@@ -277,6 +277,7 @@ fun PlayerScreen(onExit: () -> Unit) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             PlayerTopBar(
                 song = song,
+                qualityText = PlayerController.actualQuality,
                 sleepRemainingMs = if (PlayerController.sleepEndAt > 0) PlayerController.sleepEndAt - System.currentTimeMillis() else 0,
                 sleepAfterCurrent = PlayerController.sleepAfterCurrent,
                 onBack = onExit,
@@ -330,6 +331,7 @@ fun PlayerScreen(onExit: () -> Unit) {
 
             SeekRow(
                 positionMs = effective,
+                bufferedMs = PlayerController.bufferedMs,
                 durationMs = duration,
                 pulse = seekPulse,
                 onPreview = { previewMs = it },
@@ -629,6 +631,7 @@ fun PlayerScreen(onExit: () -> Unit) {
 @Composable
 private fun PlayerTopBar(
     song: MusicApi.Song,
+    qualityText: String,
     sleepRemainingMs: Long,
     sleepAfterCurrent: Boolean,
     onBack: () -> Unit,
@@ -650,14 +653,27 @@ private fun PlayerTopBar(
                 overflow = TextOverflow.MiddleEllipsis,
                 textAlign = TextAlign.Center,
             )
-            Text(
-                song.singers,
-                fontSize = 11.sp,
-                color = TextLo,
-                maxLines = 1,
-                overflow = TextOverflow.MiddleEllipsis,
-                textAlign = TextAlign.Center,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    song.singers,
+                    fontSize = 11.sp,
+                    color = TextLo,
+                    maxLines = 1,
+                    overflow = TextOverflow.MiddleEllipsis,
+                )
+                if (qualityText.isNotEmpty()) {
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        qualityText,
+                        fontSize = 9.sp,
+                        color = Color(0xFF6FE7A5),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0x221FC365))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    )
+                }
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (sleepRemainingMs > 0 || sleepAfterCurrent) {
@@ -772,6 +788,7 @@ private fun ToolItem(
 @Composable
 private fun SeekRow(
     positionMs: Long,
+    bufferedMs: Long,
     durationMs: Long,
     pulse: Int,
     onPreview: (Long?) -> Unit,
@@ -780,6 +797,7 @@ private fun SeekRow(
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
         SeekBar(
             positionMs = positionMs,
+            bufferedMs = bufferedMs,
             durationMs = durationMs,
             pulse = pulse,
             onPreview = onPreview,
@@ -797,6 +815,7 @@ private fun SeekRow(
 @Composable
 private fun SeekBar(
     positionMs: Long,
+    bufferedMs: Long,
     durationMs: Long,
     pulse: Int,
     onPreview: (Long?) -> Unit,
@@ -816,6 +835,7 @@ private fun SeekBar(
 
     val shown = dragMs ?: positionMs
     val frac = if (durationMs <= 0) 0f else (shown.toFloat() / durationMs).coerceIn(0f, 1f)
+    val bufFrac = if (durationMs <= 0) 0f else (bufferedMs.toFloat() / durationMs).coerceIn(0f, 1f)
     val dragging = dragMs != null
 
     Box(
@@ -853,6 +873,14 @@ private fun SeekBar(
                 size = Size(size.width, h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
             )
+            // 已缓冲（白）
+            drawRoundRect(
+                color = Color(0x8CE6ECF5),
+                topLeft = Offset(0f, cy - h / 2),
+                size = Size(size.width * bufFrac, h),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
+            )
+            // 已播放（绿）
             drawRoundRect(
                 color = Brand,
                 topLeft = Offset(0f, cy - h / 2),

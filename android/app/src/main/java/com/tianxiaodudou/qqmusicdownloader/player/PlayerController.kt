@@ -56,6 +56,11 @@ object PlayerController {
         private set
     var durationMs by mutableStateOf(0L)
         private set
+    var bufferedMs by mutableStateOf(0L)
+        private set
+    /** 真正在播的档位（上限是设置里选的，账号无权限会自动降级）。 */
+    var actualQuality by mutableStateOf("")
+        private set
     var mode by mutableStateOf(Mode.LIST)
         private set
     var speed by mutableStateOf(1f)
@@ -132,6 +137,7 @@ object PlayerController {
                     positionMs = pl.currentPosition.coerceAtLeast(0L)
                     posAt = positionMs
                     posRealtime = SystemClock.elapsedRealtime()
+                    bufferedMs = pl.bufferedPosition.coerceAtLeast(0L)
                     val d = pl.duration
                     if (d > 0) durationMs = d
                     val song = current
@@ -334,7 +340,7 @@ object PlayerController {
 
     // ---------------- 内部实现 ----------------
 
-    private data class Source(val uri: Uri, val label: String, val path: String)
+    private data class Source(val uri: Uri, val label: String, val path: String, val quality: String = "")
 
     private fun load(song: MusicApi.Song, startAt: Long = 0, autoPlay: Boolean = true, alt: Boolean = false) {
         val pl = exo ?: return
@@ -352,6 +358,7 @@ object PlayerController {
         error = null
         sourceLabel = ""
         sourcePath = ""
+        actualQuality = ""
         durationMs = song.interval * 1000L
         val resumeAt = if (startAt <= 0) ResumeStore.get(ctx, song.mid) else 0L
         loadJob = scope?.launch {
@@ -365,6 +372,7 @@ object PlayerController {
             }
             sourceLabel = src.label
             sourcePath = src.path
+            actualQuality = src.quality
             pl.setMediaItem(MediaItem.fromUri(src.uri))
             val startPos = when {
                 startAt > 0 -> startAt
@@ -395,14 +403,19 @@ object PlayerController {
         for (q in chain) {
             val url = batch[q.code]
             if (!url.isNullOrEmpty()) {
-                return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "")
+                return Source(
+                    Uri.parse(if (alt) cdnUrl(url) else url),
+                    q.label + " · " + q.detail,
+                    "",
+                    qualityText(q.code),
+                )
             }
         }
         // 批量没拿到（极端情况）再逐档补一次
         for (q in chain) {
             val url = runCatching { MusicApi.streamUrlOf(song, q.code) }.getOrNull()
             if (!url.isNullOrEmpty()) {
-                return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "")
+                return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "", qualityText(q.code))
             }
         }
 
@@ -417,6 +430,16 @@ object PlayerController {
             }
         }
         throw IllegalStateException("拿不到播放地址（可能需要会员或已下架）")
+    }
+
+    private fun qualityText(code: String): String = when {
+        code == "M500" -> "128k"
+        code == "M800" -> "320k"
+        code == "F000" -> "FLAC"
+        code == "O801" -> "Hi-Res"
+        code == "AI00" -> "母带"
+        code == "D004" -> "杜比"
+        else -> ""
     }
 
     /** 用 CDN 调度返回的根地址替换域名，播放失败重试时用。 */

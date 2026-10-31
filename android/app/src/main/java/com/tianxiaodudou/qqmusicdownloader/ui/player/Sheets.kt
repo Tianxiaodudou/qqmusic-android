@@ -99,7 +99,7 @@ private fun SheetHeader(title: String, subtitle: String = "", trailing: @Composa
 @Composable
 fun QualitySheet(current: Settings.Quality, onPick: (Settings.Quality) -> Unit) {
     Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
-        SheetHeader("音质", "只影响播放文件的码率，音效请到「更多 → 均衡器」")
+        SheetHeader("音质上限", "账号无权限时自动降级；实际在播音质看播放页顶栏")
         Settings.Quality.entries.forEach { q ->
             Row(
                 Modifier.fillMaxWidth().clickable { onPick(q) }.padding(horizontal = 22.dp, vertical = 13.dp),

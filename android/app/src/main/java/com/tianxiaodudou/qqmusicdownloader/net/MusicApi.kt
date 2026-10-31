@@ -148,6 +148,49 @@ object MusicApi {
 
     fun streamUrlOf(song: Song, code: String): String? = vkey(song, code)
 
+    /**
+     * 一次请求拿多档直链：把候选码率打包进一次 GetVkey，避免逐档串行请求，
+     * 起播少等一两秒。返回 码率代码 -> 播放地址。
+     */
+    fun streamBatch(song: Song, codes: List<String>): Map<String, String> {
+        if (codes.isEmpty()) return emptyMap()
+        val p = JSONObject()
+        p.put("uin", QqClient.session?.uin ?: "0")
+        val names = JSONArray()
+        val mids = JSONArray()
+        val types = JSONArray()
+        for (c in codes) {
+            names.put(c + song.mediaMid + extOf(c))
+            mids.put(song.mid)
+            types.put(0)
+        }
+        p.put("filename", names)
+        p.put("guid", QqClient.guid)
+        p.put("songmid", mids)
+        p.put("songtype", types)
+        p.put("ctx", 0)
+        val data = runCatching { QqClient.cgi("music.vkey.GetVkey", "UrlGetVkey", p) }.getOrNull() ?: return emptyMap()
+        val arr = data.optJSONArray("midurlinfo") ?: return emptyMap()
+        val out = HashMap<String, String>()
+        for (i in 0 until arr.length()) {
+            val info = arr.optJSONObject(i) ?: continue
+            val purl = info.optString("purl")
+            if (purl.isEmpty()) continue
+            val fn = info.optString("filename")
+            val code = codes.firstOrNull { fn.startsWith(it) } ?: codes.getOrNull(i) ?: continue
+            out[code] = if (purl.startsWith("http")) purl else "https://dl.stream.qqmusic.qq.com/" + purl
+        }
+        return out
+    }
+
+    private fun extOf(code: String): String = when {
+        code.startsWith("M") -> ".mp3"
+        code.startsWith("F") || code.startsWith("AI") || code.startsWith("Q0") -> ".flac"
+        code.startsWith("O8") || code.startsWith("O6") -> ".ogg"
+        code.startsWith("D0") || code.startsWith("DT") -> ".mp4"
+        else -> ".mp3"
+    }
+
     /** 兼容旧调用：优先 320k，再 128k。 */
     fun songUrl(song: Song): String? = streamUrl(song, Settings.Quality.HIGH)?.url
 

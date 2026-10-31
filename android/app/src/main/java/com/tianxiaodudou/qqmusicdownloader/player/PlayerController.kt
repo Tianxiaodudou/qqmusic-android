@@ -183,6 +183,8 @@ object PlayerController {
     fun toggle() {
         val p = exo ?: return
         if (current == null) return
+        // 解析音源期间不要重复触发 load，否则会把正在进行的解析取消掉，越点越慢
+        if (loading) return
         if (p.isPlaying) p.pause() else {
             if (p.playbackState == Player.STATE_IDLE) load(current!!) else p.play()
         }
@@ -386,9 +388,18 @@ object PlayerController {
             add(Settings.Quality.STANDARD)
         }.distinct()
 
+        // 一次请求拿全部候选码率的直链
+        val batch = runCatching {
+            MusicApi.streamBatch(song, chain.map { it.code }.filter { it.isNotEmpty() }.distinct())
+        }.getOrDefault(emptyMap())
         for (q in chain) {
-            // 只用可以直接流播的直链：无损族拿不到 FLAC 直链就自动降级，
-            // 绝不在播放前整首下载，避免一直卡在「正在准备音源」。
+            val url = batch[q.code]
+            if (!url.isNullOrEmpty()) {
+                return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "")
+            }
+        }
+        // 批量没拿到（极端情况）再逐档补一次
+        for (q in chain) {
             val url = runCatching { MusicApi.streamUrlOf(song, q.code) }.getOrNull()
             if (!url.isNullOrEmpty()) {
                 return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "")

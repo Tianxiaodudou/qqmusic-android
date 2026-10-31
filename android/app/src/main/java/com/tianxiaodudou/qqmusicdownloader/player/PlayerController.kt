@@ -387,14 +387,11 @@ object PlayerController {
         }.distinct()
 
         for (q in chain) {
-            // 先拿普通直链直接流播（快）；直链拿不到才退回「整首下载 + QMC2 解密」
+            // 只用可以直接流播的直链：无损族拿不到 FLAC 直链就自动降级，
+            // 绝不在播放前整首下载，避免一直卡在「正在准备音源」。
             val url = runCatching { MusicApi.streamUrlOf(song, q.code) }.getOrNull()
             if (!url.isNullOrEmpty()) {
                 return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "")
-            }
-            if (q.encryptedCode.isNotEmpty()) {
-                val file = runCatching { Lossless.fileFor(ctx, song, q) }.getOrNull()
-                if (file != null) return Source(Uri.fromFile(file), q.label + " · " + q.detail, file.absolutePath)
             }
         }
 

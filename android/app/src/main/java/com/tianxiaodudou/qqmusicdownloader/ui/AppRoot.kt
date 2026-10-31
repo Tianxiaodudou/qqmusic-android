@@ -36,7 +36,9 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -46,11 +48,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,6 +78,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.History
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Session
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
+import com.tianxiaodudou.qqmusicdownloader.net.Updater
 import com.tianxiaodudou.qqmusicdownloader.net.UserApi
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import com.tianxiaodudou.qqmusicdownloader.ui.player.PlayerScreen
@@ -279,6 +284,49 @@ private fun MinePage(
     var toast by remember { mutableStateOf("") }
     var offsetCount by remember { mutableStateOf(Settings.offsetCount(context)) }
     var profile by remember { mutableStateOf<UserApi.Profile?>(null) }
+    var paidPolicy by remember { mutableStateOf(Settings.paidPolicy(context)) }
+    var showPaid by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
+    var checking by remember { mutableStateOf(false) }
+    var update by remember { mutableStateOf<Updater.Release?>(null) }
+    var downloading by remember { mutableStateOf(false) }
+    var progress by remember { mutableIntStateOf(0) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val main = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+
+    fun checkUpdate() {
+        if (checking || downloading) return
+        checking = true
+        scope.launch {
+            val r = withContext(Dispatchers.IO) {
+                runCatching { Updater.latest(BuildConfig.VERSION_NAME) }
+            }
+            checking = false
+            r.onSuccess { rel ->
+                if (rel == null) toast = "已是最新版本 v" + BuildConfig.VERSION_NAME else update = rel
+            }.onFailure {
+                toast = "检查更新失败：" + (it.message ?: "网络异常")
+            }
+        }
+    }
+
+    fun startDownload(rel: Updater.Release) {
+        if (downloading) return
+        downloading = true
+        progress = 0
+        scope.launch {
+            val f = Updater.download(context, rel) { pr -> main.post { progress = pr } }
+            downloading = false
+            if (f == null) {
+                toast = "下载失败，请检查网络后重试"
+                update = null
+            } else {
+                val ok = Updater.install(context, f)
+                update = null
+                if (!ok) toast = "已下载完成，请在系统设置里允许安装后重试"
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         profile = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -350,6 +398,12 @@ private fun MinePage(
             val freed = Settings.clearCache(context)
             toast = "已清理 " + (freed / 1024 / 1024) + " MB"
         }
+        MineRow("付费内容", paidPolicy.label) { showPaid = true }
+        MineRow(
+            "检查更新",
+            if (checking) "检查中…" else "当前 v" + BuildConfig.VERSION_NAME,
+        ) { checkUpdate() }
+        MineRow("关于", "版本、开源许可与反馈") { showAbout = true }
 
         if (toast.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
@@ -360,6 +414,93 @@ private fun MinePage(
         Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onLogout) { Text("退出登录") }
+    }
+
+    if (showPaid) {
+        AlertDialog(
+            onDismissRequest = { showPaid = false },
+            title = { Text("付费内容") },
+            text = {
+                Column {
+                    Text(
+                        "付费单曲 / 需单独购买的数字专辑在列表里怎么处理（已购买的不受影响）",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Settings.PaidPolicy.entries.forEach { opt ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    paidPolicy = opt
+                                    Settings.setPaidPolicy(context, opt)
+                                    showPaid = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                if (paidPolicy == opt) "● " else "○ ",
+                                color = if (paidPolicy == opt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(opt.label, fontSize = 14.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showPaid = false }) { Text("关闭") } },
+        )
+    }
+
+    if (showAbout) {
+        AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = { Text("关于") },
+            text = {
+                Column {
+                    Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 14.sp)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "完全本地运行：登录、搜索、歌单、播放、歌词都在设备上完成，不经过任何中转服务器。\n\n开源许可：MIT License\n接口参考：QQMusicApi\n问题反馈：github.com/Tianxiaodudou/qqmusic-android/issues",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { showAbout = false }) { Text("好") } },
+        )
+    }
+
+    update?.let { rel ->
+        AlertDialog(
+            onDismissRequest = { if (!downloading) update = null },
+            title = { Text("发现新版本 v" + rel.version) },
+            text = {
+                Column {
+                    if (downloading) {
+                        LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(8.dp))
+                        Text("正在下载 $progress%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        Text(
+                            rel.notes.take(260).ifEmpty { "包含问题修复与体验改进" },
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (downloading) {
+                    TextButton(onClick = {}, enabled = false) { Text("下载中…") }
+                } else {
+                    TextButton(onClick = { startDownload(rel) }) { Text("立即更新") }
+                }
+            },
+            dismissButton = {
+                if (!downloading) TextButton(onClick = { update = null }) { Text("稍后") }
+            },
+        )
     }
 }
 

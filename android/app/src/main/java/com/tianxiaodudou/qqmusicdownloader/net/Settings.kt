@@ -17,6 +17,12 @@ object Settings {
     }
 
     /** 歌词样式（偏好类，全局生效；与「歌词同步」的单曲时间偏移是两回事）。 */
+    /** 付费单曲 / 数字专辑在列表里的处理方式。 */
+    enum class PaidPolicy(val label: String) {
+        GREY("置灰不可选"),
+        HIDE("直接隐藏"),
+    }
+
     data class LyricStyle(
         val scale: Float = 1f,
         val center: Boolean = true,
@@ -33,6 +39,7 @@ object Settings {
     private const val K_TRANS = "style_trans"
     private const val K_ROMA = "style_roma"
     private const val K_EQ = "eq_preset"
+    private const val K_PAID = "paid_policy"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -82,6 +89,13 @@ object Settings {
 
     fun clearOffsets(context: Context) {
         prefs(context).edit().remove(K_OFFSETS).apply()
+    }
+
+    fun paidPolicy(context: Context): PaidPolicy =
+        if (prefs(context).getString(K_PAID, "grey") == "hide") PaidPolicy.HIDE else PaidPolicy.GREY
+
+    fun setPaidPolicy(context: Context, p: PaidPolicy) {
+        prefs(context).edit().putString(K_PAID, if (p == PaidPolicy.HIDE) "hide" else "grey").apply()
     }
 
     fun lyricStyle(context: Context): LyricStyle {

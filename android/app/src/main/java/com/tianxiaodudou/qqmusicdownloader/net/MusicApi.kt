@@ -16,8 +16,14 @@ object MusicApi {
         val interval: Int,
         val mediaMid: String,
         val singerMid: String = "",
+        /** pay_play = 1 表示需要单独购买（付费单曲 / 数字专辑），已购买会变回 0。 */
+        val payPlay: Int = 0,
+        val priceAlbum: Int = 0,
     ) {
         val subtitle: String get() = if (album.isEmpty()) singers else singers + " · " + album
+
+        /** 需付费才能播放/下载。 */
+        val paid: Boolean get() = payPlay == 1
     }
 
     fun search(keyword: String, page: Int = 1): List<Song> {
@@ -58,6 +64,7 @@ object MusicApi {
             }
         }
         val album = o.optJSONObject("album")
+        val pay = o.optJSONObject("pay")
         return Song(
             id = o.optInt("id", o.optInt("songId", 0)),
             mid = mid,
@@ -68,6 +75,8 @@ object MusicApi {
             interval = o.optInt("interval", 0),
             mediaMid = o.optJSONObject("file")?.optString("media_mid").orEmpty().ifEmpty { mid },
             singerMid = firstSingerMid,
+            payPlay = pay?.optInt("pay_play", 0) ?: 0,
+            priceAlbum = pay?.optInt("price_album", 0) ?: 0,
         )
     }
 

@@ -41,14 +41,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
+import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -84,7 +87,11 @@ fun SongListView(
         faved = false
     }
 
-    val chosen = songs.filter { selected.contains(it.mid) }
+    val policy = Settings.paidPolicy(context)
+    val shown = if (policy == Settings.PaidPolicy.HIDE) songs.filter { !it.paid } else songs
+    val hiddenCount = songs.size - shown.size
+    val selectable = shown.filter { !it.paid }
+    val chosen = shown.filter { selected.contains(it.mid) }
 
     fun toggle(song: MusicApi.Song) {
         selected = if (selected.contains(song.mid)) selected - song.mid else selected + song.mid
@@ -111,11 +118,11 @@ fun SongListView(
                 Text("已选 " + selected.size + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 TextButton(
-                    onClick = { selected = songs.map { it.mid }.toSet() },
+                    onClick = { selected = selectable.map { it.mid }.toSet() },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                 ) { Text("全选", fontSize = 12.sp) }
                 TextButton(
-                    onClick = { selected = songs.map { it.mid }.toSet() - selected },
+                    onClick = { selected = selectable.map { it.mid }.toSet() - selected },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                 ) { Text("反选", fontSize = 12.sp) }
                 TextButton(
@@ -123,7 +130,11 @@ fun SongListView(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                 ) { Text("取消", fontSize = 12.sp) }
             } else {
-                Text(songs.size.toString() + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (hiddenCount > 0) shown.size.toString() + " 首 · 隐藏 " + hiddenCount + " 首付费" else shown.size.toString() + " 首",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.weight(1f))
                 if (playlistId != null) {
                     TextButton(onClick = {
@@ -138,8 +149,12 @@ fun SongListView(
                     }
                 }
                 TextButton(onClick = {
-                    PlayerController.enqueue(songs)
-                    toast("已把 " + songs.size + " 首加入播放队列")
+                    if (selectable.isEmpty()) {
+                        toast("没有可加入的歌曲")
+                    } else {
+                        PlayerController.enqueue(selectable)
+                        toast("已把 " + selectable.size + " 首加入播放队列")
+                    }
                 }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
                     Text("全部入队", fontSize = 12.sp)
                 }
@@ -152,23 +167,32 @@ fun SongListView(
             }
         }
 
-        if (songs.isEmpty()) {
+        if (shown.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("暂无歌曲", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (hiddenCount > 0) "这里都是需要单独购买的付费内容" else "暂无歌曲",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         } else {
             LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-                itemsIndexed(songs) { i, song ->
+                itemsIndexed(shown) { i, song ->
                     val checked = selected.contains(song.mid)
+                    val locked = song.paid
                     Row(
                         Modifier.fillMaxWidth()
+                            .alpha(if (locked) 0.4f else 1f)
                             .clip(RoundedCornerShape(10.dp))
                             .combinedClickable(
                                 onClick = {
-                                    if (selecting) toggle(song) else onPlay(songs, i)
+                                    when {
+                                        locked -> toast("付费内容，购买后才能播放")
+                                        selecting -> toggle(song)
+                                        else -> onPlay(shown, i)
+                                    }
                                 },
                                 onLongClick = {
-                                    if (!selecting) {
+                                    if (!locked && !selecting) {
                                         selecting = true
                                         selected = setOf(song.mid)
                                     }
@@ -178,7 +202,7 @@ fun SongListView(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (selecting) {
-                            Checkbox(checked = checked, onCheckedChange = { toggle(song) })
+                            Checkbox(checked = checked, enabled = !locked, onCheckedChange = { toggle(song) })
                         }
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -196,6 +220,18 @@ fun SongListView(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                        if (locked) {
+                            Text(
+                                "付费",
+                                fontSize = 9.sp,
+                                color = Color(0xFFFFB74D),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0x33FFB74D))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
                         Text(fmtDuration(song.interval), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

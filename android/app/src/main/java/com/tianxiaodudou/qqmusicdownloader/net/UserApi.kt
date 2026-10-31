@@ -96,7 +96,6 @@ object UserApi {
             val hugeEnd = identity?.optString("HugeVipEnd").orEmpty()
             if (hugeEnd.isNotEmpty()) {
                 superVipEnd = parseDateMs(hugeEnd)
-                if (superVipEnd > 0 && normalVipEnd == 0L) normalVipEnd = superVipEnd
             }
             val endMs = maxOf(normalVipEnd, superVipEnd)
             if (endMs > 0) {

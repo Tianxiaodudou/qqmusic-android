@@ -511,6 +511,8 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var lists by remember { mutableStateOf<List<PlaylistApi.Item>?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         lists = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() }.getOrNull() ?: emptyList() }
     }
@@ -561,8 +563,43 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedAction("收藏到「我喜欢」", Modifier.weight(1f)) { addTo(null) }
+            OutlinedAction("新建歌单", Modifier.weight(1f)) { newName = ""; creating = true }
         }
+    }
+
+    if (creating) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { if (!busy) creating = false },
+            title = { Text("新建歌单") },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    singleLine = true,
+                    placeholder = { Text("歌单名称") },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val n = newName.trim()
+                    if (n.isEmpty() || busy) return@TextButton
+                    busy = true
+                    scope.launch {
+                        val item = withContext(Dispatchers.IO) { runCatching { PlaylistApi.create(n) }.getOrNull() }
+                        val ok = if (item == null) false else withContext(Dispatchers.IO) {
+                            runCatching {
+                                PlaylistApi.addSong(item.dirId.toIntOrNull() ?: 0, item.id.toIntOrNull() ?: 0, song)
+                            }.getOrDefault(false)
+                        }
+                        busy = false
+                        creating = false
+                        onDone(if (ok) "已创建「" + n + "」并加入" else "创建或加入失败，可能需要重新登录")
+                    }
+                }) { Text(if (busy) "处理中…" else "创建并加入") }
+            },
+            dismissButton = { TextButton(onClick = { creating = false }) { Text("取消") } },
+        )
     }
 }

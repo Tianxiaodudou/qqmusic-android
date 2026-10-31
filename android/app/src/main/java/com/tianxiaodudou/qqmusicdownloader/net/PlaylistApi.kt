@@ -32,8 +32,14 @@ object PlaylistApi {
     }
 
     /** 加到指定歌单或「我喜欢」（dirId 201）。 */
-    fun addSong(dirId: Int, tid: Int, song: MusicApi.Song): Boolean {
-        val info = org.json.JSONArray().put(org.json.JSONObject().put("songId", song.id).put("songType", 0))
+    fun addSong(dirId: Int, tid: Int, song: MusicApi.Song): Boolean =
+        addSongs(dirId, tid, listOf(song))
+
+    /** 批量加歌：一次请求带全部 songId，比逐首快得多。 */
+    fun addSongs(dirId: Int, tid: Int, songs: List<MusicApi.Song>): Boolean {
+        if (songs.isEmpty()) return false
+        val info = org.json.JSONArray()
+        for (s in songs) info.put(org.json.JSONObject().put("songId", s.id).put("songType", 0))
         val p = JSONObject()
         p.put("dirId", dirId)
         p.put("tid", tid)
@@ -41,6 +47,36 @@ object PlaylistApi {
         p.put("v_songInfo", info)
         val data = QqClient.cgi("music.musicasset.PlaylistDetailWrite", "AddSonglist", p)
         return data.optInt("retCode", 0) == 0
+    }
+
+    /** 新建歌单，成功返回新歌单（dirId/tid 由服务端下发）。 */
+    fun create(name: String): Item? {
+        val p = JSONObject().put("dirName", name.trim())
+        val data = QqClient.cgi("music.musicasset.PlaylistBaseWrite", "AddPlaylist", p)
+        val result = data.optJSONObject("result") ?: data
+        val ret = data.optInt("retCode", result.optInt("retCode", 0))
+        if (ret != 0) return null
+        val tid = result.optString("tid")
+        val dirId = result.optString("dirId")
+        if (tid.isEmpty()) return null
+        return Item(
+            id = tid,
+            dirId = dirId,
+            name = result.optString("dirName").ifEmpty { name },
+            count = 0,
+        )
+    }
+
+    /** 收藏别人的公开歌单（disstid）。 */
+    fun favPlaylist(disstid: Long): Boolean {
+        val s = QqClient.session ?: return false
+        val uin = s.encryptUin.ifEmpty { s.uin }
+        val p = JSONObject()
+        p.put("uin", uin)
+        p.put("v_playlistId", org.json.JSONArray().put(disstid))
+        val data = QqClient.cgi("music.musicasset.PlaylistFavWrite", "FavPlaylist", p)
+        val failed = data.optJSONArray("v_failedPlaylistId")
+        return data.optInt("result", 0) == 0 && (failed == null || failed.length() == 0)
     }
 
     fun like(song: MusicApi.Song): Boolean = addSong(201, 0, song)

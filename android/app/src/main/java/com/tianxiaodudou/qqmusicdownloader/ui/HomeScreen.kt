@@ -411,11 +411,19 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
                     Text(error.ifEmpty { "暂无歌曲" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    itemsIndexed(list) { i, song ->
-                        SongRow(song, onClick = { onPlay(list, i) }, onDl = { onDownload(song) })
-                    }
+                val listId = when (v) {
+                    is HomeView.Card -> v.card.id.toLongOrNull()
+                    is HomeView.Songlist -> v.item.id.toLongOrNull()
+                    else -> null
                 }
+                SongListView(
+                    songs = list,
+                    modifier = Modifier.weight(1f),
+                    fixId = title,
+                    playlistId = listId,
+                    onPlay = onPlay,
+                    onDownload = onDownload,
+                )
             }
         }
     }

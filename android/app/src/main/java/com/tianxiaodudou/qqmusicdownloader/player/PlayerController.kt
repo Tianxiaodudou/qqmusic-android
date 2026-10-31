@@ -137,6 +137,20 @@ object PlayerController {
         load(song)
     }
 
+    /** 追加到播放队列；已经在队列里的不重复加。队列原本为空时立即开始播。 */
+    fun enqueue(songs: List<MusicApi.Song>) {
+        if (songs.isEmpty()) return
+        val known = queue.mapTo(HashSet()) { it.mid }
+        val add = songs.filter { known.add(it.mid) }
+        if (add.isEmpty()) return
+        val startEmpty = queue.isEmpty()
+        queue = queue + add
+        if (startEmpty) {
+            index = 0
+            load(queue[0])
+        }
+    }
+
     fun toggle() {
         val p = exo ?: return
         if (current == null) return

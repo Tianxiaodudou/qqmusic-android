@@ -49,6 +49,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,11 +74,14 @@ import com.tianxiaodudou.qqmusicdownloader.net.History
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Session
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
+import com.tianxiaodudou.qqmusicdownloader.net.UserApi
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import com.tianxiaodudou.qqmusicdownloader.ui.player.PlayerScreen
 import com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl
 import com.tianxiaodudou.qqmusicdownloader.ui.player.fmtMs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class Tab(val label: String) {
     Home("首页"),
@@ -114,6 +118,11 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     var showPlayer by remember { mutableStateOf(false) }
     var showDownloads by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // 顺手把账号资料拉一次：既预热「我的」页，也能补上加密 uin（收藏歌单要用）
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) { runCatching { UserApi.fetch(context) } }
+    }
 
     var dirLabel by remember { mutableStateOf(DirStore.get(context)?.lastPathSegment?.take(40) ?: "") }
     val pickDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -269,17 +278,67 @@ private fun MinePage(
     val context = LocalContext.current
     var toast by remember { mutableStateOf("") }
     var offsetCount by remember { mutableStateOf(Settings.offsetCount(context)) }
+    var profile by remember { mutableStateOf<UserApi.Profile?>(null) }
+
+    LaunchedEffect(Unit) {
+        profile = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { UserApi.fetch(context) }.getOrNull()
+        }
+    }
+    val p = profile
+    val nickname = p?.nickname?.ifEmpty { session.nickname } ?: session.nickname.ifEmpty { "已登录" }
+    val avatar = p?.avatar?.ifEmpty { null } ?: UserApi.avatarOf(session.uin)
+    val vipLabel = p?.vipLabel ?: "未开通"
+    val isVip = p?.isVip == true
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(
+                model = avatar,
+                contentDescription = "头像",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFF222833)),
+            )
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = nickname,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        vipLabel,
+                        fontSize = 11.sp,
+                        color = if (isVip) Color(0xFFFFD479) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(if (isVip) Color(0x33FFB300) else Color(0xFF232A35))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (isVip) "VIP Lv." + (p?.vipLevel ?: 0) else "听歌 Lv." + (p?.musicLevel ?: 0),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         Text(
-            text = session.nickname.ifEmpty { "已登录" },
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground,
+            buildString {
+                append("QQ 音乐 uin ").append(session.uin)
+                if (isVip && (p?.remainDays ?: 0) > 0) append(" · 会员剩余 ").append(p?.remainDays).append(" 天")
+                else if (!isVip) append(" · 开通会员可听无损")
+            },
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text("QQ 音乐 uin " + session.uin, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(18.dp))
         MineRow("下载管理", "下载的歌曲与历史记录", onDownloads)
         MineRow("下载目录", dirLabel.ifEmpty { "未选择" }, onPickDir)
         MineRow("清除所有歌词偏移", offsetCount.toString() + " 首已调整") {

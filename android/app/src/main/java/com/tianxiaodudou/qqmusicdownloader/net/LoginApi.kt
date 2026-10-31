@@ -194,7 +194,8 @@ object LoginApi {
     private fun toSession(data: JSONObject, fallbackNick: String): Session {
         val musicid = pick(data, "musicid", "musicId", "uin") ?: throw QqError("登录返回缺少 musicid")
         val musickey = pick(data, "musickey", "musicKey", "qm_keyst") ?: throw QqError("登录返回缺少 musickey")
-        return Session(musicid, musickey, fallbackNick)
+        val encrypt = pick(data, "encryptUin", "encrypt_uin", "encryptuin").orEmpty()
+        return Session(musicid, musickey, fallbackNick, encrypt)
     }
 
     private fun pick(o: JSONObject, vararg keys: String): String? {

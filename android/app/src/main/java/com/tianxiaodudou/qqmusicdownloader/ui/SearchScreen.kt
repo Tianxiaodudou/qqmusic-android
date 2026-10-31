@@ -84,31 +84,12 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
         if (error.isNotEmpty()) {
             Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp))
         }
-        LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(results) { i, song ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable { onPlay(results, i) }
-                        .padding(vertical = 10.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
-                        Text(
-                            song.subtitle,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    androidx.compose.material3.TextButton(onClick = { onDownload(song) }) {
-                        Text("下载", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-        }
+        SongListView(
+            songs = results,
+            modifier = Modifier.weight(1f),
+            fixId = "search:" + keyword,
+            onPlay = onPlay,
+            onDownload = onDownload,
+        )
     }
 }

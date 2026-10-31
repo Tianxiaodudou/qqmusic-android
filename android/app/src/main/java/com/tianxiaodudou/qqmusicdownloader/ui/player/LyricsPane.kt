@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,17 +43,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -227,16 +226,47 @@ fun LyricsPane(
                             .padding(horizontal = 24.dp, vertical = if (isCurrent) 9.dp else 7.dp),
                         horizontalAlignment = if (style.center) Alignment.CenterHorizontally else Alignment.Start,
                     ) {
-                        Text(
-                            text = if (isCurrent) karaoke(line, clock.longValue) else AnnotatedString(line.text),
-                            fontSize = fontSize.sp,
-                            lineHeight = (fontSize * 1.35f).sp,
-                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isCurrent) LyricBright else Color(0xFFC9D1DE),
-                            textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
-                            overflow = TextOverflow.Visible,
-                            modifier = Modifier.alpha(alpha).fillMaxWidth(),
-                        )
+                        if (isCurrent) {
+                            val nextStart = lines.getOrNull(i + 1)?.timeMs ?: (line.timeMs + 5000)
+                            Box(Modifier.wrapContentWidth().alpha(alpha)) {
+                                Text(
+                                    text = line.text,
+                                    fontSize = fontSize.sp,
+                                    lineHeight = (fontSize * 1.35f).sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF7C8695),
+                                    textAlign = TextAlign.Start,
+                                    overflow = TextOverflow.Visible,
+                                )
+                                Text(
+                                    text = line.text,
+                                    fontSize = fontSize.sp,
+                                    lineHeight = (fontSize * 1.35f).sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = LyricSung,
+                                    textAlign = TextAlign.Start,
+                                    overflow = TextOverflow.Visible,
+                                    modifier = Modifier.drawWithContent {
+                                        // 逐字进度在 draw 阶段读时钟：只重绘不重组，
+                                        // 按字宽比例裁剪，扫过的部分是连续的，不会一个字一个字跳。
+                                        val progress = lineProgress(line, clock.longValue, nextStart)
+                                        clipRect(right = size.width * progress) {
+                                            this@drawWithContent.drawContent()
+                                        }
+                                    },
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = line.text,
+                                fontSize = fontSize.sp,
+                                lineHeight = (fontSize * 1.35f).sp,
+                                color = Color(0xFFC9D1DE),
+                                textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
+                                overflow = TextOverflow.Visible,
+                                modifier = Modifier.alpha(alpha).fillMaxWidth(),
+                            )
+                        }
                         if (style.showTrans && line.translation.isNotEmpty() && distance <= 2) {
                             Text(
                                 line.translation,
@@ -300,22 +330,29 @@ fun LyricsPane(
     }
 }
 
-/** 当前句按字时间轴染色：已唱亮、未唱暗。 */
-private fun karaoke(line: LyricApi.Line, t: Long): AnnotatedString = buildAnnotatedString {
-    if (line.words.isEmpty()) {
-        append(line.text)
-        return@buildAnnotatedString
+/**
+ * 当前句的连续进度（0..1）：按字时间轴算出已唱到的「字数」（带小数），
+ * 再除以总字数。裁剪层再按这个比例取宽度，得到平滑扫过的效果。
+ */
+private fun lineProgress(line: LyricApi.Line, t: Long, nextStart: Int): Float {
+    val total = line.words.sumOf { it.text.length }
+    if (total == 0) {
+        val start = line.timeMs.toLong()
+        val end = maxOf(nextStart.toLong(), start + 2000L)
+        return ((t - start).toFloat() / (end - start)).coerceIn(0f, 1f)
     }
+    var sung = 0f
     for (w in line.words) {
-        val start = w.startMs.toLong()
-        val end = start + w.durMs
-        val n = w.text.length
-        val filled = when {
-            t >= end -> n
-            t <= start -> 0
-            else -> ((t - start).toFloat() / w.durMs.coerceAtLeast(1).toFloat() * n).toInt().coerceIn(0, n)
+        val s = w.startMs.toLong()
+        val e = s + w.durMs
+        if (t >= e) {
+            sung += w.text.length
+        } else if (t > s) {
+            sung += w.text.length * ((t - s).toFloat() / w.durMs.coerceAtLeast(1))
+            break
+        } else {
+            break
         }
-        withStyle(SpanStyle(color = LyricSung)) { append(w.text.take(filled)) }
-        withStyle(SpanStyle(color = Color(0xFF8E98A8))) { append(w.text.drop(filled)) }
     }
+    return (sung / total).coerceIn(0f, 1f)
 }

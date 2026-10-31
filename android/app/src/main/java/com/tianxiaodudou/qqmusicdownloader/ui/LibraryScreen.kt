@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -41,6 +42,10 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     var opened by remember { mutableStateOf<PlaylistApi.Item?>(null) }
     var songs by remember { mutableStateOf<List<MusicApi.Song>?>(null) }
     var error by remember { mutableStateOf("") }
+    var creating by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val r = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() } }
@@ -54,10 +59,46 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     }
 
     val current = opened
+
+        if (creating) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { if (!busy) creating = false },
+                title = { Text("新建歌单") },
+                text = {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        singleLine = true,
+                        placeholder = { Text("歌单名称") },
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val n = newName.trim()
+                        if (n.isEmpty() || busy) return@TextButton
+                        busy = true
+                        scope.launch {
+                            val item = withContext(Dispatchers.IO) { runCatching { PlaylistApi.create(n) }.getOrNull() }
+                            busy = false
+                            creating = false
+                            if (item != null) {
+                                playlists = (playlists ?: emptyList()) + item
+                                error = ""
+                            } else {
+                                error = "创建失败，可能需要重新登录"
+                            }
+                        }
+                    }) { Text(if (busy) "处理中…" else "创建") }
+                },
+                dismissButton = { TextButton(onClick = { creating = false }) { Text("取消") } },
+            )
+        }
+
     if (current == null) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("我的歌单", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("我的歌单", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = 12.sp) }
             }
             val list = playlists
             if (list == null) {
@@ -99,31 +140,13 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
             if (list == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
-                    itemsIndexed(list) { i, song ->
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onPlay(list, i) }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
-                                Text(
-                                    song.singers,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            androidx.compose.material3.TextButton(onClick = { onDownload(song) }) {
-                                Text("下载", fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
+                SongListView(
+                    songs = list,
+                    modifier = Modifier.weight(1f),
+                    fixId = current.name,
+                    onPlay = onPlay,
+                    onDownload = onDownload,
+                )
             }
         }
     }

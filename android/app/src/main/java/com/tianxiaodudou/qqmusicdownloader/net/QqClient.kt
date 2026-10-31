@@ -99,13 +99,8 @@ object QqClient {
                 c.put("chid", "0")
                 c.put("uin", uin)
                 c.put("qq", uin)
-                if (key.isNotEmpty()) {
-                    // Web 端靠 cookie 鉴权，但 cookie 丢了以后单靠 uin 会被判成未登录（10004）；
-                    // 顺带带上 authst，服务端认哪个都行。
-                    c.put("authst", key)
-                    c.put("tmeAppID", "qqmusic")
-                    c.put("tmeLoginType", "1")
-                }
+                // Web 端仍然只靠 cookie 鉴权，保持和旧版本完全一致；
+                // cookie 失效时由 cgi 的重试链切到 Android(authst) / 匿名。
                 c.put("g_tk", gtk().toString())
                 c.put("g_tk_new_20200303", gtk().toString())
                 c.put("format", "json")

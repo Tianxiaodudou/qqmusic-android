@@ -78,8 +78,9 @@ object PlaylistApi {
     fun songs(item: Item, page: Int = 1, num: Int = 100): List<MusicApi.Song> {
         if (item.dirId == "201" || item.id == "201") return favSongs(page, num)
         val p = JSONObject()
-        p.put("disstid", item.id)
-        p.put("dirid", item.dirId.ifEmpty { "0" })
+        // 这两个字段服务端按数字校验：传字符串会直接回 10004 param error。
+        item.id.toLongOrNull()?.let { p.put("disstid", it) } ?: p.put("disstid", item.id)
+        item.dirId.toLongOrNull()?.let { p.put("dirid", it) } ?: p.put("dirid", item.dirId.ifEmpty { "0" })
         p.put("tag", false)
         p.put("song_begin", num * (page - 1))
         p.put("song_num", num)

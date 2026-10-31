@@ -9,21 +9,37 @@ object TopApi {
 
     fun charts(): List<Chart> {
         val data = QqClient.cgi("music.musicToplist.Toplist", "GetAll", JSONObject())
-        val arr = data.optJSONArray("toplist") ?: data.optJSONArray("v_list") ?: return emptyList()
         val out = ArrayList<Chart>()
+        // 现在的返回是 data.group[].toplist[]；老接口是 data.toplist[]，两种都认。
+        val groups = data.optJSONArray("group")
+        if (groups != null) {
+            for (g in 0 until groups.length()) {
+                appendCharts(groups.optJSONObject(g)?.optJSONArray("toplist"), out)
+            }
+        }
+        if (out.isEmpty()) {
+            appendCharts(data.optJSONArray("toplist") ?: data.optJSONArray("v_list"), out)
+        }
+        return out
+    }
+
+    private fun appendCharts(arr: org.json.JSONArray?, out: MutableList<Chart>) {
+        if (arr == null) return
         for (i in 0 until arr.length()) {
             val o = arr.optJSONObject(i) ?: continue
             val id = o.optInt("topId", o.optInt("topID", 0))
             if (id <= 0) continue
+            val name = o.optString("topName").ifEmpty { o.optString("title") }
+            if (name.isEmpty()) continue
+            if (out.any { it.id == id }) continue
             out.add(
                 Chart(
                     id = id,
-                    name = o.optString("topName").ifEmpty { o.optString("title") },
+                    name = name,
                     count = o.optInt("totalNum", o.optInt("songNum", 0)),
                 )
             )
         }
-        return out
     }
 
     fun songs(chart: Chart, page: Int = 1, num: Int = 100): List<MusicApi.Song> {

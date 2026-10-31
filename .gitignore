@@ -1,0 +1,16 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# 构建产物
+*.apk
+*.aab
+*.jks
+*.p12
+*.keystore
+
+# IDE
+.idea/
+*.iml
+.DS_Store

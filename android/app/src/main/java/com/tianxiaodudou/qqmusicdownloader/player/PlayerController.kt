@@ -388,13 +388,10 @@ object PlayerController {
 
     private fun resolve(ctx: Context, song: MusicApi.Song, alt: Boolean = false): Source {
         val wanted = forcedQuality ?: Settings.quality(ctx)
-        // 目标档位取不到时逐级降级，保证「点了就能响」
-        val chain = buildList {
-            add(wanted)
-            if (wanted != Settings.Quality.LOSSLESS) add(Settings.Quality.LOSSLESS)
-            add(Settings.Quality.HIGH)
-            add(Settings.Quality.STANDARD)
-        }.distinct()
+        // 设置里选的是「上限」：只会从目标档位往下退，绝不升到更高档位
+        val chain = Settings.Quality.entries
+            .filter { it.ordinal <= wanted.ordinal }
+            .sortedByDescending { it.ordinal }
 
         // 一次请求拿全部候选码率的直链
         val batch = runCatching {

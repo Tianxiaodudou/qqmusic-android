@@ -110,11 +110,20 @@ fun SongListView(
             if (selecting) {
                 Text("已选 " + selected.size + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = { selected = songs.map { it.mid }.toSet() }) { Text("全选", fontSize = 12.sp) }
-                TextButton(onClick = { selected = songs.map { it.mid }.toSet() - selected }) { Text("反选", fontSize = 12.sp) }
-                TextButton(onClick = { finishSelection() }) { Text("取消", fontSize = 12.sp) }
+                TextButton(
+                    onClick = { selected = songs.map { it.mid }.toSet() },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
+                ) { Text("全选", fontSize = 12.sp) }
+                TextButton(
+                    onClick = { selected = songs.map { it.mid }.toSet() - selected },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
+                ) { Text("反选", fontSize = 12.sp) }
+                TextButton(
+                    onClick = { finishSelection() },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
+                ) { Text("取消", fontSize = 12.sp) }
             } else {
-                Text("共 " + songs.size + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(songs.size.toString() + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 if (playlistId != null) {
                     TextButton(onClick = {
@@ -124,12 +133,22 @@ fun SongListView(
                             faved = ok
                             toast(if (ok) "已收藏歌单" else "收藏失败，可能需要重新登录")
                         }
-                    }) { Text(if (faved) "已收藏" else "收藏歌单", fontSize = 12.sp) }
+                    }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
+                        Text(if (faved) "已收藏" else "收藏歌单", fontSize = 12.sp)
+                    }
+                }
+                TextButton(onClick = {
+                    PlayerController.enqueue(songs)
+                    toast("已把 " + songs.size + " 首加入播放队列")
+                }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
+                    Text("全部入队", fontSize = 12.sp)
                 }
                 TextButton(onClick = {
                     selecting = true
                     selected = emptySet()
-                }) { Text("多选", fontSize = 12.sp) }
+                }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
+                    Text("多选", fontSize = 12.sp)
+                }
             }
         }
 

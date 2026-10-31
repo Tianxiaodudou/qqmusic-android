@@ -67,16 +67,21 @@ object PlaylistApi {
         )
     }
 
-    /** 收藏别人的公开歌单（disstid）。 */
+    /** 收藏别人的公开歌单（disstid）。加密 uin 与明文 uin 都试一遍，兼容老登录态。 */
     fun favPlaylist(disstid: Long): Boolean {
         val s = QqClient.session ?: return false
-        val uin = s.encryptUin.ifEmpty { s.uin }
-        val p = JSONObject()
-        p.put("uin", uin)
-        p.put("v_playlistId", org.json.JSONArray().put(disstid))
-        val data = QqClient.cgi("music.musicasset.PlaylistFavWrite", "FavPlaylist", p)
-        val failed = data.optJSONArray("v_failedPlaylistId")
-        return data.optInt("result", 0) == 0 && (failed == null || failed.length() == 0)
+        val candidates = listOf(s.encryptUin, s.uin).filter { it.isNotEmpty() }.distinct()
+        for (uin in candidates) {
+            val p = JSONObject()
+            p.put("uin", uin)
+            p.put("v_playlistId", org.json.JSONArray().put(disstid))
+            val data = runCatching {
+                QqClient.cgi("music.musicasset.PlaylistFavWrite", "FavPlaylist", p, retryAuth = false)
+            }.getOrNull() ?: continue
+            val failed = data.optJSONArray("v_failedPlaylistId")
+            if (data.optInt("result", 0) == 0 && (failed == null || failed.length() == 0)) return true
+        }
+        return false
     }
 
     fun like(song: MusicApi.Song): Boolean = addSong(201, 0, song)

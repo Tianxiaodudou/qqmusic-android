@@ -300,6 +300,7 @@ private fun MinePage(
     var update by remember { mutableStateOf<Updater.Release?>(null) }
     var downloading by remember { mutableStateOf(false) }
     var progress by remember { mutableIntStateOf(0) }
+    var updateError by remember { mutableStateOf("") }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val main = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
     var loginState by remember { mutableStateOf("检查中…") }
@@ -522,8 +523,39 @@ private fun MinePage(
                 }
             },
             dismissButton = {
-                if (!downloading) TextButton(onClick = { update = null }) { Text("稍后") }
+                if (!downloading) {
+                    TextButton(onClick = {
+                        update = null
+                        com.tianxiaodudou.qqmusicdownloader.ui.player.openUrl(
+                            context,
+                            "https://github.com/Tianxiaodudou/qqmusic-android/releases/latest",
+                        )
+                    }) { Text("浏览器下载") }
+                }
             },
+        )
+    }
+
+    if (updateError.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { updateError = "" },
+            title = { Text("检查更新失败") },
+            text = {
+                Text(
+                    updateError + "\n\n可以直接到 Release 页面下载最新安装包。",
+                    fontSize = 12.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    com.tianxiaodudou.qqmusicdownloader.ui.player.openUrl(
+                        context,
+                        "https://github.com/Tianxiaodudou/qqmusic-android/releases/latest",
+                    )
+                    updateError = ""
+                }) { Text("打开浏览器") }
+            },
+            dismissButton = { TextButton(onClick = { updateError = "" }) { Text("关闭") } },
         )
     }
 }

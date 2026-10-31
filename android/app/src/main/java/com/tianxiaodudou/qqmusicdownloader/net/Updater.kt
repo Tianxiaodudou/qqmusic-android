@@ -19,21 +19,39 @@ object Updater {
 
     private const val API = "https://api.github.com/repos/Tianxiaodudou/qqmusic-android/releases/latest"
 
-    /** 有新版本才返回，已是最新返回 null。 */
+    private const val REPO = "https://github.com/Tianxiaodudou/qqmusic-android"
+
+    /**
+     * 有新版本才返回，已是最新返回 null；两条链路都失败时抛异常（不要误报「已是最新」）。
+     * 1) GitHub API；2) 打不开 API 时退回 releases/latest 的 302 跳转解析版本号。
+     */
     suspend fun latest(currentVersion: String): Release? = withContext(Dispatchers.IO) {
-            val req = Request.Builder()
-                .url(API)
-                .header("Accept", "application/vnd.github+json")
-                .header("User-Agent", QqClient.userAgent())
-                .build()
-            QqClient.http.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext null
-                val text = resp.body?.string() ?: return@withContext null
-                val j = JSONObject(text)
-                val tag = j.optString("tag_name").removePrefix("v")
-                if (tag.isEmpty() || !isNewer(tag, currentVersion)) return@withContext null
-                val assets = j.optJSONArray("assets") ?: return@withContext null
-                var url = ""
+        val byApi = runCatching { fromApi() }
+        if (byApi.isSuccess) {
+            val rel = byApi.getOrNull() ?: return@withContext null
+            return@withContext if (isNewer(rel.version, currentVersion)) rel else null
+        }
+        val ver = runCatching { versionFromRedirect() }.getOrNull()
+            ?: throw java.io.IOException("连不上更新服务器（api.github.com / github.com 都不通）")
+        if (!isNewer(ver, currentVersion)) return@withContext null
+        Release(ver, assetUrl(ver), "", REPO + "/releases/tag/v" + ver)
+    }
+
+    private fun fromApi(): Release? {
+        val req = Request.Builder()
+            .url(API)
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", QqClient.userAgent())
+            .build()
+        QqClient.http.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) throw java.io.IOException("GitHub API " + resp.code)
+            val text = resp.body?.string() ?: throw java.io.IOException("空响应")
+            val j = JSONObject(text)
+            val tag = j.optString("tag_name").removePrefix("v")
+            if (tag.isEmpty()) return null
+            val assets = j.optJSONArray("assets")
+            var url = ""
+            if (assets != null) {
                 for (i in 0 until assets.length()) {
                     val a = assets.optJSONObject(i) ?: continue
                     if (a.optString("name").endsWith(".apk")) {
@@ -41,10 +59,28 @@ object Updater {
                         break
                     }
                 }
-                if (url.isEmpty()) return@withContext null
-                Release(tag, url, j.optString("body"), j.optString("html_url"))
             }
+            if (url.isEmpty()) url = assetUrl(tag)
+            return Release(tag, url, j.optString("body"), j.optString("html_url"))
+        }
     }
+
+    /** 跟随 releases/latest 的 302，从最终地址里取 tag 版本号。 */
+    private fun versionFromRedirect(): String? {
+        val req = Request.Builder()
+            .url(REPO + "/releases/latest")
+            .header("User-Agent", QqClient.userAgent())
+            .build()
+        QqClient.http.newCall(req).execute().use { resp ->
+            val finalUrl = resp.request.url.toString()
+            val m = Regex("""/releases/tag/v?([0-9][0-9.]*)""").find(finalUrl) ?: return null
+            return m.groupValues[1]
+        }
+    }
+
+    /** 发布包的命名是固定的：<版本>-qqmusic-player.apk。 */
+    private fun assetUrl(version: String): String =
+        REPO + "/releases/download/v" + version + "/" + version + "-qqmusic-player.apk"
 
     fun isNewer(remote: String, local: String): Boolean {
         fun parts(v: String) = v.trim().removePrefix("v").split(".", "-").mapNotNull { it.toIntOrNull() }

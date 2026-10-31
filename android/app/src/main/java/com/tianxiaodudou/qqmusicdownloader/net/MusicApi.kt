@@ -18,6 +18,8 @@ object MusicApi {
         val singerMid: String = "",
         /** pay_play = 1 表示需要单独购买（付费单曲 / 数字专辑），已购买会变回 0。 */
         val payPlay: Int = 0,
+        val payMonth: Int = 0,
+        val priceTrack: Int = 0,
         val priceAlbum: Int = 0,
         val size128: Int = 0,
         val size320: Int = 0,
@@ -27,8 +29,11 @@ object MusicApi {
     ) {
         val subtitle: String get() = if (album.isEmpty()) singers else singers + " · " + album
 
-        /** 需付费才能播放/下载。 */
-        val paid: Boolean get() = payPlay == 1
+        /**
+         * 只有「需要单独购买、且不是会员就能听」的内容才算付费：
+         * pay_month=1 表示绿钻可听，不能置灰，否则会把会员曲库全判成付费。
+         */
+        val paid: Boolean get() = payPlay == 1 && payMonth == 0 && (priceTrack > 0 || priceAlbum > 0)
     }
 
     fun search(keyword: String, page: Int = 1): List<Song> {
@@ -82,6 +87,8 @@ object MusicApi {
             mediaMid = file?.optString("media_mid").orEmpty().ifEmpty { mid },
             singerMid = firstSingerMid,
             payPlay = pay?.optInt("pay_play", 0) ?: 0,
+            payMonth = pay?.optInt("pay_month", 0) ?: 0,
+            priceTrack = pay?.optInt("price_track", 0) ?: 0,
             priceAlbum = pay?.optInt("price_album", 0) ?: 0,
             size128 = file?.optInt("size_128mp3", 0) ?: 0,
             size320 = file?.optInt("size_320mp3", 0) ?: 0,

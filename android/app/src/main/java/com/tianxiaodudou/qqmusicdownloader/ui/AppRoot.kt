@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -311,7 +313,7 @@ private fun MinePage(
 
     LaunchedEffect(Unit) {
         val ok = runCatching { LoginApi.ensureFresh(context) }.getOrDefault(false)
-        loginState = if (ok) "正常" else "登录态可能已过期"
+        loginState = if (ok) "正常" else "已过期，点此重新登录"
     }
 
     fun checkUpdate() {
@@ -359,7 +361,12 @@ private fun MinePage(
     val vipLabel = p?.vipLabel ?: "未开通"
     val isVip = p?.isVip == true
 
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = avatar,
@@ -434,10 +441,9 @@ private fun MinePage(
             toast = "已清理 " + (freed / 1024 / 1024) + " MB"
         }
         MineRow("收藏的专辑", "收藏的数字专辑", { Nav.push(Route.FavLibrary(true)) })
-        MineRow("收藏的歌单", "收藏的他人歌单", { Nav.push(Route.FavLibrary(false)) })
         MineRow("关注与粉丝", "关注的歌手/用户、粉丝、好友", { Nav.push(Route.Social) })
         MineRow("登录状态", loginState) {
-            if (loginState.startsWith("已过期")) onLogout()
+            if (loginState.contains("过期")) onLogout()
         }
         MineRow("首页模块", "各模块显示/隐藏与条数", { Nav.push(Route.HomeModules) })
         MineRow("付费内容", paidPolicy.label) { showPaid = true }
@@ -452,7 +458,7 @@ private fun MinePage(
             Text(toast, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(22.dp))
         Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = {

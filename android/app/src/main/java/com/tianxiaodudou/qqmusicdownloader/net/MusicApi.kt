@@ -19,6 +19,11 @@ object MusicApi {
         /** pay_play = 1 表示需要单独购买（付费单曲 / 数字专辑），已购买会变回 0。 */
         val payPlay: Int = 0,
         val priceAlbum: Int = 0,
+        val size128: Int = 0,
+        val size320: Int = 0,
+        val sizeFlac: Int = 0,
+        val sizeDolby: Int = 0,
+        val sizeNew: List<Int> = emptyList(),
     ) {
         val subtitle: String get() = if (album.isEmpty()) singers else singers + " · " + album
 
@@ -65,6 +70,7 @@ object MusicApi {
         }
         val album = o.optJSONObject("album")
         val pay = o.optJSONObject("pay")
+        val file = o.optJSONObject("file")
         return Song(
             id = o.optInt("id", o.optInt("songId", 0)),
             mid = mid,
@@ -73,10 +79,17 @@ object MusicApi {
             album = album?.optString("name").orEmpty(),
             albumMid = album?.optString("mid").orEmpty(),
             interval = o.optInt("interval", 0),
-            mediaMid = o.optJSONObject("file")?.optString("media_mid").orEmpty().ifEmpty { mid },
+            mediaMid = file?.optString("media_mid").orEmpty().ifEmpty { mid },
             singerMid = firstSingerMid,
             payPlay = pay?.optInt("pay_play", 0) ?: 0,
             priceAlbum = pay?.optInt("price_album", 0) ?: 0,
+            size128 = file?.optInt("size_128mp3", 0) ?: 0,
+            size320 = file?.optInt("size_320mp3", 0) ?: 0,
+            sizeFlac = file?.optInt("size_flac", 0) ?: 0,
+            sizeDolby = file?.optInt("size_dolby", 0) ?: 0,
+            sizeNew = file?.optJSONArray("size_new")?.let { a ->
+                (0 until a.length()).map { a.optInt(it, 0) }
+            } ?: emptyList(),
         )
     }
 
@@ -116,23 +129,29 @@ object MusicApi {
     /** 直链 + 实际拿到的档位代码（M800 = 320k，M500 = 128k）。 */
     data class Stream(val url: String, val code: String)
 
-    /** 按音质取直链；目标码率没权限时自动退回另一档。 */
+    /** 按音质取直链；目标码率没权限时自动退回 320k/128k。 */
     fun streamUrl(song: Song, quality: Settings.Quality): Stream? {
-        val primary = if (quality == Settings.Quality.STANDARD) "M500" else "M800"
-        val fallback = if (primary == "M800") "M500" else "M800"
-        vkey(song, primary)?.let { return Stream(it, primary) }
-        vkey(song, fallback)?.let { return Stream(it, fallback) }
+        if (quality.code.isNotEmpty()) {
+            vkey(song, quality.code)?.let { return Stream(it, quality.code) }
+        }
+        vkey(song, "M800")?.let { return Stream(it, "M800") }
+        vkey(song, "M500")?.let { return Stream(it, "M500") }
         return null
     }
+
+    fun streamUrlOf(song: Song, code: String): String? = vkey(song, code)
 
     /** 兼容旧调用：优先 320k，再 128k。 */
     fun songUrl(song: Song): String? = streamUrl(song, Settings.Quality.HIGH)?.url
 
     /** 无损：拿加密直链 + ekey。返回 null 表示这首歌没有 SQ 权限。 */
-    fun lossless(song: Song): Pair<String, String>? {
+    fun lossless(song: Song): Pair<String, String>? = losslessOf(song, "F0M0", ".mflac")
+
+    /** 任意加密档位（mflac/mgg/mmp4）的直链 + ekey。 */
+    fun losslessOf(song: Song, code: String, ext: String): Pair<String, String>? {
         val p = JSONObject()
         p.put("uin", QqClient.session?.uin ?: "0")
-        p.put("filename", JSONArray().put("F000" + song.mediaMid + ".mflac"))
+        p.put("filename", JSONArray().put(code + song.mediaMid + ext))
         p.put("guid", QqClient.guid)
         p.put("songmid", JSONArray().put(song.mid))
         p.put("songtype", JSONArray().put(0))

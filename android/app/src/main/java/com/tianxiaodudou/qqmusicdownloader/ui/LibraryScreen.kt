@@ -1,6 +1,8 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,11 +33,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
+import com.tianxiaodudou.qqmusicdownloader.net.Extras
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi.Song) -> Unit) {
     var playlists by remember { mutableStateOf<List<PlaylistApi.Item>?>(null) }
@@ -45,11 +49,19 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     var creating by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var showFav by remember { mutableStateOf(false) }
+    var favs by remember { mutableStateOf<List<PlaylistApi.Item>?>(null) }
+    var pendingDelete by remember { mutableStateOf<PlaylistApi.Item?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val r = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() } }
         r.onSuccess { playlists = it }.onFailure { error = it.message ?: "歌单加载失败"; playlists = emptyList() }
+    }
+    LaunchedEffect(showFav) {
+        if (showFav && favs == null) {
+            favs = withContext(Dispatchers.IO) { runCatching { Extras.favPlaylists() }.getOrDefault(emptyList()) }
+        }
     }
     LaunchedEffect(opened) {
         val p = opened ?: return@LaunchedEffect
@@ -60,7 +72,31 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
 
     val current = opened
 
-        if (creating) {
+        pendingDelete?.let { item ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("删除歌单") },
+            text = { Text("删除「" + item.name + "」？歌单里的歌不会从曲库删除。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDelete = null
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) {
+                            runCatching { Extras.deletePlaylist(item.dirId.toIntOrNull() ?: 0) }.getOrDefault(false)
+                        }
+                        if (ok) {
+                            playlists = playlists?.filter { it.id != item.id }
+                        } else {
+                            error = "删除失败，可能需要重新登录"
+                        }
+                    }
+                }) { Text("删除") }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("取消") } },
+        )
+    }
+
+    if (creating) {
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { if (!busy) creating = false },
                 title = { Text("新建歌单") },
@@ -97,8 +133,38 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     if (current == null) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("我的歌单", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                TextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = 12.sp) }
+                Text(
+                    if (showFav) "收藏的歌单" else "我的歌单",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { showFav = !showFav }) { Text(if (showFav) "我的歌单" else "收藏的歌单", fontSize = 12.sp) }
+                if (!showFav) TextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = 12.sp) }
+            }
+            if (showFav) {
+                val favList = favs
+                if (favList == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                } else if (favList.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("还没有收藏别人的歌单", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        items(favList) { item ->
+                            Row(
+                                Modifier.fillMaxWidth().clickable { Nav.push(Route.Playlist(item.id, item.name)) }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(item.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                Text(item.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+                return@Column
             }
             val list = playlists
             if (list == null) {
@@ -113,7 +179,7 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                         Row(
                             Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
-                                .clickable { opened = item }
+                                .combinedClickable(onClick = { opened = item }, onLongClick = { pendingDelete = item })
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

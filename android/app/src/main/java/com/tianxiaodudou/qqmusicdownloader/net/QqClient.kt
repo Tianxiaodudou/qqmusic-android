@@ -125,8 +125,10 @@ object QqClient {
         param: JSONObject,
         extraComm: Map<String, String> = emptyMap(),
         retryAuth: Boolean = true,
+        style: CommStyle? = null,
     ): JSONObject {
         val styles = when {
+            style != null -> listOf(style)
             !retryAuth || module.contains("Login") -> listOf(CommStyle.WEB)
             webAuthBroken -> listOf(CommStyle.ANDROID, CommStyle.ANON)
             else -> listOf(CommStyle.WEB, CommStyle.ANDROID, CommStyle.ANON)

@@ -28,11 +28,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -100,6 +103,8 @@ import com.tianxiaodudou.qqmusicdownloader.net.LyricApi
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
+import com.tianxiaodudou.qqmusicdownloader.ui.Nav
+import com.tianxiaodudou.qqmusicdownloader.ui.Route
 import com.tianxiaodudou.qqmusicdownloader.player.Favorites
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import kotlinx.coroutines.Dispatchers
@@ -136,6 +141,10 @@ internal sealed interface PSheet {
     data object Style : PSheet
     data object Info : PSheet
     data object AddTo : PSheet
+    data object Comments : PSheet
+    data object Similar : PSheet
+    data object Related : PSheet
+    data object Versions : PSheet
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -161,6 +170,9 @@ fun PlayerScreen(onExit: () -> Unit) {
     var seekPulse by remember { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<PSheet?>(null) }
     var shareLine by remember { mutableStateOf<LyricApi.Line?>(null) }
+    var dictLine by remember { mutableStateOf<LyricApi.Line?>(null) }
+    var dictEntries by remember { mutableStateOf<List<com.tianxiaodudou.qqmusicdownloader.net.Extras.DictEntry>>(emptyList()) }
+    var dictLoading by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf("") }
 
@@ -187,6 +199,16 @@ fun PlayerScreen(onExit: () -> Unit) {
     LaunchedEffect(song?.mid) {
         Favorites.ensureLoaded()
         offsetMs = Settings.lyricOffset(context, song?.mid ?: "")
+    }
+
+    LaunchedEffect(dictLine) {
+        val line = dictLine ?: return@LaunchedEffect
+        dictLoading = true
+        dictEntries = emptyList()
+        val id = PlayerController.current?.id ?: 0
+        val all = withContext(Dispatchers.IO) { runCatching { com.tianxiaodudou.qqmusicdownloader.net.Extras.aiDict(id) }.getOrDefault(emptyList()) }
+        dictEntries = all.filter { it.lyricText == line.text || line.text.contains(it.phrase) }
+        dictLoading = false
     }
 
     LaunchedEffect(toast) {
@@ -413,12 +435,16 @@ fun PlayerScreen(onExit: () -> Unit) {
                         onInfo = { sheet = PSheet.Info },
                         onAlbum = {
                             sheet = null
-                            if (song.albumMid.isNotEmpty()) openUrl(context, "https://y.qq.com/n/ryqq/albumDetail/" + song.albumMid)
+                            if (song.albumMid.isNotEmpty()) Nav.push(Route.Album(song.albumMid, song.album))
                         },
                         onSinger = {
                             sheet = null
-                            if (song.singerMid.isNotEmpty()) openUrl(context, "https://y.qq.com/n/ryqq/singerDetail/" + song.singerMid)
+                            if (song.singerMid.isNotEmpty()) Nav.push(Route.Singer(song.singerMid, song.singers))
                         },
+                        onComments = { sheet = PSheet.Comments },
+                        onSimilar = { sheet = PSheet.Similar },
+                        onRelated = { sheet = PSheet.Related },
+                        onVersions = { sheet = PSheet.Versions },
                         onEq = { sheet = PSheet.Eq },
                         onSpeed = { sheet = PSheet.Speed },
                         onSleep = { sheet = PSheet.Sleep },
@@ -493,6 +519,25 @@ fun PlayerScreen(onExit: () -> Unit) {
                         onClose = { sheet = null },
                     )
 
+                    PSheet.Comments -> CommentsSheet(song = song, onClose = { sheet = null })
+
+                    PSheet.Similar -> SimilarSongsSheet(
+                        songId = song.id,
+                        onPlay = { list, i -> PlayerController.play(list, i) },
+                        onClose = { sheet = null },
+                    )
+
+                    PSheet.Related -> RelatedPlaylistsSheet(
+                        songId = song.id,
+                        onClose = { sheet = null },
+                    )
+
+                    PSheet.Versions -> OtherVersionsSheet(
+                        song = song,
+                        onPlay = { list, i -> PlayerController.play(list, i) },
+                        onClose = { sheet = null },
+                    )
+
                     PSheet.AddTo -> AddToSheet(
                         song = song,
                         onDone = { msg ->
@@ -509,22 +554,54 @@ fun PlayerScreen(onExit: () -> Unit) {
         AlertDialog(
             onDismissRequest = { shareLine = null },
             title = { Text("歌词") },
-            text = { Text(line.text) },
-            confirmButton = {
-                TextButton(onClick = {
-                    clipboard.setText(AnnotatedString(line.text))
-                    shareLine = null
-                    toast = "已复制这句"
-                }) { Text("复制这句") }
+            text = {
+                Column {
+                    Text(line.text)
+                    Spacer(Modifier.height(8.dp))
+                    Row {
+                        TextButton(onClick = {
+                            clipboard.setText(AnnotatedString(line.text))
+                            shareLine = null
+                            toast = "已复制这句"
+                        }) { Text("复制", fontSize = 12.sp) }
+                        TextButton(onClick = {
+                            val text = line.text + "\n—— " + song.name + " · " + song.singers
+                            val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+                            context.startActivity(Intent.createChooser(i, "分享歌词"))
+                            shareLine = null
+                        }) { Text("分享", fontSize = 12.sp) }
+                        TextButton(onClick = {
+                            val target = line
+                            shareLine = null
+                            dictLine = target
+                        }) { Text("查词", fontSize = 12.sp) }
+                    }
+                }
             },
-            dismissButton = {
-                TextButton(onClick = {
-                    val text = line.text + "\n—— " + song.name + " · " + song.singers
-                    val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
-                    context.startActivity(Intent.createChooser(i, "分享歌词"))
-                    shareLine = null
-                }) { Text("分享这句") }
+            confirmButton = { TextButton(onClick = { shareLine = null }) { Text("关闭") } },
+        )
+    }
+
+    if (dictLine != null) {
+        AlertDialog(
+            onDismissRequest = { dictLine = null },
+            title = { Text("歌词词典") },
+            text = {
+                Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                    if (dictLoading) {
+                        Text("查询中…", fontSize = 12.sp, color = TextLo)
+                    } else if (dictEntries.isEmpty()) {
+                        Text("这句没有生词解析", fontSize = 12.sp, color = TextLo)
+                    } else {
+                        dictEntries.forEach { e ->
+                            Text(e.phrase, fontSize = 14.sp, color = Color(0xFF6FE7A5))
+                            Text(e.explain, fontSize = 12.sp, color = TextHi)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                }
             },
+            confirmButton = { TextButton(onClick = { dictLine = null }) { Text("好") } },
         )
     }
 

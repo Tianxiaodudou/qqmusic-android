@@ -25,12 +25,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistAdd
@@ -272,6 +276,10 @@ fun MoreSheet(
     onInfo: () -> Unit,
     onAlbum: () -> Unit,
     onSinger: () -> Unit,
+    onComments: () -> Unit,
+    onSimilar: () -> Unit,
+    onRelated: () -> Unit,
+    onVersions: () -> Unit,
     onEq: () -> Unit,
     onSpeed: () -> Unit,
     onSleep: () -> Unit,
@@ -286,6 +294,10 @@ fun MoreSheet(
         MenuRow(Icons.Rounded.Info, "歌曲信息", onClick = onInfo)
         MenuRow(Icons.Rounded.Album, "查看专辑", onClick = onAlbum)
         MenuRow(Icons.Rounded.Person, "查看歌手", onClick = onSinger)
+        MenuRow(Icons.Rounded.ChatBubbleOutline, "评论", onClick = onComments)
+        MenuRow(Icons.Rounded.MusicNote, "相似歌曲", onClick = onSimilar)
+        MenuRow(Icons.Rounded.QueueMusic, "相关歌单", onClick = onRelated)
+        MenuRow(Icons.Rounded.RestartAlt, "其他版本", onClick = onVersions)
         MenuDivider()
         MenuRow(Icons.Rounded.GraphicEq, "均衡器", value = qualityLabel, onClick = onEq)
         MenuRow(Icons.Rounded.Speed, "播放速度", value = String.format("%.1fx", speed), onClick = onSpeed)
@@ -484,6 +496,24 @@ fun SongInfoSheet(
     lyricSource: String,
     onClose: () -> Unit,
 ) {
+    var extra by remember(song.id) {
+        mutableStateOf<Triple<List<String>, List<Pair<String, String>>, String>?>(null)
+    }
+    var hasSheet by remember(song.mid) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(song.id, song.mid) {
+        val data = withContext(Dispatchers.IO) {
+            Triple(
+                runCatching { com.tianxiaodudou.qqmusicdownloader.net.Extras.labels(song.id) }.getOrDefault(emptyList()),
+                runCatching { com.tianxiaodudou.qqmusicdownloader.net.Extras.producers(song.id) }.getOrDefault(emptyList()),
+                runCatching { com.tianxiaodudou.qqmusicdownloader.net.Extras.favNumber(song.id) }.getOrDefault(""),
+            )
+        }
+        val sheet = withContext(Dispatchers.IO) {
+            runCatching { com.tianxiaodudou.qqmusicdownloader.net.Extras.hasSheet(song.mid) }.getOrDefault(false)
+        }
+        extra = data
+        hasSheet = sheet
+    }
     Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 20.dp)) {
         SheetHeader("歌曲信息")
         InfoRow("歌名", song.name)
@@ -494,6 +524,12 @@ fun SongInfoSheet(
         InfoRow("文件", path.ifEmpty { "在线播放（未缓存）" })
         InfoRow("封面", if (song.albumMid.isEmpty()) "无" else "腾讯 CDN · T002R400x400M000" + song.albumMid)
         InfoRow("歌词", lyricSource.ifEmpty { "未加载" })
+        extra?.let { e ->
+            if (e.first.isNotEmpty()) InfoRow("标签", e.first.joinToString(" · "))
+            if (e.second.isNotEmpty()) InfoRow("制作", e.second.take(3).joinToString(" · ") { it.first + " " + it.second })
+            if (e.third.isNotEmpty()) InfoRow("收藏", e.third)
+        }
+        hasSheet?.let { InfoRow("曲谱", if (it) "有" else "无") }
         TextButton(onClick = onClose) { Text("关闭", fontSize = 13.sp, color = SheetSub) }
     }
 }

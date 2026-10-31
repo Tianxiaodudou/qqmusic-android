@@ -10,10 +10,22 @@ import java.io.File
  */
 object Settings {
 
-    enum class Quality(val label: String, val detail: String) {
-        STANDARD("标准", "128kbps · MP3"),
-        HIGH("高品质", "320kbps · MP3"),
-        LOSSLESS("无损", "FLAC · 需会员"),
+    enum class Quality(
+        val label: String,
+        val detail: String,
+        /** 普通直链的码率代码；空表示只能走加密链接。 */
+        val code: String,
+        /** EVkey 加密链接的代码（mflac/mgg/mmp4）。 */
+        val encryptedCode: String = "",
+        val encryptedExt: String = "",
+        val outputExt: String = "",
+    ) {
+        STANDARD("标准", "128kbps · MP3", "M500"),
+        HIGH("高品质", "320kbps · MP3", "M800"),
+        LOSSLESS("SQ 无损", "FLAC · 需会员", "F000", "F0M0", ".mflac", "flac"),
+        HIRES("Hi-Res", "OGG 640 · 需会员", "O801", "O8M1", ".mgg", "ogg"),
+        MASTER("臻品母带", "FLAC · 需超级会员", "AI00", "AIM0", ".mflac", "flac"),
+        DOLBY("杜比全景声", "MP4 · 需超级会员", "D004", "D0M4", ".mmp4", "mp4"),
     }
 
     /** 歌词样式（偏好类，全局生效；与「歌词同步」的单曲时间偏移是两回事）。 */
@@ -47,6 +59,9 @@ object Settings {
     fun quality(context: Context): Quality = when (prefs(context).getString(K_QUALITY, "lossless")) {
         "standard" -> Quality.STANDARD
         "high" -> Quality.HIGH
+        "hires" -> Quality.HIRES
+        "master" -> Quality.MASTER
+        "dolby" -> Quality.DOLBY
         "auto", "lossless" -> Quality.LOSSLESS
         else -> Quality.LOSSLESS
     }
@@ -56,6 +71,9 @@ object Settings {
             Quality.STANDARD -> "standard"
             Quality.HIGH -> "high"
             Quality.LOSSLESS -> "lossless"
+            Quality.HIRES -> "hires"
+            Quality.MASTER -> "master"
+            Quality.DOLBY -> "dolby"
         }
         prefs(context).edit().putString(K_QUALITY, raw).apply()
     }

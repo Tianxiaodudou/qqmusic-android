@@ -10,6 +10,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.tianxiaodudou.qqmusicdownloader.net.Extras
 import com.tianxiaodudou.qqmusicdownloader.net.Lossless
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
@@ -68,6 +69,9 @@ object PlayerController {
     var sleepAfterCurrent by mutableStateOf(false)
         private set
 
+    private var retriedQuality = false
+    private var forcedQuality: Settings.Quality? = null
+
     val current: MusicApi.Song? get() = queue.getOrNull(index)
 
     fun attach(context: Context) {
@@ -86,6 +90,10 @@ object PlayerController {
         p.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
+                if (isPlaying) {
+                    retriedQuality = false
+                    forcedQuality = null
+                }
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -98,6 +106,16 @@ object PlayerController {
             }
 
             override fun onPlayerError(e: PlaybackException) {
+                val song = current
+                // 失败先换换 CDN / 替换音源再来一次，仍不行才报错
+                if (song != null && !retriedQuality) {
+                    retriedQuality = true
+                    // 高音质源有问题时降一档重来，避免卡在同一个坏文件上
+                    forcedQuality = Settings.Quality.HIGH
+                    runCatching { if (sourcePath.isNotEmpty()) java.io.File(sourcePath).delete() }
+                    load(song, startAt = positionMs, autoPlay = true, alt = true)
+                    return
+                }
                 loading = false
                 error = "播放出错：" + (e.message ?: "未知错误")
             }
@@ -303,7 +321,7 @@ object PlayerController {
 
     private data class Source(val uri: Uri, val label: String, val path: String)
 
-    private fun load(song: MusicApi.Song, startAt: Long = 0, autoPlay: Boolean = true) {
+    private fun load(song: MusicApi.Song, startAt: Long = 0, autoPlay: Boolean = true, alt: Boolean = false) {
         val pl = exo ?: return
         val ctx = appContext ?: return
         loadJob?.cancel()
@@ -314,7 +332,7 @@ object PlayerController {
         durationMs = song.interval * 1000L
         loadJob = scope?.launch {
             val src = withContext(Dispatchers.IO) {
-                runCatching { resolve(ctx, song) }.getOrNull()
+                runCatching { resolve(ctx, song, alt) }.getOrNull()
             }
             if (src == null) {
                 loading = false
@@ -331,17 +349,48 @@ object PlayerController {
         }
     }
 
-    private fun resolve(ctx: Context, song: MusicApi.Song): Source {
-        val quality = Settings.quality(ctx)
-        if (quality == Settings.Quality.LOSSLESS) {
-            val file = runCatching { Lossless.playableFile(ctx, song) }.getOrNull()
-            if (file != null) return Source(Uri.fromFile(file), "无损 · FLAC", file.absolutePath)
+    private fun resolve(ctx: Context, song: MusicApi.Song, alt: Boolean = false): Source {
+        val wanted = forcedQuality ?: Settings.quality(ctx)
+        // 目标档位取不到时逐级降级，保证「点了就能响」
+        val chain = buildList {
+            add(wanted)
+            if (wanted != Settings.Quality.LOSSLESS) add(Settings.Quality.LOSSLESS)
+            add(Settings.Quality.HIGH)
+            add(Settings.Quality.STANDARD)
+        }.distinct()
+
+        for (q in chain) {
+            // 无损族先用加密链接（EVkey + QMC2），这是旧版本验证过能播的路径
+            if (q.encryptedCode.isNotEmpty()) {
+                val file = runCatching { Lossless.fileFor(ctx, song, q) }.getOrNull()
+                if (file != null) return Source(Uri.fromFile(file), q.label + " · " + q.detail, file.absolutePath)
+            }
+            val url = runCatching { MusicApi.streamUrlOf(song, q.code) }.getOrNull()
+            if (!url.isNullOrEmpty()) {
+                return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "")
+            }
         }
-        val stream = MusicApi.streamUrl(song, quality)
-            ?: throw IllegalStateException("拿不到播放地址")
-        val label = if (stream.code == "M800") "高品质 · 320kbps MP3" else "标准 · 128kbps MP3"
-        return Source(Uri.parse(stream.url), label, "")
+
+        // 版权受限：换一个可播版本再试
+        val replaced = runCatching { Extras.replacement(song) }.getOrNull()
+        if (replaced != null) {
+            for (q in chain) {
+                val url = runCatching { MusicApi.streamUrlOf(replaced, q.code) }.getOrNull()
+                if (!url.isNullOrEmpty()) {
+                    return Source(Uri.parse(if (alt) cdnUrl(url) else url), "替换音源 · " + q.label, "")
+                }
+            }
+        }
+        throw IllegalStateException("拿不到播放地址（可能需要会员或已下架）")
     }
+
+    /** 用 CDN 调度返回的根地址替换域名，播放失败重试时用。 */
+    private fun cdnUrl(url: String): String = runCatching {
+        val sip = Extras.cdnSips().firstOrNull() ?: return url
+        val u = java.net.URI(url)
+        val s = java.net.URI(sip)
+        java.net.URI(s.scheme, s.authority, u.path, u.query, u.fragment).toString()
+    }.getOrDefault(url)
 
     private fun onEnded() {
         if (sleepAfterCurrent) {

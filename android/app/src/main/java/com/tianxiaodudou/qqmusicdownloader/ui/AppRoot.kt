@@ -74,6 +74,7 @@ import coil3.compose.AsyncImage
 import com.tianxiaodudou.qqmusicdownloader.BuildConfig
 import com.tianxiaodudou.qqmusicdownloader.net.DirStore
 import com.tianxiaodudou.qqmusicdownloader.net.Downloader
+import com.tianxiaodudou.qqmusicdownloader.net.Extras
 import com.tianxiaodudou.qqmusicdownloader.net.History
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Session
@@ -138,6 +139,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     }
 
     fun playAt(list: List<MusicApi.Song>, i: Int) {
+        Nav.clear()
         PlayerController.play(list, i)
         showPlayer = true
     }
@@ -218,6 +220,13 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         ) {
             PlayerScreen(onExit = { showPlayer = false })
         }
+
+        if (Nav.stack.isNotEmpty()) {
+            RouteHost(
+                onPlay = { list, i -> playAt(list, i) },
+                onDownload = { Downloader.enqueue(context, it) },
+            )
+        }
     }
 }
 
@@ -293,6 +302,12 @@ private fun MinePage(
     var progress by remember { mutableIntStateOf(0) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val main = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+    var loginState by remember { mutableStateOf("检查中…") }
+
+    LaunchedEffect(Unit) {
+        val ok = withContext(Dispatchers.IO) { runCatching { Extras.checkLogin() }.getOrDefault(true) }
+        loginState = if (ok) "正常" else "已过期，点此重新登录"
+    }
 
     fun checkUpdate() {
         if (checking || downloading) return
@@ -398,6 +413,12 @@ private fun MinePage(
             val freed = Settings.clearCache(context)
             toast = "已清理 " + (freed / 1024 / 1024) + " MB"
         }
+        MineRow("收藏的专辑", "收藏的数字专辑", { Nav.push(Route.FavLibrary(true)) })
+        MineRow("收藏的歌单", "收藏的他人歌单", { Nav.push(Route.FavLibrary(false)) })
+        MineRow("关注与粉丝", "关注的歌手/用户、粉丝、好友", { Nav.push(Route.Social) })
+        MineRow("登录状态", loginState) {
+            if (loginState.startsWith("已过期")) onLogout()
+        }
         MineRow("付费内容", paidPolicy.label) { showPaid = true }
         MineRow(
             "检查更新",
@@ -413,7 +434,10 @@ private fun MinePage(
         Spacer(Modifier.weight(1f))
         Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = onLogout) { Text("退出登录") }
+        OutlinedButton(onClick = {
+            scope.launch { withContext(Dispatchers.IO) { runCatching { Extras.logout() } } }
+            onLogout()
+        }) { Text("退出登录") }
     }
 
     if (showPaid) {

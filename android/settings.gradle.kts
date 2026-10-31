@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "qqmusic-downloader"
+rootProject.name = "qqmusic-player"
 include(":app")

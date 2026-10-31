@@ -12,6 +12,7 @@ private fun verPart(index: Int): Int =
 android {
     namespace = "com.tianxiaodudou.qqmusicdownloader"
     compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.tianxiaodudou.qqmusicdownloader"
@@ -74,6 +75,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("net.jthink:jaudiotagger:3.0.1")
     implementation("org.slf4j:slf4j-nop:2.0.13")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

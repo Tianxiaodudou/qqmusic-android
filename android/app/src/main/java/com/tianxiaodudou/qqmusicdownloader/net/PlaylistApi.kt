@@ -45,6 +45,17 @@ object PlaylistApi {
 
     fun like(song: MusicApi.Song): Boolean = addSong(201, 0, song)
 
+    /** 取消收藏（从「我喜欢」移出）。 */
+    fun unlike(song: MusicApi.Song): Boolean {
+        val info = org.json.JSONArray().put(org.json.JSONObject().put("songId", song.id).put("songType", 0))
+        val p = JSONObject()
+        p.put("dirId", 201)
+        p.put("tid", 0)
+        p.put("v_songInfo", info)
+        val data = QqClient.cgi("music.musicasset.PlaylistDetailWrite", "DelSonglist", p)
+        return data.optInt("retCode", 0) == 0
+    }
+
     /** 「我喜欢」（dirId 201）走收藏接口：disstid=0 + dirid=201 + enc_host_uin。 */
     fun favSongs(page: Int = 1, num: Int = 100): List<MusicApi.Song> {
         val uin = QqClient.session?.uin ?: return emptyList()

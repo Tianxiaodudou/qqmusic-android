@@ -3,12 +3,10 @@ package com.tianxiaodudou.qqmusicdownloader.net
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.util.zip.Inflater
-import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
 
 /**
- * 歌词：优先取 QRC 逐字歌词（hex -> 3DES -> zlib -> XML），拿不到就退回 LRC 逐行。
- * 与 fpk 的 parseQrc / fetchLyrics 同一套规则。
+ * 歌词：优先取 QRC 逐字歌词（hex -> 3DES -> zlib -> XML），拿不到就退回 LRC 逐行；
+ * 同时取翻译（trans）与音译（roma）。
  */
 object LyricApi {
 
@@ -19,18 +17,24 @@ object LyricApi {
         val text: String,
         val words: List<Word>,
         val translation: String = "",
+        val roma: String = "",
     )
+
+    /** 歌词来源，用于「歌曲信息」里展示。 */
+    data class Result(val lines: List<Line>, val source: String)
 
     private const val QRC_KEY = "!@#)(*$%123ZXC!@!@#)(NHL"
 
-    fun fetch(mid: String): List<Line> {
+    fun fetch(mid: String): List<Line> = load(mid).lines
+
+    fun load(mid: String): Result {
         val p = JSONObject()
         p.put("songMid", mid)
         p.put("songId", 0)
         p.put("lrc_t", 0)
         p.put("qrc", 1)
         p.put("qrc_t", 0)
-        p.put("roma", 0)
+        p.put("roma", 1)
         p.put("roma_t", 0)
         p.put("trans", 1)
         p.put("trans_t", 0)
@@ -38,18 +42,27 @@ object LyricApi {
         p.put("type", 0)
         val data = runCatching {
             QqClient.cgi("music.musichallSong.PlayLyricInfo", "GetPlayLyricInfo", p)
-        }.getOrNull() ?: return emptyList()
+        }.getOrNull() ?: return Result(emptyList(), "无")
 
         val lyric = data.optString("lyric").orEmpty()
         val lrc = data.optString("lrc").orEmpty()
         val trans = data.optString("trans").orEmpty()
+        val roma = data.optString("roma").orEmpty()
         val qrcXml = qrcXmlOf(lyric)
-        // QRC 用的是 QQ 自己的 3DES 变体（与标准 DESede 不同），还没移植完；
-        // 拿不到逐字歌词时用接口同时下发的普通 LRC，至少保证有歌词、能跟着滚。
-        val lines = if (qrcXml != null) parseQrc(qrcXml) else parseLrc(decodeLrc(lrc.ifEmpty { lyric }))
-        if (lines.isEmpty()) return lines
+        // QRC 是 QQ 自己的 3DES 变体加密后的 XML；解不开时用同一接口下发的 LRC 兜底。
+        val lines: List<Line>
+        val source: String
+        if (qrcXml != null) {
+            lines = parseQrc(qrcXml)
+            source = "QRC 逐字"
+        } else {
+            lines = parseLrc(decodeLrc(lrc.ifEmpty { lyric }))
+            source = if (lines.isEmpty()) "无" else "LRC 逐行"
+        }
+        if (lines.isEmpty()) return Result(lines, source)
         val tr = parseLrc(decodeLrc(trans))
-        return attachTranslation(lines, tr)
+        val rm = parseLrc(decodeLrc(roma))
+        return Result(attachAll(lines, tr, rm), source)
     }
 
     /** 上游把 QRC 的 xml 塞在 lyric 里（加密），先解密再判断。 */
@@ -79,7 +92,9 @@ object LyricApi {
 
     private fun decodeLrc(raw: String): String {
         if (raw.isEmpty()) return ""
-        val text = runCatching { String(android.util.Base64.decode(raw, android.util.Base64.DEFAULT), Charsets.UTF_8) }.getOrNull()
+        val text = runCatching {
+            String(android.util.Base64.decode(raw, android.util.Base64.DEFAULT), Charsets.UTF_8)
+        }.getOrNull()
         return if (text != null && text.contains("]")) text else raw
     }
 
@@ -102,8 +117,7 @@ object LyricApi {
 
     private fun parseQrc(xml: String): List<Line> {
         val out = ArrayList<Line>()
-        // 与 fpk 的 parseQrc 一致：先取 LyricContent 属性值并反转义实体，
-        // 否则歌词里的 &apos; / &#10; 会原样显示成符号。
+        // 先取 LyricContent 属性值并反转义实体，否则歌词里的 &apos; / &#10; 会原样显示。
         var body = xml
         val at = body.indexOf("LyricContent=\"")
         if (at >= 0) {
@@ -136,11 +150,18 @@ object LyricApi {
         return out
     }
 
-    private fun attachTranslation(lines: List<Line>, trans: List<Line>): List<Line> {
-        if (trans.isEmpty()) return lines
+    private fun attachAll(lines: List<Line>, trans: List<Line>, roma: List<Line>): List<Line> {
+        if (trans.isEmpty() && roma.isEmpty()) return lines
         return lines.map { l ->
-            val hit = trans.minByOrNull { kotlin.math.abs(it.timeMs - l.timeMs) }
-            if (hit != null && kotlin.math.abs(hit.timeMs - l.timeMs) <= 600) l.copy(translation = hit.text) else l
+            val t = nearest(trans, l.timeMs)
+            val r = nearest(roma, l.timeMs)
+            l.copy(translation = t, roma = r)
         }
+    }
+
+    private fun nearest(list: List<Line>, timeMs: Int): String {
+        if (list.isEmpty()) return ""
+        val hit = list.minByOrNull { kotlin.math.abs(it.timeMs - timeMs) } ?: return ""
+        return if (kotlin.math.abs(hit.timeMs - timeMs) <= 600) hit.text else ""
     }
 }

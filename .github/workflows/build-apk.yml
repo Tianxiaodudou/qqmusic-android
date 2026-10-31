@@ -107,8 +107,8 @@ jobs:
         run: |
           set -eu
           APK="$(ls android/app/build/outputs/apk/release/*.apk | head -1)"
-          OUT="${GITHUB_REF_NAME#v}-qqmusic-downloader.apk"
-          if [[ ! "$GITHUB_REF_NAME" == v* ]]; then OUT="${{ steps.ver.outputs.version }}-qqmusic-downloader.apk"; fi
+          OUT="${GITHUB_REF_NAME#v}-qqmusic-player.apk"
+          if [[ ! "$GITHUB_REF_NAME" == v* ]]; then OUT="${{ steps.ver.outputs.version }}-qqmusic-player.apk"; fi
           cp "$APK" "$OUT"
           echo "path=$OUT" >> "$GITHUB_OUTPUT"
           ls -l "$OUT"
@@ -118,7 +118,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: QQ音乐下载器 ${{ steps.ver.outputs.version }}
+          name: QQ音乐播放器 ${{ steps.ver.outputs.version }}
           files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
 
@@ -126,5 +126,5 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
-          name: qqmusic-downloader-${{ steps.ver.outputs.version }}
+          name: qqmusic-player-${{ steps.ver.outputs.version }}
           path: ${{ steps.apk.outputs.path }}

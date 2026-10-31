@@ -1,8 +1,16 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,12 +20,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,32 +57,32 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import coil3.compose.AsyncImage
 import com.tianxiaodudou.qqmusicdownloader.BuildConfig
 import com.tianxiaodudou.qqmusicdownloader.net.DirStore
-import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import com.tianxiaodudou.qqmusicdownloader.net.Downloader
-import com.tianxiaodudou.qqmusicdownloader.net.Lossless
+import com.tianxiaodudou.qqmusicdownloader.net.History
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Session
-import kotlinx.coroutines.Dispatchers
+import com.tianxiaodudou.qqmusicdownloader.net.Settings
+import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
+import com.tianxiaodudou.qqmusicdownloader.ui.player.PlayerScreen
+import com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl
+import com.tianxiaodudou.qqmusicdownloader.ui.player.fmtMs
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 enum class Tab(val label: String) {
     Home("首页"),
     Search("搜索"),
     Library("歌单"),
-    Downloads("下载"),
     Mine("我的"),
 }
 
@@ -64,6 +90,7 @@ enum class Tab(val label: String) {
 fun AppRoot() {
     val context = LocalContext.current
     var session by remember { mutableStateOf(Session.load(context)) }
+    PlayerController.attach(context)
     val current = session
 
     if (current == null) {
@@ -73,7 +100,7 @@ fun AppRoot() {
             session = s
         })
     } else {
-        MainTabs(current, onLogout = {
+        MainScaffold(current, onLogout = {
             Session.clear(context)
             session = null
         })
@@ -81,16 +108,11 @@ fun AppRoot() {
 }
 
 @Composable
-private fun MainTabs(session: Session, onLogout: () -> Unit) {
+private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     val context = LocalContext.current
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
-    var nowPlaying by remember { mutableStateOf<MusicApi.Song?>(null) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
     var showPlayer by remember { mutableStateOf(false) }
-    var queue by remember { mutableStateOf<List<MusicApi.Song>>(emptyList()) }
-    var qIndex by remember { mutableStateOf(-1) }
-    var ended by remember { mutableStateOf(false) }
+    var showDownloads by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     var dirLabel by remember { mutableStateOf(DirStore.get(context)?.lastPathSegment?.take(40) ?: "") }
@@ -101,152 +123,152 @@ private fun MainTabs(session: Session, onLogout: () -> Unit) {
         }
     }
 
-    val player = remember { ExoPlayer.Builder(context).build() }
-    DisposableEffect(Unit) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
-
-            override fun onPlaybackStateChanged(state: Int) {
-                // 播完自动下一首；用状态标记触发，避免在这里直接调后面的局部函数
-                if (state == Player.STATE_ENDED) ended = true
-            }
-        }
-        player.addListener(listener)
-        onDispose {
-            player.removeListener(listener)
-            player.release()
-        }
+    fun playAt(list: List<MusicApi.Song>, i: Int) {
+        PlayerController.play(list, i)
+        showPlayer = true
     }
 
-    fun playSong(song: MusicApi.Song) {
-        nowPlaying = song
-        loading = true
-        scope.launch {
-            // 优先无损（整首下载 + QMC2 解密），失败再退回 320k/128k 直链
-            val file = withContext(Dispatchers.IO) { runCatching { Lossless.playableFile(context, song) }.getOrNull() }
-            loading = false
-            val uri = if (file != null) {
-                android.net.Uri.fromFile(file)
-            } else {
-                val url = withContext(Dispatchers.IO) { runCatching { MusicApi.songUrl(song) }.getOrNull() }
-                if (url == null) {
-                    Toast.makeText(context, "这首歌拿不到播放地址（可能需要会员或已下架）", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-                android.net.Uri.parse(url)
-            }
-            player.setMediaItem(MediaItem.fromUri(uri))
-            player.prepare()
-            player.play()
-        }
-    }
+    BackHandler(enabled = showDownloads && !showPlayer) { showDownloads = false }
 
-    fun playAt(list: List<MusicApi.Song>, index: Int) {
-        if (index !in list.indices) return
-        queue = list
-        qIndex = index
-        playSong(list[index])
-    }
-
-    fun playNext() {
-        if (qIndex >= 0 && qIndex + 1 < queue.size) playAt(queue, qIndex + 1)
-    }
-
-    fun playPrev() {
-        if (qIndex > 0) playAt(queue, qIndex - 1)
-    }
-
-    androidx.compose.runtime.LaunchedEffect(ended) {
-        if (ended) {
-            ended = false
-            if (qIndex >= 0 && qIndex + 1 < queue.size) playNext()
-        }
-    }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            Column {
-                val song = nowPlaying
-                if (song != null) {
-                    MiniBar(
-                        title = song.name,
-                        subtitle = if (loading) "正在准备无损…" else song.singers,
-                        playing = isPlaying,
-                        onToggle = { if (isPlaying) player.pause() else player.play() },
-                        onOpen = { showPlayer = true },
-                    )
-                }
-                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                    Tab.entries.forEach { item ->
-                        NavigationBarItem(
-                            selected = tab == item,
-                            onClick = { tab = item },
-                            icon = { Text(item.label.take(1)) },
-                            label = { Text(item.label) },
-                        )
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                Column {
+                    if (PlayerController.current != null) {
+                        MiniPlayer(onOpen = { showPlayer = true })
+                    }
+                    NavigationBar(containerColor = Color(0xFF11141A), tonalElevation = 0.dp) {
+                        Tab.entries.forEach { item ->
+                            NavigationBarItem(
+                                selected = tab == item,
+                                onClick = { tab = item },
+                                icon = {
+                                    Icon(
+                                        when (item) {
+                                            Tab.Home -> Icons.Rounded.Home
+                                            Tab.Search -> Icons.Rounded.Search
+                                            Tab.Library -> Icons.Rounded.LibraryMusic
+                                            Tab.Mine -> Icons.Rounded.Person
+                                        },
+                                        contentDescription = item.label,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                },
+                                label = { Text(item.label, fontSize = 10.sp) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = Color(0xFF1B2A22),
+                                ),
+                            )
+                        }
                     }
                 }
+            },
+        ) { inner ->
+            Box(Modifier.fillMaxSize().padding(inner)) {
+                when (tab) {
+                    Tab.Home -> HomeScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
+                    Tab.Search -> SearchScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
+                    Tab.Library -> LibraryScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
+                    Tab.Mine -> MinePage(
+                        session = session,
+                        dirLabel = dirLabel,
+                        onPickDir = { pickDir.launch(null) },
+                        onDownloads = { showDownloads = true },
+                        onLogout = onLogout,
+                    )
+                }
             }
-        },
-    ) { inner ->
-        Box(modifier = Modifier.fillMaxSize().padding(inner)) {
-            when (tab) {
-                Tab.Home -> HomeScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
-                Tab.Search -> SearchScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
-                Tab.Library -> LibraryScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
-                Tab.Downloads -> DownloadsScreen()
-                Tab.Mine -> MinePage(session, onLogout, dirLabel, onPickDir = { pickDir.launch(null) })
-                else -> Placeholder(tab.label)
+        }
+
+        if (showDownloads && !showPlayer) {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                Column(Modifier.fillMaxSize().statusBarsPadding()) {
+                    Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showDownloads = false }, modifier = Modifier.size(44.dp)) {
+                            Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "返回")
+                        }
+                        Text("下载管理", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    DownloadsScreen()
+                }
             }
-            val playing = nowPlaying
-            if (showPlayer && playing != null) {
-                PlayerScreen(playing, player, onBack = { showPlayer = false }, onPrev = { playPrev() }, onNext = { playNext() })
+        }
+
+        AnimatedVisibility(
+            visible = showPlayer,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(160)),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(140)),
+        ) {
+            PlayerScreen(onExit = { showPlayer = false })
+        }
+    }
+}
+
+@Composable
+private fun MiniPlayer(onOpen: () -> Unit) {
+    val song = PlayerController.current ?: return
+    val dur = PlayerController.durationMs
+    val pos = PlayerController.positionMs
+    Column(Modifier.fillMaxWidth().background(Color(0xFF171B22))) {
+        Box(Modifier.fillMaxWidth().height(1.5.dp).background(Color(0xFF262C36))) {
+            if (dur > 0) {
+                Box(Modifier.fillMaxWidth((pos.toFloat() / dur).coerceIn(0f, 1f)).height(1.5.dp).background(MaterialTheme.colorScheme.primary))
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val cover = coverUrl(song.albumMid, 200)
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF222833)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (cover.isNotEmpty()) {
+                    AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                } else {
+                    Text("♪", color = Color(0xFF8C96A6), fontSize = 16.sp)
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 13.5.sp, color = Color(0xFFE9EDF4))
+                Text(
+                    if (PlayerController.loading) "正在准备音源…" else song.singers,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 10.5.sp,
+                    color = Color(0xFF8C96A6),
+                )
+            }
+            IconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(44.dp)) {
+                Icon(
+                    if (PlayerController.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = "播放/暂停",
+                    tint = Color(0xFFE9EDF4),
+                )
+            }
+            IconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(44.dp)) {
+                Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = Color(0xFFE9EDF4))
             }
         }
     }
 }
 
 @Composable
-private fun MiniBar(title: String, subtitle: String, playing: Boolean, onToggle: () -> Unit, onOpen: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onOpen() }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            Text(
-                subtitle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Box(Modifier.size(34.dp).clickable { onToggle() }, contentAlignment = Alignment.Center) {
-            Text(if (playing) "⏸" else "▶", fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
-        }
-    }
-}
-
-@Composable
-private fun Placeholder(label: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(label + " · 开发中", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun MinePage(session: Session, onLogout: () -> Unit, dirLabel: String, onPickDir: () -> Unit) {
+private fun MinePage(
+    session: Session,
+    dirLabel: String,
+    onPickDir: () -> Unit,
+    onDownloads: () -> Unit,
+    onLogout: () -> Unit,
+) {
     val context = LocalContext.current
-    var quality by remember { mutableStateOf(Settings.quality(context)) }
     var toast by remember { mutableStateOf("") }
+    var offsetCount by remember { mutableStateOf(Settings.offsetCount(context)) }
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text(
@@ -258,34 +280,16 @@ private fun MinePage(session: Session, onLogout: () -> Unit, dirLabel: String, o
         Text("QQ 音乐 uin " + session.uin, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         Spacer(Modifier.height(22.dp))
-        Text("播放音质", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Settings.Quality.entries.forEach { q ->
-            Row(
-                Modifier.fillMaxWidth().clickable {
-                    quality = q
-                    Settings.setQuality(context, q)
-                }.padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(if (quality == q) "● " else "○ ", color = MaterialTheme.colorScheme.primary)
-                Text(q.label, fontSize = 13.sp)
-            }
+        MineRow("下载管理", "下载的歌曲与历史记录", onDownloads)
+        MineRow("下载目录", dirLabel.ifEmpty { "未选择" }, onPickDir)
+        MineRow("清除所有歌词偏移", offsetCount.toString() + " 首已调整") {
+            Settings.clearOffsets(context)
+            offsetCount = 0
+            toast = "已清除"
         }
-
-        Spacer(Modifier.height(18.dp))
-        Text("下载", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Text(
-            if (dirLabel.isEmpty()) "目录：未选择" else "目录：" + dirLabel,
-            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 6.dp),
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = onPickDir) { Text("选择下载目录") }
-            Spacer(Modifier.width(10.dp))
-            OutlinedButton(onClick = {
-                val freed = Settings.clearCache(context)
-                toast = "已清理 " + (freed / 1024 / 1024) + " MB 缓存"
-            }) { Text("清理缓存") }
+        MineRow("清理缓存", "无损解密缓存与临时文件") {
+            val freed = Settings.clearCache(context)
+            toast = "已清理 " + (freed / 1024 / 1024) + " MB"
         }
 
         if (toast.isNotEmpty()) {
@@ -294,8 +298,22 @@ private fun MinePage(session: Session, onLogout: () -> Unit, dirLabel: String, o
         }
 
         Spacer(Modifier.weight(1f))
-        Text("QQ音乐下载器 " + BuildConfig.VERSION_NAME, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onLogout) { Text("退出登录") }
     }
+}
+
+@Composable
+private fun MineRow(title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    HorizontalDivider(color = Color(0xFF222833), thickness = 0.6.dp)
 }

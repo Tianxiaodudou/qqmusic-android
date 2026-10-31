@@ -15,6 +15,7 @@ object MusicApi {
         val albumMid: String,
         val interval: Int,
         val mediaMid: String,
+        val singerMid: String = "",
     ) {
         val subtitle: String get() = if (album.isEmpty()) singers else singers + " · " + album
     }
@@ -43,10 +44,13 @@ object MusicApi {
         val mid = o.optString("mid")
         if (mid.isEmpty()) return null
         val names = StringBuilder()
+        var firstSingerMid = ""
         val singers = o.optJSONArray("singer")
         if (singers != null) {
             for (j in 0 until singers.length()) {
-                val s = singers.optJSONObject(j)?.optString("name").orEmpty()
+                val so = singers.optJSONObject(j) ?: continue
+                val s = so.optString("name")
+                if (firstSingerMid.isEmpty()) firstSingerMid = so.optString("mid")
                 if (s.isNotEmpty()) {
                     if (names.isNotEmpty()) names.append(" / ")
                     names.append(s)
@@ -63,10 +67,10 @@ object MusicApi {
             albumMid = album?.optString("mid").orEmpty(),
             interval = o.optInt("interval", 0),
             mediaMid = o.optJSONObject("file")?.optString("media_mid").orEmpty().ifEmpty { mid },
+            singerMid = firstSingerMid,
         )
     }
 
-    /** 依次尝试 320k / 128k，返回可播放的直链。 */
     /** 热搜词：music.musicsearch.HotkeyService / GetHotkeyForQQMusicMobile。 */
     fun hotKeys(): List<String> {
         val p = JSONObject()
@@ -100,13 +104,20 @@ object MusicApi {
         return parseSong(o)
     }
 
-    fun songUrl(song: Song): String? {
-        for (quality in listOf("M800", "M500")) {
-            val url = vkey(song, quality)
-            if (!url.isNullOrEmpty()) return url
-        }
+    /** 直链 + 实际拿到的档位代码（M800 = 320k，M500 = 128k）。 */
+    data class Stream(val url: String, val code: String)
+
+    /** 按音质取直链；目标码率没权限时自动退回另一档。 */
+    fun streamUrl(song: Song, quality: Settings.Quality): Stream? {
+        val primary = if (quality == Settings.Quality.STANDARD) "M500" else "M800"
+        val fallback = if (primary == "M800") "M500" else "M800"
+        vkey(song, primary)?.let { return Stream(it, primary) }
+        vkey(song, fallback)?.let { return Stream(it, fallback) }
         return null
     }
+
+    /** 兼容旧调用：优先 320k，再 128k。 */
+    fun songUrl(song: Song): String? = streamUrl(song, Settings.Quality.HIGH)?.url
 
     /** 无损：拿加密直链 + ekey。返回 null 表示这首歌没有 SQ 权限。 */
     fun lossless(song: Song): Pair<String, String>? {

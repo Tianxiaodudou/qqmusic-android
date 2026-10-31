@@ -199,10 +199,6 @@ fun PlayerScreen(onExit: () -> Unit) {
     val position = PlayerController.positionMs
     val duration = if (PlayerController.durationMs > 0) PlayerController.durationMs else (song?.interval ?: 0) * 1000L
     val effective = previewMs ?: position
-    val lyricTime = effective + offsetMs
-    val currentIndex = remember(lines, lyricTime) {
-        if (lines.isEmpty()) -1 else lines.indexOfLast { it.timeMs <= lyricTime }
-    }
 
     if (song == null) {
         Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
@@ -268,8 +264,8 @@ fun PlayerScreen(onExit: () -> Unit) {
             Box(Modifier.weight(1f)) {
                 LyricsPane(
                     lines = lines,
-                    currentIndex = currentIndex,
-                    lyricTimeMs = lyricTime,
+                    positionProvider = { previewMs ?: PlayerController.positionNow() },
+                    offsetMs = offsetMs,
                     style = style,
                     coverUrl = cover,
                     playing = PlayerController.playing,

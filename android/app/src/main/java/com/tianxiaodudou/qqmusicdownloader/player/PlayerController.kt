@@ -2,6 +2,7 @@ package com.tianxiaodudou.qqmusicdownloader.player
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -36,6 +37,8 @@ object PlayerController {
 
     private var exo: ExoPlayer? = null
     private var appContext: Context? = null
+    private var posAt = 0L
+    private var posRealtime = 0L
     private var scope: CoroutineScope? = null
     private var loadJob: Job? = null
 
@@ -106,6 +109,8 @@ object PlayerController {
                 val pl = exo
                 if (pl != null) {
                     positionMs = pl.currentPosition.coerceAtLeast(0L)
+                    posAt = positionMs
+                    posRealtime = SystemClock.elapsedRealtime()
                     val d = pl.duration
                     if (d > 0) durationMs = d
                 }
@@ -182,6 +187,21 @@ object PlayerController {
         val target = ms.coerceIn(0, durationMs.coerceAtLeast(1))
         p.seekTo(target)
         positionMs = target
+        posAt = target
+        posRealtime = SystemClock.elapsedRealtime()
+    }
+
+    /**
+     * 帧级的播放位置：在最近一次采样（80ms 一跳）上按真实流逝时间外推，
+     * 避免逐字歌词比声音慢半拍、一跳一跳地前进。
+     */
+    fun positionNow(): Long {
+        if (!playing) return positionMs
+        val elapsed = SystemClock.elapsedRealtime() - posRealtime
+        if (elapsed <= 0) return positionMs
+        val ahead = (elapsed * speed).toLong()
+        val pos = posAt + ahead
+        return if (durationMs > 0) pos.coerceIn(0L, durationMs) else pos
     }
 
     fun changeMode(m: Mode) {

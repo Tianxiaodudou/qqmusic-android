@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,8 +77,8 @@ private val LyricDim = Color(0xFF9AA3B2)
 @Composable
 fun LyricsPane(
     lines: List<LyricApi.Line>,
-    currentIndex: Int,
-    lyricTimeMs: Long,
+    positionProvider: () -> Long,
+    offsetMs: Int,
     style: Settings.LyricStyle,
     coverUrl: String,
     playing: Boolean,
@@ -90,6 +91,22 @@ fun LyricsPane(
     var follow by remember { mutableStateOf(true) }
     var manualTick by remember { mutableIntStateOf(0) }
     var tapFade by remember { mutableStateOf(false) }
+
+    // 逐字高亮是逐帧刷新的：按屏幕刷新率从播放器外推当前位置，
+    // 既不会 12fps 一跳一跳，也不会落后于音频。
+    val clock = remember { mutableLongStateOf(0L) }
+    LaunchedEffect(offsetMs) {
+        while (true) {
+            androidx.compose.runtime.withFrameNanos {
+                clock.longValue = positionProvider() + offsetMs
+            }
+        }
+    }
+    val currentIndex by remember(lines) {
+        androidx.compose.runtime.derivedStateOf {
+            if (lines.isEmpty()) -1 else lines.indexOfLast { it.timeMs <= clock.longValue }
+        }
+    }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -211,7 +228,7 @@ fun LyricsPane(
                         horizontalAlignment = if (style.center) Alignment.CenterHorizontally else Alignment.Start,
                     ) {
                         Text(
-                            text = if (isCurrent) karaoke(line, lyricTimeMs) else AnnotatedString(line.text),
+                            text = if (isCurrent) karaoke(line, clock.longValue) else AnnotatedString(line.text),
                             fontSize = fontSize.sp,
                             lineHeight = (fontSize * 1.35f).sp,
                             fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,

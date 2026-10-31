@@ -26,11 +26,13 @@ data class Session(val uin: String, val musickey: String, val nickname: String) 
                 .putString(K_NICK, s.nickname)
                 .apply()
             QqClient.session = s
+            QqClient.onSessionChanged()
         }
 
         fun clear(ctx: Context) {
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
             QqClient.session = null
+            QqClient.onSessionChanged()
         }
     }
 }

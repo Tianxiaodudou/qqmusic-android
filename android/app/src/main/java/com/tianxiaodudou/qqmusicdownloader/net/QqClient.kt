@@ -23,6 +23,19 @@ object QqClient {
 
     private var store: CookieStore? = null
 
+    /** Web 端 cookie 失效后置位：后续请求直接走 authst / 匿名，少一次白跑。 */
+    @Volatile
+    private var webAuthBroken = false
+
+    fun onSessionChanged() {
+        webAuthBroken = false
+    }
+
+    private val noCookies = object : okhttp3.CookieJar {
+        override fun saveFromResponse(url: okhttp3.HttpUrl, cookies: List<okhttp3.Cookie>) = Unit
+        override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> = emptyList()
+    }
+
     fun init(context: Context) {
         if (::http.isInitialized) return
         val jar = CookieStore(context.applicationContext)
@@ -52,32 +65,104 @@ object QqClient {
 
     fun userAgent(): String = UA
 
-    /** 组装 comm。字段与 web 平台一致，字段名不要改。 */
-    fun comm(extra: Map<String, String> = emptyMap()): JSONObject {
+    /** comm 的三种形态：Web（cookie + g_tk）、Android（authst 直接授权）、匿名（只读公开数据）。 */
+    enum class CommStyle { WEB, ANDROID, ANON }
+
+    /** 组装 comm。字段名不要改。 */
+    fun comm(extra: Map<String, String> = emptyMap(), style: CommStyle = CommStyle.WEB): JSONObject {
+        val s = if (style == CommStyle.ANON) null else session
+        val uin = s?.uin ?: "0"
+        val key = s?.musickey.orEmpty()
         val c = JSONObject()
-        c.put("ct", "24")
-        c.put("cv", "4747474")
-        c.put("platform", "yqq.json")
-        c.put("chid", "0")
-        c.put("uin", session?.uin ?: "0")
-        c.put("g_tk", gtk().toString())
-        c.put("g_tk_new_20200303", gtk().toString())
-        c.put("format", "json")
-        c.put("inCharset", "utf-8")
-        c.put("outCharset", "utf-8")
-        c.put("notice", "0")
-        c.put("need_new_code", "1")
+        when (style) {
+            CommStyle.ANDROID -> {
+                c.put("ct", "11")
+                c.put("cv", "20090008")
+                c.put("v", "20090008")
+                c.put("chid", "10003505")
+                c.put("uin", uin)
+                c.put("qq", uin)
+                c.put("authst", key)
+                c.put("tmeAppID", "qqmusic")
+                c.put("tmeLoginType", "1")
+                c.put("OpenUDID", guid)
+                c.put("udid", guid)
+                c.put("format", "json")
+                c.put("inCharset", "utf-8")
+                c.put("outCharset", "utf-8")
+                c.put("notice", "0")
+            }
+            else -> {
+                c.put("ct", "24")
+                c.put("cv", "4747474")
+                c.put("platform", "yqq.json")
+                c.put("chid", "0")
+                c.put("uin", uin)
+                c.put("qq", uin)
+                if (key.isNotEmpty()) {
+                    // Web 端靠 cookie 鉴权，但 cookie 丢了以后单靠 uin 会被判成未登录（10004）；
+                    // 顺带带上 authst，服务端认哪个都行。
+                    c.put("authst", key)
+                    c.put("tmeAppID", "qqmusic")
+                    c.put("tmeLoginType", "1")
+                }
+                c.put("g_tk", gtk().toString())
+                c.put("g_tk_new_20200303", gtk().toString())
+                c.put("format", "json")
+                c.put("inCharset", "utf-8")
+                c.put("outCharset", "utf-8")
+                c.put("notice", "0")
+                c.put("need_new_code", "1")
+            }
+        }
         for ((k, v) in extra) c.put(k, v)
         return c
     }
 
     /**
      * 调一次 musicu.fcg，返回 req_0.data。
-     * 上游 code 非 0 时抛 [QqError]，带上游 message 方便排查。
+     * 登录态异常（1000 / 10004）时自动降级重试：Web -> Android(authst) -> 匿名，
+     * 这样即使票据过期，首页公开内容也不会整块空白。
      */
-    fun cgi(module: String, method: String, param: JSONObject, extraComm: Map<String, String> = emptyMap()): JSONObject {
+    fun cgi(
+        module: String,
+        method: String,
+        param: JSONObject,
+        extraComm: Map<String, String> = emptyMap(),
+        retryAuth: Boolean = true,
+    ): JSONObject {
+        val styles = when {
+            !retryAuth || module.contains("Login") -> listOf(CommStyle.WEB)
+            webAuthBroken -> listOf(CommStyle.ANDROID, CommStyle.ANON)
+            else -> listOf(CommStyle.WEB, CommStyle.ANDROID, CommStyle.ANON)
+        }
+        var lastError: QqError? = null
+        for (style in styles) {
+            try {
+                return once(module, method, param, extraComm, style)
+            } catch (e: QqError) {
+                lastError = e
+                if (!isAuthError(e.message.orEmpty())) throw e
+                if (style == CommStyle.WEB) webAuthBroken = true
+                android.util.Log.w("QqClient", "auth degraded (" + style + ") " + module + "." + method + ": " + e.message)
+            }
+        }
+        throw lastError ?: QqError("接口异常")
+    }
+
+    private fun isAuthError(message: String): Boolean =
+        message.contains("10004") || message.contains("错误 1000") || message.contains("未登录") ||
+            message.contains("登录态")
+
+    private fun once(
+        module: String,
+        method: String,
+        param: JSONObject,
+        extraComm: Map<String, String>,
+        style: CommStyle,
+    ): JSONObject {
         val body = JSONObject()
-        body.put("comm", comm(extraComm))
+        body.put("comm", comm(extraComm, style))
         body.put("req_0", JSONObject().put("module", module).put("method", method).put("param", param))
         val request = Request.Builder()
             .url(MUSICU)
@@ -85,7 +170,9 @@ object QqClient {
             .header("User-Agent", UA)
             .header("Referer", "https://y.qq.com/")
             .build()
-        http.newCall(request).execute().use { resp ->
+        // Web 端靠 cookie；authst / 匿名必须丢掉 cookie，否则过期 cookie 会继续把请求带成 10004
+        val client = if (style == CommStyle.WEB) http else http.newBuilder().cookieJar(noCookies).build()
+        client.newCall(request).execute().use { resp ->
             val text = resp.body?.string() ?: throw QqError("接口无响应 (" + resp.code + ")")
             val root = JSONObject(text)
             val sub = root.optJSONObject("req_0")

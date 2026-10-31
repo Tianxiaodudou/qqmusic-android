@@ -4,7 +4,7 @@
 
 ## 安装
 
-从 [Releases](https://github.com/Tianxiaodudou/qqmusic-downloader-android/releases) 下载 `*-qqmusic-downloader.apk` 直接安装（Android 8.0+）。
+从 [Releases](https://github.com/Tianxiaodudou/qqmusic-android/releases) 下载 `*-qqmusic-downloader.apk` 直接安装（Android 8.0+）。
 
 固定签名，新版本可直接覆盖安装，不需要卸载。
 

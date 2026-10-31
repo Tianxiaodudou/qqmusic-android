@@ -12,6 +12,7 @@ sealed interface Route {
     data class Playlist(val id: String, val name: String) : Route
     data class FavLibrary(val albums: Boolean) : Route
     data object Social : Route
+    data object HomeModules : Route
 }
 
 /** 极简页面栈：详情页盖在播放器/主界面上，返回即出栈。 */
@@ -40,6 +41,7 @@ fun RouteHost(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi.
         is Route.Playlist -> PlaylistScreen(r.id, r.name, onPlay, onDownload)
         is Route.FavLibrary -> FavLibraryScreen(r.albums, onPlay, onDownload)
         is Route.Social -> SocialScreen()
+        is Route.HomeModules -> HomeModulesScreen()
         null -> Unit
     }
 }

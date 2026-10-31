@@ -25,6 +25,10 @@ object UserApi {
         val remainDays: Int,
         val musicLevel: Int,
         val isVip: Boolean,
+        /** 普通会员（绿钻）到期时间，毫秒；0 表示没有。 */
+        val normalVipEnd: Long = 0L,
+        /** 超级会员（豪华绿钻）到期时间，毫秒；0 表示没有。 */
+        val superVipEnd: Long = 0L,
     )
 
     fun fetch(context: android.content.Context): Profile? {
@@ -62,6 +66,8 @@ object UserApi {
         var remainDays = 0
         var musicLevel = 0
         var isVip = false
+        var normalVipEnd = 0L
+        var superVipEnd = 0L
 
         runCatching {
             val data = QqClient.cgi("VipLogin.VipLoginInter", "vip_login_base", JSONObject())
@@ -84,18 +90,39 @@ object UserApi {
             }
 
             val expire = ui?.optLong("expire", 0L) ?: 0L
-            var endMs = 0L
-            if (expire > 1_000_000_000L) endMs = expire * 1000L
-            else if (expire > 0L) endMs = System.currentTimeMillis() + expire * 1000L
+            if (expire > 1_000_000_000L) normalVipEnd = expire * 1000L
+            else if (expire > 0L) normalVipEnd = System.currentTimeMillis() + expire * 1000L
+            // 豪华绿钻（超级会员）到期时间，常见为 "2026-01-01" 或时间戳字符串
+            val hugeEnd = identity?.optString("HugeVipEnd").orEmpty()
+            if (hugeEnd.isNotEmpty()) {
+                superVipEnd = parseDateMs(hugeEnd)
+                if (superVipEnd > 0 && normalVipEnd == 0L) normalVipEnd = superVipEnd
+            }
+            val endMs = maxOf(normalVipEnd, superVipEnd)
             if (endMs > 0) {
                 remainDays = TimeUnit.MILLISECONDS.toDays(endMs - System.currentTimeMillis()).toInt().coerceAtLeast(0)
             }
         }
 
-        val result = Profile(nickname, avatar, vipLabel, vipLevel, remainDays, musicLevel, isVip)
+        val result = Profile(
+            nickname, avatar, vipLabel, vipLevel, remainDays, musicLevel, isVip,
+            normalVipEnd = normalVipEnd,
+            superVipEnd = superVipEnd,
+        )
         cache = result
         cachedAt = now
         return result
+    }
+
+    private fun parseDateMs(raw: String): Long {
+        val v = raw.trim()
+        val n = v.toLongOrNull()
+        if (n != null && n > 0) {
+            return if (n > 1_000_000_000L) n * 1000L else n
+        }
+        return runCatching {
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).parse(v)?.time ?: 0L
+        }.getOrDefault(0L)
     }
 
     fun avatarOf(uin: String, size: Int = 140): String =

@@ -112,7 +112,7 @@ object LoginApi {
             JSONObject().put("code", code),
             mapOf("tmeLoginType" to "2"),
         )
-        return toSession(data, nick)
+        return toSession(data, nick, loginType = 2)
     }
 
 
@@ -160,7 +160,7 @@ object LoginApi {
             JSONObject().put("code", code).put("strAppid", "wx48db31d50e334801"),
             mapOf("tmeLoginType" to "1"),
         )
-        return toSession(data, "微信用户")
+        return toSession(data, "微信用户", loginType = 1)
     }
 
     // ---------------- 手机验证码 ----------------
@@ -188,15 +188,71 @@ object LoginApi {
             p,
             mapOf("tmeLoginMethod" to "3", "tmeLoginType" to "0"),
         )
-        return toSession(data, "手机用户")
+        return toSession(data, "手机用户", loginType = 0)
     }
 
-    private fun toSession(data: JSONObject, fallbackNick: String): Session {
+    private fun toSession(data: JSONObject, fallbackNick: String, loginType: Int = 1): Session {
         val musicid = pick(data, "musicid", "musicId", "uin") ?: throw QqError("登录返回缺少 musicid")
         val musickey = pick(data, "musickey", "musicKey", "qm_keyst") ?: throw QqError("登录返回缺少 musickey")
-        val encrypt = pick(data, "encryptUin", "encrypt_uin", "encryptuin").orEmpty()
-        return Session(musicid, musickey, fallbackNick, encrypt)
+        return Session(
+            uin = musicid,
+            musickey = musickey,
+            nickname = fallbackNick,
+            encryptUin = pick(data, "encryptUin", "encrypt_uin", "encryptuin").orEmpty(),
+            refreshKey = pick(data, "refresh_key", "refreshKey").orEmpty(),
+            refreshToken = pick(data, "refresh_token", "refreshToken").orEmpty(),
+            accessToken = pick(data, "access_token", "accessToken").orEmpty(),
+            openid = pick(data, "openid", "openId", "open_id").orEmpty(),
+            unionid = pick(data, "unionid", "unionId").orEmpty(),
+            loginType = loginType,
+            expireAt = pick(data, "expired_in", "expiredIn", "expired_at")?.toLongOrNull() ?: 0L,
+        )
     }
+
+    /**
+     * 用登录时保存的 refresh_key / refresh_token 续期。
+     * 扫码链路字段不全时返回 null（调用方保持原会话，不强制登出）。
+     */
+    fun refresh(s: Session): Session? {
+        if (s.refreshKey.isEmpty() && s.refreshToken.isEmpty()) return null
+        val p = JSONObject()
+            .put("openid", s.openid)
+            .put("access_token", s.accessToken)
+            .put("refresh_token", s.refreshToken)
+            .put("expired_in", s.expireAt)
+            .put("musicid", s.uin)
+            .put("str_musicid", s.uin)
+            .put("musickey", s.musickey)
+            .put("refresh_key", s.refreshKey)
+            .put("unionid", s.unionid)
+            .put("loginMode", 2)
+        val data = QqClient.cgi(
+            "music.login.LoginServer",
+            "Login",
+            p,
+            mapOf("tmeLoginType" to s.loginType.toString()),
+            retryAuth = false,
+        )
+        val fresh = toSession(data, s.nickname, s.loginType)
+        return fresh.copy(
+            encryptUin = fresh.encryptUin.ifEmpty { s.encryptUin },
+            refreshKey = fresh.refreshKey.ifEmpty { s.refreshKey },
+            refreshToken = fresh.refreshToken.ifEmpty { s.refreshToken },
+            accessToken = fresh.accessToken.ifEmpty { s.accessToken },
+            openid = fresh.openid.ifEmpty { s.openid },
+            unionid = fresh.unionid.ifEmpty { s.unionid },
+        )
+    }
+
+    /** 启动/进「我的」时调用：登录态无效就自动续期，成功写回本地。 */
+    suspend fun ensureFresh(context: android.content.Context): Boolean =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val s = QqClient.session ?: return@withContext false
+            if (runCatching { Extras.checkLogin() }.getOrDefault(false)) return@withContext true
+            val fresh = runCatching { refresh(s) }.getOrNull() ?: return@withContext false
+            Session.save(context, fresh)
+            runCatching { Extras.checkLogin() }.getOrDefault(false)
+        }
 
     private fun pick(o: JSONObject, vararg keys: String): String? {
         for (k in keys) {

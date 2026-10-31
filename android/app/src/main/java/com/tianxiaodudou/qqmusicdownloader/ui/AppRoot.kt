@@ -76,6 +76,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.DirStore
 import com.tianxiaodudou.qqmusicdownloader.net.Downloader
 import com.tianxiaodudou.qqmusicdownloader.net.Extras
 import com.tianxiaodudou.qqmusicdownloader.net.History
+import com.tianxiaodudou.qqmusicdownloader.net.LoginApi
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Session
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
@@ -127,7 +128,10 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
 
     // 顺手把账号资料拉一次：既预热「我的」页，也能补上加密 uin（收藏歌单要用）
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) { runCatching { UserApi.fetch(context) } }
+        withContext(Dispatchers.IO) {
+            runCatching { LoginApi.ensureFresh(context) }
+            runCatching { UserApi.fetch(context) }
+        }
     }
 
     var dirLabel by remember { mutableStateOf(DirStore.get(context)?.lastPathSegment?.take(40) ?: "") }
@@ -306,8 +310,8 @@ private fun MinePage(
     var loginState by remember { mutableStateOf("检查中…") }
 
     LaunchedEffect(Unit) {
-        val ok = withContext(Dispatchers.IO) { runCatching { Extras.checkLogin() }.getOrDefault(true) }
-        loginState = if (ok) "正常" else "已过期，点此重新登录"
+        val ok = runCatching { LoginApi.ensureFresh(context) }.getOrDefault(false)
+        loginState = if (ok) "正常" else "登录态可能已过期"
     }
 
     fun checkUpdate() {
@@ -392,15 +396,30 @@ private fun MinePage(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text(
-            buildString {
-                append("QQ 音乐 uin ").append(session.uin)
-                if (isVip && (p?.remainDays ?: 0) > 0) append(" · 会员剩余 ").append(p?.remainDays).append(" 天")
-                else if (!isVip) append(" · 开通会员可听无损")
-            },
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        val dateFmt = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
+        val normalEnd = p?.normalVipEnd ?: 0L
+        val superEnd = p?.superVipEnd ?: 0L
+        if (normalEnd > 0) {
+            Text(
+                "普通会员 " + dateFmt.format(java.util.Date(normalEnd)) + " 到期",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (superEnd > 0) {
+            Text(
+                "超级会员 " + dateFmt.format(java.util.Date(superEnd)) + " 到期",
+                fontSize = 11.sp,
+                color = Color(0xFFFFD479),
+            )
+        }
+        if (normalEnd <= 0 && superEnd <= 0) {
+            Text(
+                if (isVip) "会员到期时间未知" else "未开通会员 · 开通可听无损",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         Spacer(Modifier.height(18.dp))
         MineRow("下载管理", "下载的歌曲与历史记录", onDownloads)
@@ -420,6 +439,7 @@ private fun MinePage(
         MineRow("登录状态", loginState) {
             if (loginState.startsWith("已过期")) onLogout()
         }
+        MineRow("首页模块", "各模块显示/隐藏与条数", { Nav.push(Route.HomeModules) })
         MineRow("付费内容", paidPolicy.label) { showPaid = true }
         MineRow(
             "检查更新",

@@ -39,6 +39,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.AlbumApi
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import com.tianxiaodudou.qqmusicdownloader.net.RecommendApi
+import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import com.tianxiaodudou.qqmusicdownloader.net.SingerApi
 import com.tianxiaodudou.qqmusicdownloader.net.TopApi
 import kotlinx.coroutines.Dispatchers
@@ -74,12 +75,20 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
     var songs by remember { mutableStateOf<List<MusicApi.Song>?>(null) }
     var error by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun on(key: String) = Settings.homeEnabled(context, key)
+    fun n(key: String) = Settings.homeCount(context, key)
+    val cfgVersion = HomeConfig.version
+
+    LaunchedEffect(cfgVersion) {
         withContext(Dispatchers.IO) {
-            runCatching { TopApi.charts() }.onSuccess { charts = it }.onFailure { charts = emptyList() }
-            runCatching { RecommendApi.songlists() }.onSuccess { songlists = it }.onFailure { songlists = emptyList() }
-            runCatching { RecommendApi.newSongs() }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() }
-            runCatching { RecommendApi.homeFeed() }.onSuccess { feed = it }.onFailure { feed = emptyList() }
+            if (on("charts")) runCatching { TopApi.charts().take(n("charts")) }.onSuccess { charts = it }.onFailure { charts = emptyList() } else charts = emptyList()
+            if (on("songlists")) runCatching { RecommendApi.songlists(num = n("songlists")) }.onSuccess { songlists = it }.onFailure { songlists = emptyList() } else songlists = emptyList()
+            if (on("newsongs")) runCatching { RecommendApi.newSongs().take(n("newsongs")) }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() } else newSongs = emptyList()
+            if (on("feed")) runCatching { RecommendApi.homeFeed(limit = n("feed")) }.onSuccess { feed = it }.onFailure { feed = emptyList() } else feed = emptyList()
+            if (on("albums")) runCatching { AlbumApi.newAlbums(num = n("albums")) }.onSuccess { albums = it }.onFailure { albums = emptyList() }
+            if (on("singers")) runCatching { SingerApi.list().take(n("singers")) }.onSuccess { singers = it }.onFailure { singers = emptyList() }
+            if (on("hot")) runCatching { MusicApi.hotKeys().take(n("hot")) }.onSuccess { hot = it }.onFailure { hot = emptyList() }
         }
         if (charts.isNullOrEmpty() && songlists.isNullOrEmpty() && newSongs.isNullOrEmpty()) {
             error = "推荐加载失败，请检查登录状态"
@@ -90,7 +99,7 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         if (v is HomeView.Feed) return@LaunchedEffect
         if (v is HomeView.Hot && v.kw.isEmpty()) {
             hot = null
-            val r = withContext(Dispatchers.IO) { runCatching { MusicApi.hotKeys() } }
+            val r = withContext(Dispatchers.IO) { runCatching { MusicApi.hotKeys().take(n("hot")) } }
             r.onSuccess { hot = it }.onFailure { hot = emptyList() }
             return@LaunchedEffect
         }
@@ -100,13 +109,13 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         }
         if (v is HomeView.Singers) {
             singers = null
-            val r = withContext(Dispatchers.IO) { runCatching { SingerApi.list() } }
+            val r = withContext(Dispatchers.IO) { runCatching { SingerApi.list().take(n("singers")) } }
             r.onSuccess { singers = it }.onFailure { singers = emptyList() }
             return@LaunchedEffect
         }
         if (v is HomeView.Albums) {
             albums = null
-            val r = withContext(Dispatchers.IO) { runCatching { AlbumApi.newAlbums() } }
+            val r = withContext(Dispatchers.IO) { runCatching { AlbumApi.newAlbums(num = n("albums")) } }
             r.onSuccess { albums = it }.onFailure { albums = emptyList() }
             return@LaunchedEffect
         }
@@ -115,15 +124,16 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         val r = withContext(Dispatchers.IO) {
             runCatching {
                 when (v) {
-                    is HomeView.Guess -> RecommendApi.guess()
-                    is HomeView.Radar -> RecommendApi.radar()
-                    is HomeView.Chart -> TopApi.songs(v.chart)
+                    is HomeView.Guess -> RecommendApi.guess(num = n("guess"))
+                    is HomeView.Radar -> RecommendApi.radar().take(n("radar"))
+                    is HomeView.Chart -> TopApi.songs(v.chart, num = n("charts"))
                     is HomeView.Songlist -> PlaylistApi.songs(
-                        PlaylistApi.Item(v.item.id, v.item.dirId, v.item.name, v.item.songNum)
+                        PlaylistApi.Item(v.item.id, v.item.dirId, v.item.name, v.item.songNum),
+                        num = n("songlists"),
                     )
-                    is HomeView.AlbumSongs -> AlbumApi.songs(v.album.mid)
-                    is HomeView.Hot -> MusicApi.search(v.kw)
-                    is HomeView.SingerSongs -> SingerApi.songs(v.singer.mid)
+                    is HomeView.AlbumSongs -> AlbumApi.songs(v.album.mid, num = n("albums"))
+                    is HomeView.Hot -> MusicApi.search(v.kw).take(n("hot"))
+                    is HomeView.SingerSongs -> SingerApi.songs(v.singer.mid, num = n("singers"))
                     is HomeView.Card -> {
                         if (v.card.kind == "song") {
                             val sid = v.card.id.toLongOrNull()
@@ -139,16 +149,16 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         r.onSuccess { songs = it }.onFailure { error = it.message ?: "歌曲加载失败"; songs = emptyList() }
     }
 
-    val entries = listOf(
-        "推荐歌单" to HomeView.Songlists,
-        "新歌速递" to HomeView.NewSongs,
-        "每日推荐" to HomeView.Radar,
-        "新碟上架" to HomeView.Albums,
-        "热门歌手" to HomeView.Singers,
-        "热搜榜" to HomeView.Hot(),
-        "排行榜" to HomeView.Charts,
-        "猜你喜欢" to HomeView.Guess,
-    )
+    val entries = buildList {
+        if (on("songlists")) add("推荐歌单" to HomeView.Songlists)
+        if (on("newsongs")) add("新歌速递" to HomeView.NewSongs)
+        if (on("radar")) add("每日推荐" to HomeView.Radar)
+        if (on("albums")) add("新碟上架" to HomeView.Albums)
+        if (on("singers")) add("热门歌手" to HomeView.Singers)
+        if (on("hot")) add("热搜榜" to HomeView.Hot())
+        if (on("charts")) add("排行榜" to HomeView.Charts)
+        if (on("guess")) add("猜你喜欢" to HomeView.Guess)
+    }
     val v = view
     if (v is HomeView.Feed) {
         LazyColumn(Modifier.fillMaxSize()) {

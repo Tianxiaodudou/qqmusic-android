@@ -53,6 +53,37 @@ object Settings {
     private const val K_EQ = "eq_preset"
     private const val K_PAID = "paid_policy"
 
+    /** 首页模块：key、标题、默认条数。 */
+    data class HomeModule(val key: String, val title: String, val defaultCount: Int)
+
+    val HOME_MODULES = listOf(
+        HomeModule("feed", "为你推荐", 6),
+        HomeModule("songlists", "推荐歌单", 12),
+        HomeModule("newsongs", "新歌速递", 20),
+        HomeModule("radar", "每日推荐", 20),
+        HomeModule("albums", "新碟上架", 20),
+        HomeModule("singers", "热门歌手", 20),
+        HomeModule("hot", "热搜榜", 10),
+        HomeModule("charts", "排行榜", 20),
+        HomeModule("guess", "猜你喜欢", 20),
+    )
+
+    fun homeEnabled(context: Context, key: String): Boolean =
+        prefs(context).getBoolean("home_" + key + "_on", true)
+
+    fun setHomeEnabled(context: Context, key: String, on: Boolean) {
+        prefs(context).edit().putBoolean("home_" + key + "_on", on).apply()
+    }
+
+    fun homeCount(context: Context, key: String): Int {
+        val def = HOME_MODULES.firstOrNull { it.key == key }?.defaultCount ?: 10
+        return prefs(context).getInt("home_" + key + "_n", def).coerceIn(1, 100)
+    }
+
+    fun setHomeCount(context: Context, key: String, n: Int) {
+        prefs(context).edit().putInt("home_" + key + "_n", n.coerceIn(1, 100)).apply()
+    }
+
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 

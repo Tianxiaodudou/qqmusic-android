@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.tianxiaodudou.qqmusicdownloader.net.Extras
 import com.tianxiaodudou.qqmusicdownloader.net.Lossless
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
+import com.tianxiaodudou.qqmusicdownloader.net.ResumeStore
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,7 @@ object PlayerController {
 
     private var retriedQuality = false
     private var forcedQuality: Settings.Quality? = null
+    private var loadedSong: MusicApi.Song? = null
 
     val current: MusicApi.Song? get() = queue.getOrNull(index)
 
@@ -123,6 +125,7 @@ object PlayerController {
         AudioFx.attach(ctx, p.audioSessionId, Settings.eqPreset(ctx))
 
         scope?.launch {
+            var lastSavedSec = -1L
             while (isActive) {
                 val pl = exo
                 if (pl != null) {
@@ -131,6 +134,14 @@ object PlayerController {
                     posRealtime = SystemClock.elapsedRealtime()
                     val d = pl.duration
                     if (d > 0) durationMs = d
+                    val song = current
+                    if (pl.isPlaying && song != null) {
+                        val sec = positionMs / 5000
+                        if (sec != lastSavedSec) {
+                            lastSavedSec = sec
+                            appContext?.let { ResumeStore.save(it, song.mid, positionMs, durationMs) }
+                        }
+                    }
                 }
                 val end = sleepEndAt
                 if (end > 0 && System.currentTimeMillis() >= end) {
@@ -178,6 +189,8 @@ object PlayerController {
     }
 
     fun pause() {
+        val song = current
+        if (song != null) appContext?.let { ResumeStore.save(it, song.mid, positionMs, durationMs) }
         exo?.pause()
     }
 
@@ -325,11 +338,20 @@ object PlayerController {
         val pl = exo ?: return
         val ctx = appContext ?: return
         loadJob?.cancel()
+        // 切歌前把上一首的进度存下来（index 已经指向新歌，不能再用 current）
+        loadedSong?.let { prev ->
+            if (prev.mid != song.mid) {
+                val prevPos = exo?.currentPosition ?: positionMs
+                ResumeStore.save(ctx, prev.mid, prevPos, durationMs)
+            }
+        }
+        loadedSong = song
         loading = true
         error = null
         sourceLabel = ""
         sourcePath = ""
         durationMs = song.interval * 1000L
+        val resumeAt = if (startAt <= 0) ResumeStore.get(ctx, song.mid) else 0L
         loadJob = scope?.launch {
             val src = withContext(Dispatchers.IO) {
                 runCatching { resolve(ctx, song, alt) }.getOrNull()
@@ -342,7 +364,12 @@ object PlayerController {
             sourceLabel = src.label
             sourcePath = src.path
             pl.setMediaItem(MediaItem.fromUri(src.uri))
-            if (startAt > 0) pl.seekTo(startAt)
+            val startPos = when {
+                startAt > 0 -> startAt
+                resumeAt > 0 -> resumeAt
+                else -> 0L
+            }
+            if (startPos > 0) pl.seekTo(startPos)
             pl.prepare()
             if (autoPlay) pl.play()
             loading = false
@@ -393,6 +420,7 @@ object PlayerController {
     }.getOrDefault(url)
 
     private fun onEnded() {
+        current?.let { appContext?.let { ctx -> ResumeStore.clear(ctx, it.mid) } }
         if (sleepAfterCurrent) {
             sleepAfterCurrent = false
             exo?.pause()

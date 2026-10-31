@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -14,6 +15,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FiberNew
+import androidx.compose.material.icons.rounded.Leaderboard
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +56,18 @@ import com.tianxiaodudou.qqmusicdownloader.net.SingerApi
 import com.tianxiaodudou.qqmusicdownloader.net.TopApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private fun entryIcons(): Map<String, androidx.compose.ui.graphics.vector.ImageVector> = mapOf(
+    "推荐歌单" to Icons.Rounded.QueueMusic,
+    "新歌速递" to Icons.Rounded.FiberNew,
+    "每日推荐" to Icons.Rounded.AutoAwesome,
+    "新碟上架" to Icons.Rounded.Album,
+    "热门歌手" to Icons.Rounded.Person,
+    "热搜榜" to Icons.Rounded.LocalFireDepartment,
+    "排行榜" to Icons.Rounded.Leaderboard,
+    "猜你喜欢" to Icons.Rounded.Favorite,
+    "为你推荐" to Icons.Rounded.Explore,
+)
 
 private sealed interface HomeView {
     data object Feed : HomeView
@@ -163,24 +187,24 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
     if (v is HomeView.Feed) {
         LazyColumn(Modifier.fillMaxSize()) {
             item {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    entries.chunked(3).forEach { row ->
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            row.forEach { e ->
-                                OutlinedButton(
-                                    onClick = { view = e.second },
-                                    shape = RoundedCornerShape(50),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Text(
-                                        e.first, fontSize = 13.sp, maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
+                Column(Modifier.fillMaxWidth()) {
+                    BlockTitle("发现")
+                    val icons = entryIcons()
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        entries.chunked(4).forEach { row ->
+                            Row(
+                                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                row.forEach { e ->
+                                    EntryTile(
+                                        icon = icons[e.first] ?: Icons.Rounded.MusicNote,
+                                        label = e.first,
+                                        onClick = { view = e.second },
+                                        modifier = Modifier.weight(1f),
                                     )
                                 }
+                                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }

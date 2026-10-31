@@ -367,6 +367,10 @@ private fun MinePage(
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(18.dp)).background(CardBg).padding(16.dp),
+        ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = avatar,
@@ -428,43 +432,64 @@ private fun MinePage(
             )
         }
 
-        Spacer(Modifier.height(18.dp))
-        MineRow("下载管理", "下载的歌曲与历史记录", onDownloads)
-        MineRow("下载目录", dirLabel.ifEmpty { "未选择" }, onPickDir)
-        MineRow("清除所有歌词偏移", offsetCount.toString() + " 首已调整") {
-            Settings.clearOffsets(context)
-            offsetCount = 0
-            toast = "已清除"
         }
-        MineRow("清理缓存", "无损解密缓存与临时文件") {
-            val freed = Settings.clearCache(context)
-            toast = "已清理 " + (freed / 1024 / 1024) + " MB"
+
+        Spacer(Modifier.height(6.dp))
+        SectionCard("内容与发现") {
+            MineRow("收藏的专辑", "收藏的数字专辑") { Nav.push(Route.FavLibrary(true)) }
+            MineRow("关注与粉丝", "关注的歌手 / 用户、粉丝、好友") { Nav.push(Route.Social) }
+            MineRow("首页模块", "各模块显示 / 隐藏与条数", divider = false) { Nav.push(Route.HomeModules) }
         }
-        MineRow("收藏的专辑", "收藏的数字专辑", { Nav.push(Route.FavLibrary(true)) })
-        MineRow("关注与粉丝", "关注的歌手/用户、粉丝、好友", { Nav.push(Route.Social) })
-        MineRow("登录状态", loginState) {
-            if (loginState.contains("过期")) onLogout()
+        SectionCard("播放与下载") {
+            MineRow("付费内容", paidPolicy.label) { showPaid = true }
+            MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }
+            MineRow("下载目录", dirLabel.ifEmpty { "未选择" }) { onPickDir() }
+            MineRow("清除所有歌词偏移", offsetCount.toString() + " 首已调整") {
+                Settings.clearOffsets(context)
+                offsetCount = 0
+                toast = "已清除"
+            }
+            MineRow("清理缓存", "无损解密缓存与临时文件", divider = false) {
+                val freed = Settings.clearCache(context)
+                toast = "已清理 " + (freed / 1024 / 1024) + " MB"
+            }
         }
-        MineRow("首页模块", "各模块显示/隐藏与条数", { Nav.push(Route.HomeModules) })
-        MineRow("付费内容", paidPolicy.label) { showPaid = true }
-        MineRow(
-            "检查更新",
-            if (checking) "检查中…" else "当前 v" + BuildConfig.VERSION_NAME,
-        ) { checkUpdate() }
-        MineRow("关于", "版本、开源许可与反馈") { showAbout = true }
+        SectionCard("账号与关于") {
+            MineRow("登录状态", loginState) {
+                if (loginState.contains("过期")) onLogout()
+            }
+            MineRow(
+                "检查更新",
+                if (checking) "检查中…" else "当前 v" + BuildConfig.VERSION_NAME,
+            ) { checkUpdate() }
+            MineRow("关于", "版本、开源许可与反馈", divider = false) { showAbout = true }
+        }
 
         if (toast.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text(toast, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                toast,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
 
-        Spacer(Modifier.height(22.dp))
-        Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(18.dp))
+        Text(
+            "QQ音乐播放器 " + BuildConfig.VERSION_NAME,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
         Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = {
-            scope.launch { withContext(Dispatchers.IO) { runCatching { Extras.logout() } } }
-            onLogout()
-        }) { Text("退出登录") }
+        OutlinedButton(
+            onClick = {
+                scope.launch { withContext(Dispatchers.IO) { runCatching { Extras.logout() } } }
+                onLogout()
+            },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        ) { Text("退出登录") }
     }
 
     if (showPaid) {
@@ -587,15 +612,19 @@ private fun MinePage(
 }
 
 @Composable
-private fun MineRow(title: String, subtitle: String, onClick: () -> Unit) {
+private fun MineRow(title: String, subtitle: String, divider: Boolean = true, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (subtitle.isNotEmpty()) {
+                Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
+        Text("›", fontSize = 16.sp, color = Color(0xFF4A5262))
     }
-    HorizontalDivider(color = Color(0xFF222833), thickness = 0.6.dp)
+    if (divider) HorizontalDivider(color = Color(0xFF222833), thickness = 0.6.dp)
 }

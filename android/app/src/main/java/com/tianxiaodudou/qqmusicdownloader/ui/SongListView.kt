@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -43,7 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,8 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
-import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
+import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -204,6 +207,27 @@ fun SongListView(
                         if (selecting) {
                             Checkbox(checked = checked, enabled = !locked, onCheckedChange = { toggle(song) })
                         }
+                        val playingThis = PlayerController.current?.mid == song.mid
+                        Box(
+                            Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF232A35)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val cover = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 200)
+                            if (cover.isNotEmpty()) {
+                                AsyncImage(
+                                    model = cover,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                            if (playingThis) {
+                                Box(Modifier.fillMaxSize().background(Color(0x99000000)), contentAlignment = Alignment.Center) {
+                                    Text("♪", fontSize = 14.sp, color = Color(0xFF6FE7A5))
+                                }
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 song.name,

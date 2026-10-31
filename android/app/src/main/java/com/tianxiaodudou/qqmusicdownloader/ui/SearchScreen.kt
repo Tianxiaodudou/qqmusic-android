@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -150,17 +151,25 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
             }
         }
 
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             SEARCH_TYPES.forEachIndexed { i, pair ->
-                TextButton(onClick = {
-                    type = i
-                    if (keyword.isNotBlank()) doSearch(keyword, i)
-                }) {
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(if (type == i) Color(0xFF1B2A22) else MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable {
+                            type = i
+                            if (keyword.isNotBlank()) doSearch(keyword, i)
+                        }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                ) {
                     Text(
                         pair.first,
-                        fontSize = 13.sp,
-                        fontWeight = if (type == i) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (type == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        color = if (type == i) Color(0xFF6FE7A5) else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

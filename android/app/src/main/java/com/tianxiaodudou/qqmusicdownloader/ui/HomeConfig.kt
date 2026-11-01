@@ -46,7 +46,15 @@ object HomeCache {
     var hot: List<String>? = null
     var charts: List<TopApi.Chart>? = null
 
+    /** 各模块已加载的歌曲页（key = 模块标识），进出模块页都复用，不再重新请求。 */
+    val songPages: MutableMap<String, List<MusicApi.Song>> = mutableMapOf()
+    val pageNos: MutableMap<String, Int> = mutableMapOf()
+    val exhausted: MutableSet<String> = mutableSetOf()
+
     fun clear() {
+        songPages.clear()
+        pageNos.clear()
+        exhausted.clear()
         feed = null
         songlists = null
         newSongs = null

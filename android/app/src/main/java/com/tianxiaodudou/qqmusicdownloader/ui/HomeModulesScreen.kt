@@ -32,8 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
 
-private val COUNT_OPTIONS = listOf(5, 10, 20, 30, 50)
-
 @Composable
 fun HomeModulesScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -42,7 +40,8 @@ fun HomeModulesScreen() {
         LazyColumn(Modifier.fillMaxSize()) {
             item {
                 Text(
-                    "关掉的模块不会出现在首页入口墙，也不会发请求；条数就是点进模块后列表的条数（服务端单页有上限时客户端会翻页凑够）。",
+                    "关掉的模块不会出现在首页入口墙，也不会发请求。每个模块固定每页 " +
+                        Settings.PAGE_SIZE + " 条，往下滑会继续加载。",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -50,52 +49,22 @@ fun HomeModulesScreen() {
             }
             items(Settings.HOME_MODULES) { m ->
                 val enabled = Settings.homeEnabled(context, m.key)
-                var count by remember(version, m.key) { mutableIntStateOf(Settings.homeCount(context, m.key)) }
-                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(m.title, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                        Switch(
-                            checked = enabled,
-                            onCheckedChange = {
-                                Settings.setHomeEnabled(context, m.key, it)
-                                HomeConfig.bump()
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color(0xFF06230F),
-                                checkedTrackColor = Color(0xFF1FC365),
-                            ),
-                        )
-                    }
-                    if (enabled) {
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "当前 " + count + " 条",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 4.dp),
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            COUNT_OPTIONS.forEach { opt ->
-                                Box(
-                                    Modifier
-                                        .clip(RoundedCornerShape(50))
-                                        .background(if (count == opt) Color(0xFF1B2A22) else MaterialTheme.colorScheme.surfaceVariant)
-                                        .clickable {
-                                            count = opt
-                                            Settings.setHomeCount(context, m.key, opt)
-                                            HomeConfig.bump()
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 5.dp),
-                                ) {
-                                    Text(
-                                        opt.toString() + " 条",
-                                        fontSize = 11.sp,
-                                        color = if (count == opt) Color(0xFF6FE7A5) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(m.title, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = {
+                            Settings.setHomeEnabled(context, m.key, it)
+                            HomeConfig.bump()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color(0xFF06230F),
+                            checkedTrackColor = Color(0xFF1FC365),
+                        ),
+                    )
                 }
             }
         }

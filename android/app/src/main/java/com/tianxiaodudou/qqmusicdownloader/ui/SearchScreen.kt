@@ -42,6 +42,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.AlbumApi
 import com.tianxiaodudou.qqmusicdownloader.net.Extras
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
+import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import com.tianxiaodudou.qqmusicdownloader.net.SingerApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -60,6 +61,10 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
     var suggestions by remember { mutableStateOf<List<String>>(emptyList()) }
     var hot by remember { mutableStateOf<List<String>>(emptyList()) }
     var searched by remember { mutableStateOf(false) }
+    // 无限流：每次 15 条，滑到底继续取
+    var page by remember { mutableIntStateOf(1) }
+    var moreLoading by remember { mutableStateOf(false) }
+    var exhausted by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     // 搜索页返回：先回热搜/历史，再交给上层（标签页 -> 首页 -> 退出）
@@ -88,9 +93,13 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
         type = t
         loading = true
         error = ""
+        page = 1
+        exhausted = false
         suggestions = emptyList()
         scope.launch {
-            val r = withContext(Dispatchers.IO) { runCatching { Extras.searchByType(q, SEARCH_TYPES[t].second) } }
+            val r = withContext(Dispatchers.IO) {
+                runCatching { Extras.searchByType(q, SEARCH_TYPES[t].second, page = 1, num = Settings.PAGE_SIZE) }
+            }
             loading = false
             searched = true
             r.onSuccess {
@@ -103,6 +112,36 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                 }
                 if (empty) error = "没有搜到结果"
             }.onFailure { error = it.message ?: "搜索失败" }
+        }
+    }
+
+    fun loadMore() {
+        if (loading || moreLoading || exhausted || keyword.isBlank()) return
+        moreLoading = true
+        val t = type
+        val next = page + 1
+        scope.launch {
+            val r = withContext(Dispatchers.IO) {
+                runCatching { Extras.searchByType(keyword, SEARCH_TYPES[t].second, page = next, num = Settings.PAGE_SIZE) }
+            }
+            moreLoading = false
+            r.onSuccess { more ->
+                val cur = result
+                val merged = Extras.SearchResult(
+                    songs = (cur.songs + more.songs).distinctBy { it.mid },
+                    playlists = (cur.playlists + more.playlists).distinctBy { it.id },
+                    singers = (cur.singers + more.singers).distinctBy { it.mid },
+                    albums = (cur.albums + more.albums).distinctBy { it.mid },
+                )
+                if (merged.songs.size == cur.songs.size && merged.singers.size == cur.singers.size &&
+                    merged.albums.size == cur.albums.size && merged.playlists.size == cur.playlists.size
+                ) {
+                    exhausted = true
+                } else {
+                    result = merged
+                    page = next
+                }
+            }
         }
     }
 
@@ -205,37 +244,60 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                 fixId = "search:" + keyword,
                 onPlay = onPlay,
                 onDownload = onDownload,
+                onLoadMore = { loadMore() },
+                loadingMore = moreLoading,
             )
-            1 -> LazyColumn(Modifier.fillMaxSize()) {
-                items(result.singers) { s ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { Nav.push(Route.Singer(s.mid, s.name)) }
-                            .padding(horizontal = 4.dp, vertical = 12.dp),
-                    ) { Text(s.name, fontSize = 15.sp) }
+            1 -> {
+                val st = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(st, result.singers.size) {
+                    androidx.compose.runtime.snapshotFlow { st.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+                        .collect { last -> if (last >= result.singers.size - 3) loadMore() }
+                }
+                LazyColumn(state = st, modifier = Modifier.fillMaxSize()) {
+                    items(result.singers) { s ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { Nav.push(Route.Singer(s.mid, s.name)) }
+                                .padding(horizontal = 4.dp, vertical = 12.dp),
+                        ) { Text(s.name, fontSize = 15.sp) }
+                    }
                 }
             }
-            2 -> LazyColumn(Modifier.fillMaxSize()) {
-                items(result.albums) { a ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
-                            .padding(horizontal = 4.dp, vertical = 12.dp),
-                    ) {
-                        Column {
-                            Text(a.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(a.singer, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            2 -> {
+                val st = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(st, result.albums.size) {
+                    androidx.compose.runtime.snapshotFlow { st.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+                        .collect { last -> if (last >= result.albums.size - 3) loadMore() }
+                }
+                LazyColumn(state = st, modifier = Modifier.fillMaxSize()) {
+                    items(result.albums) { a ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
+                                .padding(horizontal = 4.dp, vertical = 12.dp),
+                        ) {
+                            Column {
+                                Text(a.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(a.singer, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                 }
             }
-            else -> LazyColumn(Modifier.fillMaxSize()) {
-                items(result.playlists) { p ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { Nav.push(Route.Playlist(p.id, p.name)) }
-                            .padding(horizontal = 4.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(p.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(p.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else -> {
+                val st = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(st, result.playlists.size) {
+                    androidx.compose.runtime.snapshotFlow { st.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+                        .collect { last -> if (last >= result.playlists.size - 3) loadMore() }
+                }
+                LazyColumn(state = st, modifier = Modifier.fillMaxSize()) {
+                    items(result.playlists) { p ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { Nav.push(Route.Playlist(p.id, p.name)) }
+                                .padding(horizontal = 4.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(p.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text(p.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }

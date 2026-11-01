@@ -37,12 +37,12 @@ object SingerApi {
         return out
     }
 
-    fun songs(mid: String, num: Int = 50): List<MusicApi.Song> {
+    fun songs(mid: String, num: Int = 50, page: Int = 1): List<MusicApi.Song> {
         val p = JSONObject()
         p.put("singerMid", mid)
         p.put("order", 1)
         p.put("number", num)
-        p.put("begin", 0)
+        p.put("begin", num * (page - 1))
         // 登录态异常时退回匿名（歌手曲目是公开数据）
         val data = runCatching { QqClient.cgi("musichall.song_list_server", "GetSingerSongList", p) }
             .getOrElse {

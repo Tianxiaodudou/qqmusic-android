@@ -49,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -109,6 +110,9 @@ fun SongListView(
     onDownload: (MusicApi.Song) -> Unit,
     /** 传了就在多选工具条里多一个「移出歌单」（只有自己的歌单需要）。 */
     onRemove: ((List<MusicApi.Song>) -> Unit)? = null,
+    /** 滑到底部继续加载（无限流）。 */
+    onLoadMore: (() -> Unit)? = null,
+    loadingMore: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -223,7 +227,17 @@ fun SongListView(
                 )
             }
         } else {
-            LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            androidx.compose.runtime.LaunchedEffect(listState, shown.size, onLoadMore) {
+                if (onLoadMore == null) return@LaunchedEffect
+                snapshotFlow {
+                    val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    last to listState.layoutInfo.totalItemsCount
+                }.collect { (last, total) ->
+                    if (total > 0 && last >= total - 3 && !loadingMore) onLoadMore()
+                }
+            }
+            LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f)) {
                 itemsIndexed(shown) { i, song ->
                     val checked = selected.contains(song.mid)
                     val locked = song.paid
@@ -357,6 +371,20 @@ fun SongListView(
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+                if (onLoadMore != null) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
+                            if (loadingMore) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text("上滑继续加载", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }

@@ -63,23 +63,29 @@ object AlbumApi {
      * 专辑曲目。有的专辑（新碟上架里的）只认 albumId，只传 albumMid 会回 104403，
      * 所以按 mid -> albumId 依次试，拿到第一份非空结果就返回。
      */
-    fun songs(mid: String, num: Int = 50): List<MusicApi.Song> {
+    fun songs(mid: String, num: Int = 50, page: Int = 1): List<MusicApi.Song> {
         val attempts = ArrayList<Triple<String, Any, QqClient.CommStyle?>>()
         attempts.add(Triple("albumMid", mid, null))
         albumIdOf(mid)?.let { attempts.add(Triple("albumId", it, null)) }
         // 公开专辑数据匿名也能读：登录态异常时最后兜一层，避免整页空白
         attempts.add(Triple("albumMid", mid, QqClient.CommStyle.ANON))
         for ((k, v, style) in attempts) {
-            val r = runCatching { songList(k, v, num, style) }.getOrDefault(emptyList())
+            val r = runCatching { songList(k, v, num, style, page) }.getOrDefault(emptyList())
             if (r.isNotEmpty()) return r
         }
         return emptyList()
     }
 
-    private fun songList(key: String, value: Any, num: Int, style: QqClient.CommStyle? = null): List<MusicApi.Song> {
+    private fun songList(
+        key: String,
+        value: Any,
+        num: Int,
+        style: QqClient.CommStyle? = null,
+        page: Int = 1,
+    ): List<MusicApi.Song> {
         val p = JSONObject()
         if (value is Int) p.put(key, value) else p.put(key, value.toString())
-        p.put("begin", 0)
+        p.put("begin", num * (page - 1))
         p.put("num", num)
         val data = QqClient.cgi("music.musichallAlbum.AlbumSongList", "GetAlbumSongList", p, style = style)
         val arr = data.optJSONArray("songList") ?: data.optJSONArray("song_list")

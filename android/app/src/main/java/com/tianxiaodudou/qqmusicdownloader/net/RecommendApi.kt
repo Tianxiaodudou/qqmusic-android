@@ -34,6 +34,21 @@ object RecommendApi {
         return out.distinctBy { it.id }.take(n.coerceAtLeast(1))
     }
 
+    /** 按页取猜你喜欢（服务端单次 5 首，这里按页拼够 size 条）。 */
+    fun guessPage(page: Int, size: Int = 15): List<MusicApi.Song> {
+        val out = ArrayList<MusicApi.Song>()
+        var from = (page - 1) * size
+        while (out.size < size && from <= 300) {
+            val batch = runCatching { guessFrom(from, 5) }.getOrDefault(emptyList())
+            if (batch.isEmpty()) break
+            val before = out.size
+            out.addAll(batch)
+            if (out.size == before) break
+            from += batch.size
+        }
+        return out.distinctBy { it.id }
+    }
+
     private fun guessFrom(from: Int, num: Int): List<MusicApi.Song> {
         val p = JSONObject()
         p.put("id", 99)
@@ -132,6 +147,8 @@ object RecommendApi {
             val sh = shelves.optJSONObject(i) ?: continue
             var title = sh.optString("title_content").ifEmpty { sh.optString("title_template") }
             if (title.isEmpty() || title.startsWith("{")) title = "为你推荐"
+            // 「从你的红心歌曲开始搜索」这类搜索引导书架不在首页/为你推荐里展示
+            if (title.contains("搜索") || title.contains("红心")) continue
             val cards = ArrayList<FeedCard>()
             val niches = sh.optJSONArray("v_niche")
             if (niches != null) {

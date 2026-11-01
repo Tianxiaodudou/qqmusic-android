@@ -321,12 +321,12 @@ object Extras {
     )
 
     /** type: 0 单曲 / 1 歌手 / 2 专辑 / 3 歌单。 */
-    fun searchByType(keyword: String, type: Int, page: Int = 1): SearchResult = runCatching {
+    fun searchByType(keyword: String, type: Int, page: Int = 1, num: Int = 15): SearchResult = runCatching {
         val p = JSONObject()
             .put("searchid", java.util.UUID.randomUUID().toString().replace("-", ""))
             .put("query", keyword)
             .put("search_type", type)
-            .put("num_per_page", 30)
+            .put("num_per_page", num)
             .put("page_num", page)
             .put("highlight", true)
             .put("grp", true)

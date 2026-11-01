@@ -59,6 +59,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import com.tianxiaodudou.qqmusicdownloader.net.SingerApi
 import com.tianxiaodudou.qqmusicdownloader.net.TopApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private fun entryIcons(): Map<String, androidx.compose.ui.graphics.vector.ImageVector> = mapOf(
@@ -75,6 +76,7 @@ private fun entryIcons(): Map<String, androidx.compose.ui.graphics.vector.ImageV
 
 private sealed interface HomeView {
     data object Feed : HomeView
+    data object Recommend : HomeView
     data object Guess : HomeView
     data object Radar : HomeView
     data class Chart(val chart: TopApi.Chart) : HomeView
@@ -114,40 +116,139 @@ fun HomeScreen(
 
     val context = androidx.compose.ui.platform.LocalContext.current
     fun on(key: String) = Settings.homeEnabled(context, key)
-    fun n(key: String) = Settings.homeCount(context, key)
-    // 统一在客户端兜一层条数上限：服务端对 num/Size 不总是买账，不裁剪就等于设置无效。
-    fun <T> List<T>.cap(key: String): List<T> = take(n(key).coerceAtLeast(1))
+    val PAGE = Settings.PAGE_SIZE
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var moreLoading by remember { mutableStateOf(false) }
     val cfgVersion = HomeConfig.version
+
+    fun keyOf(v: HomeView): String = when (v) {
+        is HomeView.Guess -> "guess"
+        is HomeView.Radar -> "radar"
+        is HomeView.Chart -> "chart:" + v.chart.id
+        is HomeView.Songlist -> "songlist:" + v.item.id
+        is HomeView.AlbumSongs -> "album:" + v.album.mid
+        is HomeView.Hot -> "hot:" + v.kw
+        is HomeView.SingerSongs -> "singer:" + v.singer.mid
+        is HomeView.Card -> "card:" + v.card.id
+        else -> "feed"
+    }
+
+    suspend fun fetchPage(v: HomeView, page: Int): List<MusicApi.Song> = withContext(Dispatchers.IO) {
+        runCatching {
+            when (v) {
+                is HomeView.Guess -> RecommendApi.guessPage(page, PAGE)
+                is HomeView.Radar -> RecommendApi.radar(page)
+                is HomeView.Chart -> TopApi.songs(v.chart, page = page, num = PAGE)
+                is HomeView.Songlist -> PlaylistApi.songs(
+                    PlaylistApi.Item(v.item.id, v.item.dirId, v.item.name, v.item.songNum, v.item.pic),
+                    page = page, num = PAGE,
+                )
+                is HomeView.AlbumSongs -> AlbumApi.songs(v.album.mid, num = PAGE, page = page)
+                is HomeView.Hot -> MusicApi.legacySearch(v.kw, page, PAGE)
+                is HomeView.SingerSongs -> SingerApi.songs(v.singer.mid, num = PAGE, page = page)
+                is HomeView.Card -> {
+                    if (v.card.kind == "song") {
+                        val sid = v.card.id.toLongOrNull()
+                        if (sid == null) emptyList() else listOfNotNull(MusicApi.detail(sid))
+                    } else {
+                        PlaylistApi.songs(PlaylistApi.Item(v.card.id, "0", v.card.name, 0), page = page, num = PAGE)
+                    }
+                }
+                else -> emptyList()
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun loadMore(v: HomeView) {
+        if (moreLoading) return
+        val key = keyOf(v)
+        if (HomeCache.exhausted.contains(key)) return
+        val page = (HomeCache.pageNos[key] ?: 1) + 1
+        moreLoading = true
+        scope.launch {
+            val more = fetchPage(v, page)
+            val known = HomeCache.songPages[key] ?: emptyList()
+            val fresh = more.filter { s -> known.none { it.mid == s.mid } }
+            if (fresh.isEmpty()) {
+                HomeCache.exhausted.add(key)
+            } else {
+                val merged = known + fresh
+                HomeCache.songPages[key] = merged
+                HomeCache.pageNos[key] = page
+                songs = merged
+            }
+            moreLoading = false
+        }
+    }
+
+    fun loadMoreSonglists() {
+        if (moreLoading || HomeCache.exhausted.contains("songlists")) return
+        moreLoading = true
+        scope.launch {
+            val page = (HomeCache.pageNos["songlists"] ?: 1) + 1
+            val more = withContext(Dispatchers.IO) {
+                runCatching { RecommendApi.songlists(page = page, num = PAGE) }.getOrDefault(emptyList())
+            }
+            if (more.isEmpty()) {
+                HomeCache.exhausted.add("songlists")
+            } else {
+                val merged = (songlists ?: emptyList()) + more.filter { m -> (songlists ?: emptyList()).none { it.id == m.id } }
+                songlists = merged
+                HomeCache.songlists = merged
+                HomeCache.pageNos["songlists"] = page
+            }
+            moreLoading = false
+        }
+    }
+
+    fun loadMoreAlbums() {
+        if (moreLoading || HomeCache.exhausted.contains("albums")) return
+        moreLoading = true
+        scope.launch {
+            val page = (HomeCache.pageNos["albums"] ?: 1) + 1
+            val more = withContext(Dispatchers.IO) {
+                runCatching { AlbumApi.newAlbums(num = PAGE, page = page) }.getOrDefault(emptyList())
+            }
+            if (more.isEmpty()) {
+                HomeCache.exhausted.add("albums")
+            } else {
+                val merged = (albums ?: emptyList()) + more.filter { m -> (albums ?: emptyList()).none { it.mid == m.mid } }
+                albums = merged
+                HomeCache.albums = merged
+                HomeCache.pageNos["albums"] = page
+            }
+            moreLoading = false
+        }
+    }
 
     LaunchedEffect(cfgVersion) {
         val force = HomeConfig.takeForce()
-        // 有缓存又不是强制刷新：直接用上次的结果，切标签/进出模块都不再发请求
         if (!force && HomeCache.charts != null) return@LaunchedEffect
         if (force) HomeCache.clear()
         withContext(Dispatchers.IO) {
-            if (on("charts")) runCatching { TopApi.charts().take(n("charts")) }.onSuccess { charts = it }.onFailure { charts = emptyList() } else charts = emptyList()
+            if (on("charts")) runCatching { TopApi.charts() }.onSuccess { charts = it }.onFailure { charts = emptyList() } else charts = emptyList()
             if (on("songlists")) {
-                runCatching { RecommendApi.songlistsUpTo(n("songlists")) }
+                runCatching { RecommendApi.songlists(page = 1, num = PAGE) }
                     .onSuccess { l ->
                         songlists = l
                         Covers.prefetch(context, l.map { it.pic })
                     }
                     .onFailure { songlists = emptyList() }
             } else songlists = emptyList()
-            if (on("newsongs")) runCatching { RecommendApi.newSongsUpTo(n("newsongs")) }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() } else newSongs = emptyList()
+            if (on("newsongs")) runCatching { RecommendApi.newSongsUpTo(PAGE) }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() } else newSongs = emptyList()
             if (on("feed")) {
-                runCatching { RecommendApi.homeFeed(limit = n("feed")) }
+                runCatching { RecommendApi.homeFeed(limit = PAGE) }
                     .onSuccess { g ->
                         feed = g
                         Covers.prefetch(context, g.flatMap { it.cards.map { c -> c.cover } })
                     }
                     .onFailure { feed = emptyList() }
             } else feed = emptyList()
-            if (on("albums")) runCatching { AlbumApi.newAlbumsUpTo(n("albums")) }
+            if (on("albums")) runCatching { AlbumApi.newAlbums(num = PAGE, page = 1) }
                 .onSuccess { albums = it; Covers.prefetch(context, it.map { a -> a.cover }) }
                 .onFailure { albums = emptyList() }
-            if (on("singers")) runCatching { SingerApi.list().cap("singers") }.onSuccess { singers = it }.onFailure { singers = emptyList() }
-            if (on("hot")) runCatching { MusicApi.hotKeys().cap("hot") }.onSuccess { hot = it }.onFailure { hot = emptyList() }
+            if (on("singers")) runCatching { SingerApi.list() }.onSuccess { singers = it.take(PAGE) }.onFailure { singers = emptyList() }
+            if (on("hot")) runCatching { MusicApi.hotKeys() }.onSuccess { hot = it.take(PAGE) }.onFailure { hot = emptyList() }
         }
         if (charts.isNullOrEmpty() && songlists.isNullOrEmpty() && newSongs.isNullOrEmpty()) {
             error = "推荐加载失败，请检查登录状态"
@@ -160,13 +261,17 @@ fun HomeScreen(
         HomeCache.singers = singers
         HomeCache.hot = hot
     }
+
     LaunchedEffect(view) {
         val v = view
-        if (v is HomeView.Feed) return@LaunchedEffect
+        if (v is HomeView.Feed || v is HomeView.Recommend) return@LaunchedEffect
         if (v is HomeView.Hot && v.kw.isEmpty()) {
-            hot = null
-            val r = withContext(Dispatchers.IO) { runCatching { MusicApi.hotKeys().cap("hot") } }
-            r.onSuccess { hot = it }.onFailure { hot = emptyList() }
+            if (hot.isNullOrEmpty()) {
+                hot = null
+                hot = withContext(Dispatchers.IO) {
+                    runCatching { MusicApi.hotKeys() }.getOrDefault(emptyList()).take(PAGE)
+                }
+            }
             return@LaunchedEffect
         }
         if (v is HomeView.NewSongs) {
@@ -174,54 +279,33 @@ fun HomeScreen(
             return@LaunchedEffect
         }
         if (v is HomeView.Singers) {
-            singers = null
-            val r = withContext(Dispatchers.IO) { runCatching { SingerApi.list().cap("singers") } }
-            r.onSuccess { singers = it }.onFailure { singers = emptyList() }
+            if (singers.isNullOrEmpty()) singers = withContext(Dispatchers.IO) {
+                runCatching { SingerApi.list() }.getOrDefault(emptyList()).take(PAGE)
+            }
             return@LaunchedEffect
         }
         if (v is HomeView.Albums) {
-            albums = null
-            val r = withContext(Dispatchers.IO) { runCatching { AlbumApi.newAlbumsUpTo(n("albums")) } }
-            r.onSuccess { albums = it }.onFailure { albums = emptyList() }
+            if (albums.isNullOrEmpty()) albums = withContext(Dispatchers.IO) {
+                runCatching { AlbumApi.newAlbums(num = PAGE, page = 1) }.getOrDefault(emptyList())
+            }
+            return@LaunchedEffect
+        }
+        val key = keyOf(v)
+        val cached = HomeCache.songPages[key]
+        if (cached != null) {
+            songs = cached
             return@LaunchedEffect
         }
         songs = null
         error = ""
-        val r = withContext(Dispatchers.IO) {
-            runCatching {
-                when (v) {
-                    is HomeView.Guess -> RecommendApi.guessUpTo(n("guess"))
-                    is HomeView.Radar -> RecommendApi.radarUpTo(n("radar"))
-                    is HomeView.Chart -> TopApi.songs(v.chart, num = n("charts")).cap("charts")
-                    is HomeView.Songlist -> PlaylistApi.songs(
-                        PlaylistApi.Item(v.item.id, v.item.dirId, v.item.name, v.item.songNum, v.item.pic),
-                        num = n("songlists"),
-                    ).cap("songlists")
-                    is HomeView.AlbumSongs -> AlbumApi.songs(v.album.mid, num = n("albums")).cap("albums")
-                    is HomeView.Hot -> MusicApi.search(v.kw).cap("hot")
-                    is HomeView.SingerSongs -> SingerApi.songs(v.singer.mid, num = n("singers")).cap("singers")
-                    is HomeView.Card -> {
-                        if (v.card.kind == "song") {
-                            val sid = v.card.id.toLongOrNull()
-                            if (sid == null) emptyList() else listOfNotNull(MusicApi.detail(sid))
-                        } else {
-                            PlaylistApi.songs(PlaylistApi.Item(v.card.id, "0", v.card.name, 0), num = n("songlists"))
-                                .cap("songlists")
-                        }
-                    }
-                    else -> emptyList()
-                }
-            }
-        }
-        r.onSuccess { songs = it }.onFailure { error = it.message ?: "歌曲加载失败"; songs = emptyList() }
-    }
-
-    BackHandler(enabled = viewStack.size > 1) {
-        back()
-        songs = null
+        val first = fetchPage(v, 1)
+        HomeCache.songPages[key] = first
+        HomeCache.pageNos[key] = 1
+        songs = first
     }
 
     val entries = buildList {
+        if (on("feed")) add("为你推荐" to HomeView.Recommend)
         if (on("songlists")) add("推荐歌单" to HomeView.Songlists)
         if (on("newsongs")) add("新歌速递" to HomeView.NewSongs)
         if (on("radar")) add("每日推荐" to HomeView.Radar)
@@ -281,33 +365,44 @@ fun HomeScreen(
                 }
             }
 
-            item { SectionTitle("为你推荐") }
+            item { Box(Modifier.padding(24.dp)) {} }
+        }
+    } else if (v is HomeView.Recommend) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = { back() }) { Text("返回") }
+                Text("为你推荐", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
             val fd = feed
             if (fd == null) {
-                item { LoadingRow() }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else {
-                for (g in fd) {
-                    item { SubTitle(g.title) }
-                    items(g.cards) { c ->
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { open(HomeView.Card(c)) }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Cover(c.cover, 44.dp)
-                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                                Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
-                                Text(
-                                    c.sub, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                LazyColumn(Modifier.fillMaxSize()) {
+                    for (g in fd) {
+                        item { SubTitle(g.title) }
+                        items(g.cards) { c ->
+                            Row(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                                    .clickable { open(HomeView.Card(c)) }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Cover(c.cover, 44.dp)
+                                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                    Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
+                                    Text(
+                                        c.sub, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-            item { Box(Modifier.padding(24.dp)) {} }
         }
     } else if (v is HomeView.Albums) {
         Column(Modifier.fillMaxSize()) {
@@ -326,7 +421,13 @@ fun HomeScreen(
                     Text("暂无新碟", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
+                val alState = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(alState, al.size) {
+                    androidx.compose.runtime.snapshotFlow {
+                        alState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    }.collect { last -> if (last >= al.size - 3) loadMoreAlbums() }
+                }
+                LazyColumn(state = alState, modifier = Modifier.fillMaxSize()) {
                     items(al) { a ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
@@ -364,7 +465,13 @@ fun HomeScreen(
                     Text("暂无推荐歌单", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
-                LazyColumn(Modifier.fillMaxSize()) {
+                val slState = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.runtime.LaunchedEffect(slState, sl.size) {
+                    androidx.compose.runtime.snapshotFlow {
+                        slState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    }.collect { last -> if (last >= sl.size - 3) loadMoreSonglists() }
+                }
+                LazyColumn(state = slState, modifier = Modifier.fillMaxSize()) {
                     items(sl) { s ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
@@ -537,6 +644,8 @@ fun HomeScreen(
                     playlistId = listId,
                     onPlay = onPlay,
                     onDownload = onDownload,
+                    onLoadMore = { loadMore(v) },
+                    loadingMore = moreLoading,
                 )
             }
         }

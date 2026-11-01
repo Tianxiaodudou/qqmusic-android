@@ -192,6 +192,9 @@ object PlayerController {
         })
         AudioFx.attach(ctx, p.audioSessionId, Settings.eqPreset(ctx))
 
+        // 歌词运行时（蓝牙歌词 / 桌面歌词都要用）
+        runCatching { LyricsRuntime.start() }
+
         // 系统接管：通知栏 / 锁屏 / 蓝牙 / 耳机按键
         runCatching {
             val sessionActivity = android.app.PendingIntent.getActivity(
@@ -206,6 +209,23 @@ object PlayerController {
             mediaSession = androidx.media3.session.MediaSession.Builder(ctx, p)
                 .setSessionActivity(sessionActivity)
                 .build()
+        }
+
+        LyricsRuntime.onLineChanged = { line ->
+            val ctx2 = appContext
+            if (ctx2 != null && Settings.btLyrics(ctx2)) {
+                btTitle = line
+                val pl = exo
+                val idx = pl?.currentMediaItemIndex ?: -1
+                val song2 = current
+                if (pl != null && idx >= 0 && song2 != null) {
+                    runCatching {
+                        pl.replaceMediaItem(idx, mediaItemOf(song2, pl.currentMediaItem?.localConfiguration?.uri ?: return@runCatching))
+                    }
+                }
+            } else {
+                btTitle = ""
+            }
         }
 
         scope?.launch {
@@ -370,6 +390,16 @@ object PlayerController {
     }
 
     /** 换音质：保留当前进度与播放状态重新解析。 */
+    /** 元数据类设置（蓝牙歌词开关）变更后，立刻刷新当前 MediaItem 的标题。 */
+    fun refreshMetadata() {
+        val pl = exo ?: return
+        val song = current ?: return
+        val uri = pl.currentMediaItem?.localConfiguration?.uri ?: return
+        val ctx = appContext ?: return
+        btTitle = if (Settings.btLyrics(ctx)) LyricsRuntime.currentLine else ""
+        runCatching { pl.replaceMediaItem(pl.currentMediaItemIndex, mediaItemOf(song, uri)) }
+    }
+
     fun setQuality(q: Settings.Quality) {
         val ctx = appContext ?: return
         Settings.setQuality(ctx, q)
@@ -452,6 +482,8 @@ object PlayerController {
         AudioFx.release()
         exo?.release()
         exo = null
+        runCatching { LyricsRuntime.stop() }
+        LyricsRuntime.onLineChanged = null
         runCatching { mediaSession?.release() }
         mediaSession = null
         runCatching { mediaCache?.release() }
@@ -461,11 +493,19 @@ object PlayerController {
 
     // ---------------- 内部实现 ----------------
 
-    /** 带元数据的 MediaItem：通知栏、锁屏、蓝牙车机都从这里取标题/歌手/封面/时长。 */
+    /** 蓝牙歌词模式下当前标题（歌词行），空表示用歌名。 */
+    private var btTitle: String = ""
+
+    /**
+     * 带元数据的 MediaItem：通知栏、锁屏、蓝牙车机都从这里取标题/歌手/封面/时长。
+     * 开启「蓝牙歌词」时 Title 换成当前歌词行（非标准协议，车机兼容性不保证）。
+     */
     private fun mediaItemOf(song: MusicApi.Song, uri: Uri): MediaItem {
         val artwork = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 500)
+        val btOn = appContext?.let { Settings.btLyrics(it) } == true
+        val title = if (btOn && btTitle.isNotEmpty()) btTitle else song.name
         val metadata = androidx.media3.common.MediaMetadata.Builder()
-            .setTitle(song.name)
+            .setTitle(title)
             .setArtist(song.singers)
             .setAlbumTitle(song.album)
             .setDurationMs(song.interval * 1000L)

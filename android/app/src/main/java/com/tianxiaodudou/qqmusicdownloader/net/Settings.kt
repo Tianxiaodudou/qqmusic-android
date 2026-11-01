@@ -54,6 +54,7 @@ object Settings {
     private const val K_PAID = "paid_policy"
     private const val K_AUTO_DOWNGRADE = "auto_downgrade"
     private const val K_DESKTOP_LYRICS = "desktop_lyrics"
+    private const val K_BT_LYRICS = "bt_lyrics"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -72,6 +73,13 @@ object Settings {
         HomeModule("charts", "排行榜"),
         HomeModule("guess", "猜你喜欢"),
     )
+
+    /** 蓝牙歌词：把当前歌词行写进 MediaMetadata 的 Title（非标准协议，默认关闭）。 */
+    fun btLyrics(context: Context): Boolean = prefs(context).getBoolean(K_BT_LYRICS, false)
+
+    fun setBtLyrics(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(K_BT_LYRICS, on).apply()
+    }
 
     /** 桌面歌词悬浮窗开关（默认关闭）。 */
     fun desktopLyrics(context: Context): Boolean =

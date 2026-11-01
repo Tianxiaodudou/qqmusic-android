@@ -31,6 +31,10 @@ object LyricsRuntime {
 
     val currentLine: String get() = lines.getOrNull(index)?.text.orEmpty()
 
+    /** 行变化回调：蓝牙歌词用它把当前行推给系统元数据。 */
+    var onLineChanged: ((String) -> Unit)? = null
+    private var lastPushed = ""
+
     fun start() {
         if (ticker?.isActive == true) return
         ticker = scope.launch {
@@ -76,6 +80,11 @@ object LyricsRuntime {
         }
         index = i
         progress = if (i < 0) 0f else lineProgress(lines[i], t, lines.getOrNull(i + 1)?.timeMs ?: (lines[i].timeMs + 4000))
+        val text = currentLine
+        if (text != lastPushed) {
+            lastPushed = text
+            onLineChanged?.invoke(text)
+        }
     }
 
     /** 与播放页一致的连续扫字进度。 */

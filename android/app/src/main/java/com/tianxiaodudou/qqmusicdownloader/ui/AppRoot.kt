@@ -358,6 +358,7 @@ private fun MinePage(
     var openSection by remember { mutableStateOf("") }
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
     var desktopLyrics by remember { mutableStateOf(Settings.desktopLyrics(context)) }
+    var btLyrics by remember { mutableStateOf(Settings.btLyrics(context)) }
     // 悬浮窗权限走系统授权页，回来后再真正拉起悬浮歌词
     val overlayPermission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val ok = android.provider.Settings.canDrawOverlays(context)
@@ -524,6 +525,14 @@ private fun MinePage(
                     Settings.setDesktopLyrics(context, want)
                     com.tianxiaodudou.qqmusicdownloader.player.DesktopLyrics.setEnabled(context, want)
                 }
+            }
+            MineRow(
+                "蓝牙歌词",
+                if (btLyrics) "已开启 · 车机标题显示当前歌词" else "已关闭 · 车机显示歌名",
+            ) {
+                btLyrics = !btLyrics
+                Settings.setBtLyrics(context, btLyrics)
+                com.tianxiaodudou.qqmusicdownloader.player.PlayerController.refreshMetadata()
             }
             MineRow("付费内容", paidPolicy.label) { showPaid = true }
             MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }

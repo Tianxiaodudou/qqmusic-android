@@ -88,7 +88,11 @@ private sealed interface HomeView {
 }
 
 @Composable
-fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi.Song) -> Unit) {
+fun HomeScreen(
+    onPlay: (List<MusicApi.Song>, Int) -> Unit,
+    onDownload: (MusicApi.Song) -> Unit,
+    onSearch: (String) -> Unit = {},
+) {
     var charts by remember { mutableStateOf<List<TopApi.Chart>?>(null) }
     var songlists by remember { mutableStateOf<List<RecommendApi.Songlist>?>(null) }
     var newSongs by remember { mutableStateOf<List<MusicApi.Song>?>(null) }
@@ -434,7 +438,7 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
                     itemsIndexed(hk) { i, kw ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { view = HomeView.Hot(kw) }
+                                .clickable { onSearch(kw) }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

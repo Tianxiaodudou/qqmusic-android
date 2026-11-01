@@ -201,7 +201,14 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         ) { inner ->
             Box(Modifier.fillMaxSize().padding(inner)) {
                 when (tab) {
-                    Tab.Home -> HomeScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
+                    Tab.Home -> HomeScreen(
+                        onPlay = { list, i -> playAt(list, i) },
+                        onDownload = { Downloader.enqueue(context, it) },
+                        onSearch = { kw ->
+                            SearchBus.submit(kw)
+                            tab = Tab.Search
+                        },
+                    )
                     Tab.Search -> SearchScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
                     Tab.Library -> LibraryScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
                     Tab.Mine -> MinePage(

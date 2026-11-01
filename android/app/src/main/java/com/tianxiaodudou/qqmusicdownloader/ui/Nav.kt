@@ -33,6 +33,21 @@ object Nav {
     }
 }
 
+/** 搜索入口总线：热搜词点一下就把关键词送进搜索页，保证和搜索页走同一条链路。 */
+object SearchBus {
+    var keyword by mutableStateOf("")
+        private set
+    var ticket by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+
+    fun submit(k: String) {
+        val q = k.trim()
+        if (q.isEmpty()) return
+        keyword = q
+        ticket += 1
+    }
+}
+
 @Composable
 fun RouteHost(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi.Song) -> Unit) {
     when (val r = Nav.stack.lastOrNull()) {

@@ -21,7 +21,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -54,11 +63,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
+import com.tianxiaodudou.qqmusicdownloader.player.Favorites
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** 行内图标按钮：28dp 点击区，紧凑排 4 个也不挤掉歌名。 */
+@Composable
+private fun RowAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean = true,
+    tint: Color = Color(0xFF8C96A6),
+    onClick: () -> Unit,
+) {
+    Box(
+        Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = if (enabled) tint else Color(0xFF3A4150),
+            modifier = Modifier.size(17.dp),
+        )
+    }
+}
 
 /**
  * 通用歌曲列表：支持多选（全选 / 反选）、批量加入播放队列、收藏到歌单、新建歌单、批量下载。
@@ -83,11 +116,14 @@ fun SongListView(
     var picker by remember { mutableStateOf(false) }
     var createDialog by remember { mutableStateOf(false) }
     var faved by remember { mutableStateOf(false) }
+    var moreFor by remember { mutableStateOf<MusicApi.Song?>(null) }
 
     LaunchedEffect(songs, fixId) {
         selected = emptySet()
         selecting = false
         faved = false
+        moreFor = null
+        Favorites.ensureLoaded()
         // 列表封面预加载，滚动到下一屏时不用现等
         withContext(Dispatchers.IO) {
             Covers.prefetch(
@@ -246,7 +282,7 @@ fun SongListView(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                song.singers,
+                                song.singers + "  ·  " + fmtDuration(song.interval),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 fontSize = 11.sp,
@@ -264,8 +300,63 @@ fun SongListView(
                                     .padding(horizontal = 5.dp, vertical = 2.dp),
                             )
                         }
-                        Spacer(Modifier.width(6.dp))
-                        Text(fmtDuration(song.interval), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (!selecting) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RowAction(Icons.Rounded.QueueMusic, "加入队列", enabled = !locked) {
+                                    PlayerController.enqueue(listOf(song))
+                                    toast("已加入播放队列")
+                                }
+                                val fav = Favorites.isFav(song.mid)
+                                RowAction(
+                                    if (fav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                    if (fav) "取消收藏" else "收藏",
+                                    tint = if (fav) Color(0xFFE85D75) else Color(0xFF8C96A6),
+                                ) {
+                                    scope.launch {
+                                        val ok = Favorites.toggle(song)
+                                        toast(
+                                            when {
+                                                !ok -> "操作失败，可能需要重新登录"
+                                                Favorites.isFav(song.mid) -> "已收藏到「我喜欢」"
+                                                else -> "已取消收藏"
+                                            }
+                                        )
+                                    }
+                                }
+                                RowAction(Icons.Rounded.Download, "下载", enabled = !locked) { onDownload(song) }
+                                Box {
+                                    RowAction(Icons.Rounded.MoreVert, "更多") { moreFor = song }
+                                    DropdownMenu(
+                                        expanded = moreFor?.mid == song.mid,
+                                        onDismissRequest = { moreFor = null },
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("收藏到歌单", fontSize = 13.sp) },
+                                            onClick = {
+                                                moreFor = null
+                                                selected = setOf(song.mid)
+                                                selecting = true
+                                                picker = true
+                                            },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("查看歌手", fontSize = 13.sp) },
+                                            onClick = {
+                                                moreFor = null
+                                                if (song.singerMid.isNotEmpty()) Nav.push(Route.Singer(song.singerMid, song.singers))
+                                            },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("查看专辑", fontSize = 13.sp) },
+                                            onClick = {
+                                                moreFor = null
+                                                if (song.albumMid.isNotEmpty()) Nav.push(Route.Album(song.albumMid, song.album))
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

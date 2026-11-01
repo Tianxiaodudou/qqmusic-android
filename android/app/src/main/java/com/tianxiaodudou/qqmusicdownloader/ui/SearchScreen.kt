@@ -106,6 +106,15 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
         }
     }
 
+    // 热搜词 / 外部入口进来：直接把关键词交给同一个搜索函数
+    LaunchedEffect(SearchBus.ticket) {
+        if (SearchBus.ticket > 0) {
+            keyword = SearchBus.keyword
+            type = 0
+            doSearch(SearchBus.keyword, 0)
+        }
+    }
+
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {

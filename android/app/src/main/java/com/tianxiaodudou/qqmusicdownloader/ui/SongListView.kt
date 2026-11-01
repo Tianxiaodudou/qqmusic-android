@@ -82,7 +82,7 @@ private fun RowAction(
     onClick: () -> Unit,
 ) {
     Box(
-        Modifier.size(30.dp).clip(AppTheme.shapes.cover)
+        Modifier.size(AppTheme.dimens.spacing32).clip(AppTheme.shapes.cover)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -261,7 +261,7 @@ fun SongListView(
                                     }
                                 },
                             )
-                            .padding(start = if (selecting) 6.dp else 16.dp, end = AppTheme.dimens.pagePadding, top = AppTheme.dimens.spacing10, bottom = AppTheme.dimens.spacing10),
+                            .padding(start = if (selecting) AppTheme.dimens.spacing6 else AppTheme.dimens.pagePadding, end = AppTheme.dimens.pagePadding, top = AppTheme.dimens.spacing10, bottom = AppTheme.dimens.spacing10),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (selecting) {

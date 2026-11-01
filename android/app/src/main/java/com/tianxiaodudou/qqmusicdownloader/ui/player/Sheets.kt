@@ -178,7 +178,7 @@ private fun offsetText(ms: Int): String {
 private fun OutlinedAction(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
-            .height(40.dp)
+            .height(AppTheme.dimens.coverSm)
             .clip(AppTheme.shapes.cardSmall)
             .background(SheetRow)
             .clickable(onClick = onClick),
@@ -216,7 +216,7 @@ fun QueueSheet(
                             .padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing11),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(Modifier.width(26.dp)) {
+                        Box(Modifier.width(AppTheme.dimens.spacingXl + AppTheme.dimens.spacing2)) {
                             if (current) {
                                 Icon(
                                     if (playing) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
@@ -325,7 +325,7 @@ fun MoreSheet(
 
 @Composable
 private fun MenuDivider() {
-    Box(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing6).height(1.dp).background(SheetLine))
+    Box(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing6).height(AppTheme.dimens.divider).background(SheetLine))
 }
 
 @Composable
@@ -467,7 +467,7 @@ private fun Segment(options: List<Pair<String, Float>>, selected: Float, onSelec
         options.forEach { (label, v) ->
             val on = abs(v - selected) < 0.01f
             Box(
-                Modifier.weight(1f).height(34.dp).clip(AppTheme.shapes.cover)
+                Modifier.weight(1f).height(AppTheme.dimens.albumBarHeight).clip(AppTheme.shapes.cover)
                     .background(if (on) AppTheme.colors.surface3 else Color.Transparent)
                     .clickable { onSelect(v) },
                 contentAlignment = Alignment.Center,
@@ -543,7 +543,7 @@ fun SongInfoSheet(
 @Composable
 private fun InfoRow(key: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.Top) {
-        Text(key, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub, modifier = Modifier.width(52.dp))
+        Text(key, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub, modifier = Modifier.width(AppTheme.dimens.spacing52))
         Text(value, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
     }
 }

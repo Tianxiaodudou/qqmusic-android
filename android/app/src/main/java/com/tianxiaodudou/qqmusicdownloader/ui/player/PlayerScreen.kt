@@ -295,7 +295,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                 model = cover,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().blur(64.dp).alpha(breath),
+                modifier = Modifier.fillMaxSize().blur(AppTheme.dimens.blurRadius).alpha(breath),
             )
         }
         Box(
@@ -396,14 +396,14 @@ fun PlayerScreen(onExit: () -> Unit) {
                 containerColor = AppTheme.colors.surface1,
                 scrimColor = if (s == PSheet.Sync) Color.Transparent else AppTheme.colors.scrim,
                 dragHandle = {
-                    Box(Modifier.fillMaxWidth().height(34.dp)) {
+                    Box(Modifier.fillMaxWidth().height(AppTheme.dimens.albumBarHeight)) {
                         BottomSheetDefaults.DragHandle(
                             color = AppTheme.colors.textDisabled,
                             modifier = Modifier.align(Alignment.Center),
                         )
                         IconButton(
                             onClick = { sheet = null },
-                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = AppTheme.dimens.spacing6).size(40.dp),
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = AppTheme.dimens.spacing6).size(AppTheme.dimens.coverSm),
                         ) {
                             Icon(
                                 Icons.Rounded.Close,
@@ -671,10 +671,10 @@ private fun PlayerTopBar(
     onMore: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().height(56.dp).padding(horizontal = AppTheme.dimens.spacing2),
+        Modifier.fillMaxWidth().height(AppTheme.dimens.spacing56).padding(horizontal = AppTheme.dimens.spacing2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(46.dp)) {
+        IconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.iconButton)) {
             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "收起", tint = TextHi)
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -719,7 +719,7 @@ private fun PlayerTopBar(
                 )
                 Spacer(Modifier.width(AppTheme.dimens.spacing2))
             }
-            IconButton(onClick = onMore, modifier = Modifier.size(46.dp)) {
+            IconButton(onClick = onMore, modifier = Modifier.size(AppTheme.dimens.iconButton)) {
                 Icon(Icons.Rounded.MoreVert, contentDescription = "更多", tint = TextHi)
             }
         }
@@ -777,7 +777,7 @@ private fun PlayerToolbar(
                     Icon(Icons.Rounded.Sync, null, tint = if (lyricEnabled) tint else AppTheme.colors.textDisabled, modifier = Modifier.size(size))
                     if (offsetMs != 0) {
                         Box(
-                            Modifier.align(Alignment.TopEnd).size(6.dp).clip(CircleShape).background(Brand)
+                            Modifier.align(Alignment.TopEnd).size(AppTheme.dimens.spacing6).clip(CircleShape).background(Brand)
                         )
                     }
                 }
@@ -807,12 +807,12 @@ private fun ToolItem(
 ) {
     Column(
         modifier
-            .height(56.dp)
+            .height(AppTheme.dimens.spacing56)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        icon(tint, 21.dp)
+        icon(tint, AppTheme.dimens.iconLg)
         Spacer(Modifier.height(AppTheme.dimens.spacing3))
         Text(label, fontSize = AppTheme.typography.badge.fontSize, color = tint.copy(alpha = 0.82f), maxLines = 1)
     }
@@ -873,7 +873,7 @@ private fun SeekBar(
 
     Box(
         modifier
-            .height(34.dp)
+            .height(AppTheme.dimens.albumBarHeight)
             .onSizeChanged { widthPx = it.width.toFloat() }
             .pointerInput(durationMs) {
                 detectHorizontalDragGestures(
@@ -902,9 +902,11 @@ private fun SeekBar(
         val bufferedColor = AppTheme.colors.progressBuffered
         val playedColor = AppTheme.colors.brand
         val knobRing = AppTheme.colors.bg
+        val trackHeight = AppTheme.dimens.trackHeight
+        val knobRingWidth = AppTheme.dimens.stroke2
         Canvas(Modifier.fillMaxSize()) {
             val cy = size.height / 2f
-            val h = 3.5.dp.toPx()
+            val h = trackHeight.toPx()
             drawRoundRect(
                 color = trackColor,
                 topLeft = Offset(0f, cy - h / 2),
@@ -926,7 +928,7 @@ private fun SeekBar(
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
             )
             val r = (if (dragging) 9f else 5.5f).dp.toPx() * pulseScale.value
-            drawCircle(color = knobRing, radius = r + 2.dp.toPx(), center = Offset(size.width * frac, cy))
+            drawCircle(color = knobRing, radius = r + knobRingWidth.toPx(), center = Offset(size.width * frac, cy))
             drawCircle(color = playedColor, radius = r, center = Offset(size.width * frac, cy))
         }
     }
@@ -957,11 +959,11 @@ private fun PlayerControls(
         }
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onPrev, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
-            Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(32.dp))
+            Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         PlayPauseButton(playing, loading, onToggle)
         IconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
-            Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(32.dp))
+            Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onQueue, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
@@ -978,7 +980,7 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
     Box(
         Modifier
             .padding(horizontal = AppTheme.dimens.spacing10)
-            .size(62.dp)
+            .size(AppTheme.dimens.spacing32 + AppTheme.dimens.spacing32)
             .scale(scale)
             .clip(CircleShape)
             .background(Brand)

@@ -212,27 +212,19 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
             horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacingSm),
         ) {
             SEARCH_TYPES.forEachIndexed { i, pair ->
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(if (type == i) AppTheme.colors.brandSoft else MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable {
-                            type = i
-                            if (keyword.isNotBlank()) doSearch(keyword, i)
-                        }
-                        .padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacing6),
-                ) {
-                    Text(
-                        pair.first,
-                        fontSize = AppTheme.typography.bodySmall.fontSize,
-                        color = if (type == i) AppTheme.colors.selectedText else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                AppChip(
+                    text = pair.first,
+                    selected = type == i,
+                    onClick = {
+                        type = i
+                        if (keyword.isNotBlank()) doSearch(keyword, i)
+                    },
+                )
             }
         }
 
         if (loading) {
-            Box(Modifier.fillMaxWidth().padding(AppTheme.dimens.spacing20), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            LoadingBox(Modifier.fillMaxWidth().padding(AppTheme.dimens.spacing20), text = "搜索中…")
         }
         if (error.isNotEmpty()) {
             Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(AppTheme.dimens.spacingSm))

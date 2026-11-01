@@ -61,7 +61,7 @@ import kotlinx.coroutines.withContext
 internal fun DetailScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
     BackHandler { onBack() }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(AppTheme.dimens.topBarHeight), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
             }
@@ -173,7 +173,7 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
     DetailScaffold(info?.name?.ifEmpty { name } ?: name, onBack = { Nav.pop() }) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(72.dp).clip(RoundedCornerShape(50)).background(AppTheme.colors.coverPlaceholder)) {
+                Box(Modifier.size(AppTheme.dimens.coverXxl).clip(RoundedCornerShape(50)).background(AppTheme.colors.coverPlaceholder)) {
                     val a = info?.avatar.orEmpty()
                     if (a.startsWith("http")) {
                         AsyncImage(model = a, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())

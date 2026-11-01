@@ -394,7 +394,7 @@ fun HomeScreen(
                                     .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Cover(c.cover, 44.dp)
+                                Cover(c.cover, AppTheme.dimens.buttonHeight)
                                 Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                     Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                     Text(
@@ -439,7 +439,7 @@ fun HomeScreen(
                                 .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Cover(a.cover, 48.dp)
+                            Cover(a.cover, AppTheme.dimens.coverLg)
                             Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                 Text(a.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 Text(
@@ -483,7 +483,7 @@ fun HomeScreen(
                                 .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Cover(s.pic, 48.dp)
+                            Cover(s.pic, AppTheme.dimens.coverLg)
                             Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                 Text(s.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 Text(
@@ -692,7 +692,7 @@ private fun SongRow(song: MusicApi.Song, onClick: () -> Unit, onDl: () -> Unit) 
             .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Cover(albumCover(song.albumMid), 44.dp)
+        Cover(albumCover(song.albumMid), AppTheme.dimens.buttonHeight)
         Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
             Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
             Text(

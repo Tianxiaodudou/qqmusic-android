@@ -196,3 +196,63 @@ fun BlockTitle(text: String) {
     )
 }
 
+
+/** 胶囊筛选片（搜索类型、分类切换）。 */
+@Composable
+fun AppChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    val shapes = AppTheme.shapes
+    val dimens = AppTheme.dimens
+    Box(
+        modifier
+            .clip(shapes.chip)
+            .background(if (selected) colors.brandSoft else colors.surface3)
+            .clickable(onClick = onClick)
+            .padding(horizontal = dimens.spacing14, vertical = dimens.spacing6),
+    ) {
+        Text(
+            text,
+            style = AppTheme.typography.bodySmall,
+            color = if (selected) colors.selectedText else colors.textSecondary,
+        )
+    }
+}
+
+/** 分割线。 */
+@Composable
+fun AppDivider(modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxWidth().height(AppTheme.dimens.divider).background(AppTheme.colors.line))
+}
+
+/** 统一的加载态：转圈 + 可选说明文字。 */
+@Composable
+fun LoadingBox(modifier: Modifier = Modifier, text: String = "") {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.size(AppTheme.dimens.iconLg),
+                strokeWidth = AppTheme.dimens.stroke2,
+                color = AppTheme.colors.brand,
+            )
+            if (text.isNotEmpty()) {
+                Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+                Text(text, style = AppTheme.typography.caption, color = AppTheme.colors.textSecondary)
+            }
+        }
+    }
+}
+
+/** 统一空状态：说明文字 + 可选操作。 */
+@Composable
+fun EmptyState(text: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text, style = AppTheme.typography.body, color = AppTheme.colors.textSecondary)
+            if (action != null) {
+                Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+                action()
+            }
+        }
+    }
+}
+

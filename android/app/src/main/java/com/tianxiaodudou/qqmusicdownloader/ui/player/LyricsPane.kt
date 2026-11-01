@@ -148,7 +148,7 @@ fun LyricsPane(
 
         if (lines.isEmpty()) {
             Column(
-                Modifier.fillMaxSize().padding(horizontal = 32.dp),
+                Modifier.fillMaxSize().padding(horizontal = AppTheme.dimens.spacing32),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -200,7 +200,7 @@ fun LyricsPane(
                                 onClick = { onSeekLine(line) },
                                 onLongClick = { onLongPressLine(line) },
                             )
-                            .padding(horizontal = AppTheme.dimens.spacingXl, vertical = if (isCurrent) 9.dp else 7.dp),
+                            .padding(horizontal = AppTheme.dimens.spacingXl, vertical = if (isCurrent) AppTheme.dimens.spacing9 else AppTheme.dimens.spacing7),
                         horizontalAlignment = if (style.center) Alignment.CenterHorizontally else Alignment.Start,
                     ) {
                         if (isCurrent) {

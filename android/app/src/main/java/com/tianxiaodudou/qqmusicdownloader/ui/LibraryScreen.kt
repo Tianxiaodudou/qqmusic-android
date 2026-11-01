@@ -163,11 +163,9 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
             if (showFav) {
                 val favList = favs
                 if (favList == null) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    LoadingBox(Modifier.fillMaxSize(), text = "加载收藏歌单…")
                 } else if (favList.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("还没有收藏别人的歌单", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    EmptyState("还没有收藏别人的歌单", Modifier.fillMaxSize())
                 } else {
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(favList) { item ->
@@ -190,11 +188,9 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
             }
             val list = playlists
             if (list == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize(), text = "加载歌单…")
             } else if (list.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(error.ifEmpty { "还没有歌单" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                EmptyState(error.ifEmpty { "还没有歌单" }, Modifier.fillMaxSize())
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(list) { item ->

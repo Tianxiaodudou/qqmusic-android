@@ -133,11 +133,11 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            modifier = Modifier.size(210.dp).clip(AppTheme.shapes.cardMedium).background(Color.White),
+            modifier = Modifier.size(AppTheme.dimens.qrBox).clip(AppTheme.shapes.cardMedium).background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
             val bmp = image
-            if (bmp != null) Image(bitmap = bmp, contentDescription = "二维码", modifier = Modifier.size(200.dp))
+            if (bmp != null) Image(bitmap = bmp, contentDescription = "二维码", modifier = Modifier.size(AppTheme.dimens.qrSize))
             else Text("…", color = AppTheme.colors.textSecondary)
         }
         Spacer(Modifier.height(AppTheme.dimens.spacingMd))

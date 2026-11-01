@@ -171,7 +171,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                     if (PlayerController.current != null) {
                         MiniPlayer(onOpen = { showPlayer = true })
                     }
-                    NavigationBar(containerColor = AppTheme.colors.bgElevated, tonalElevation = 0.dp) {
+                    NavigationBar(containerColor = AppTheme.colors.bgElevated, tonalElevation = AppTheme.dimens.none) {
                         Tab.entries.forEach { item ->
                             if (item == Tab.Search) {
                                 // 搜索入口已挪到首页右上角，这个位置改成手动刷新首页
@@ -252,7 +252,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         if (showDownloads && !showPlayer) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
-                    Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().height(AppTheme.dimens.topBarHeight).padding(horizontal = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { showDownloads = false }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "返回")
                         }
@@ -286,9 +286,9 @@ private fun MiniPlayer(onOpen: () -> Unit) {
     val dur = PlayerController.durationMs
     val pos = PlayerController.positionMs
     Column(Modifier.fillMaxWidth().background(AppTheme.colors.surface1)) {
-        Box(Modifier.fillMaxWidth().height(1.5.dp).background(AppTheme.colors.progressTrack)) {
+        Box(Modifier.fillMaxWidth().height(AppTheme.dimens.trackThin).background(AppTheme.colors.progressTrack)) {
             if (dur > 0) {
-                Box(Modifier.fillMaxWidth((pos.toFloat() / dur).coerceIn(0f, 1f)).height(1.5.dp).background(MaterialTheme.colorScheme.primary))
+                Box(Modifier.fillMaxWidth((pos.toFloat() / dur).coerceIn(0f, 1f)).height(AppTheme.dimens.trackThin).background(MaterialTheme.colorScheme.primary))
             }
         }
         Row(

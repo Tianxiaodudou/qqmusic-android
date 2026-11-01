@@ -182,6 +182,13 @@ object Settings {
     /** 清掉无损解密缓存与封面临时文件，返回释放的字节数。 */
     fun clearCache(context: Context): Long {
         var freed = 0L
+        // 播放缓存 / 多连接音频缓存整目录清掉，再清 cacheDir 下的零散文件
+        for (name in listOf("lossless", "audio_cache", "media_cache", "update")) {
+            val d = File(context.cacheDir, name)
+            if (!d.exists()) continue
+            freed += runCatching { d.walkTopDown().filter { it.isFile }.sumOf { it.length() } }.getOrDefault(0L)
+            runCatching { d.deleteRecursively() }
+        }
         val dirs = listOf(File(context.cacheDir, "lossless"), context.cacheDir)
         for (dir in dirs) {
             val files = dir.listFiles() ?: continue

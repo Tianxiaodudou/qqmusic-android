@@ -124,8 +124,11 @@ object PlayerController {
             )
             .setLoadControl(
                 androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                    // 起播 2s、保底 30s、上限 180s：高音质码流给足余量
-                    .setBufferDurationsMs(30_000, 180_000, 2_000, 5_000)
+                    // 维持播放至少 60s、最多囤 240s；起播 3s、卡顿后补 12s 再继续。
+                    // 用几秒起播延迟换稳定性，配合下面的整首多连接预下，效果更明显。
+                    .setBufferDurationsMs(60_000, 240_000, 3_000, 12_000)
+                    .setBackBuffer(30_000, true)
+                    .setPrioritizeTimeOverSizeThresholds(true)
                     .build(),
             )
             .build()
@@ -434,6 +437,25 @@ object PlayerController {
         durationMs = song.interval * 1000L
         val resumeAt = if (startAt <= 0) ResumeStore.get(ctx, song.mid) else 0L
         loadJob = scope?.launch {
+            // 整首已经并行下到本地：直接本地播放，起播和拖动都不碰网络
+            val localHit = withContext(Dispatchers.IO) { AudioFetch.cached(ctx, song.mid) }
+            if (localHit != null) {
+                sourceLabel = "本地缓存" + if (localHit.second.isNotEmpty()) " · " + localHit.second else ""
+                sourcePath = localHit.first.absolutePath
+                actualQuality = localHit.third
+                pl.setMediaItem(MediaItem.fromUri(Uri.fromFile(localHit.first)))
+                val startPos = when {
+                    startAt > 0 -> startAt
+                    resumeAt > 0 -> resumeAt
+                    else -> 0L
+                }
+                if (startPos > 0) pl.seekTo(startPos)
+                pl.prepare()
+                if (autoPlay) pl.play()
+                loading = false
+                prefetchAround()
+                return@launch
+            }
             val src = withContext(Dispatchers.IO) {
                 runCatching { resolve(ctx, song, alt) }.getOrNull()
             }
@@ -535,7 +557,7 @@ object PlayerController {
                     .map { it.code }
                     .filter { it.isNotEmpty() }
                     .distinct()
-                for (s in targets) {
+                for ((n, s) in targets.withIndex()) {
                     if (urlCache[s.mid] != null) continue
                     val map = runCatching { MusicApi.streamBatch(s, codes) }.getOrDefault(emptyMap())
                     val code = codes.firstOrNull { !map[it].isNullOrEmpty() } ?: continue
@@ -546,6 +568,13 @@ object PlayerController {
                         qualityText(code),
                         System.currentTimeMillis(),
                     )
+                    // 只预下紧挨着的下一首，而且当前播放已经缓冲住 15s 以上才开工，别抢带宽
+                    val ahead = bufferedMs - positionMs
+                    if (n == 0 && ahead > 15_000 && AudioFetch.cached(ctx, s.mid) == null) {
+                        runCatching {
+                            AudioFetch.ensure(ctx, s.mid, map[code]!!, q.label, qualityText(code))
+                        }
+                    }
                 }
             }
         }

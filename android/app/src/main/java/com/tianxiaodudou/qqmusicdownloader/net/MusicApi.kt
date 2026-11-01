@@ -36,7 +36,19 @@ object MusicApi {
         val paid: Boolean get() = payPlay == 1 && payMonth == 0 && (priceTrack > 0 || priceAlbum > 0)
     }
 
+    /**
+     * 搜索：移动端接口（登录态最好）-> 综合搜索适配器（匿名也能用）-> smartbox 快搜。
+     * 只走一个接口时经常整页空白，所以按顺序兜底。
+     */
     fun search(keyword: String, page: Int = 1): List<Song> {
+        val q = keyword.trim()
+        if (q.isEmpty()) return emptyList()
+        runCatching { searchMobile(q, page) }.getOrDefault(emptyList()).let { if (it.isNotEmpty()) return it }
+        runCatching { searchAdaptor(q, page) }.getOrDefault(emptyList()).let { if (it.isNotEmpty()) return it }
+        return smartBox(q).songs
+    }
+
+    private fun searchMobile(keyword: String, page: Int): List<Song> {
         val p = JSONObject()
         p.put("searchid", UUID.randomUUID().toString().replace("-", ""))
         p.put("query", keyword)
@@ -46,7 +58,7 @@ object MusicApi {
         p.put("highlight", true)
         p.put("grp", true)
         p.put("selectors", JSONObject())
-        // 与搜索页保持一致：移动端方法在 Android comm 下最稳，桌面方法常回空。
+        p.put("vec_selectors", org.json.JSONArray())
         val data = QqClient.cgi(
             "music.search.SearchCgiService",
             "DoSearchForQQMusicMobile",
@@ -55,10 +67,103 @@ object MusicApi {
         )
         val arr = data.optJSONObject("body")?.optJSONObject("song")?.optJSONArray("list") ?: return emptyList()
         val out = ArrayList<Song>(arr.length())
-        for (i in 0 until arr.length()) {
-            parseSong(arr.optJSONObject(i))?.let { out.add(it) }
-        }
+        for (i in 0 until arr.length()) parseSong(arr.optJSONObject(i))?.let { out.add(it) }
         return out
+    }
+
+    /** 综合搜索（music.adaptor.SearchAdaptor）的 body，歌曲在 item_song.items。 */
+    fun adaptorBody(keyword: String, page: Int = 1): JSONObject? = runCatching {
+        val p = JSONObject()
+        p.put("searchid", UUID.randomUUID().toString().replace("-", ""))
+        p.put("search_type", 100)
+        p.put("page_num", 15)
+        p.put("query", keyword)
+        p.put("page_id", page)
+        p.put("highlight", true)
+        p.put("grp", true)
+        val data = QqClient.cgi("music.adaptor.SearchAdaptor", "do_search_v2", p)
+        data.optJSONObject("body") ?: data
+    }.getOrNull()
+
+    private fun searchAdaptor(keyword: String, page: Int): List<Song> {
+        val body = adaptorBody(keyword, page) ?: return emptyList()
+        val arr = body.optJSONObject("item_song")?.optJSONArray("items") ?: return emptyList()
+        val out = ArrayList<Song>(arr.length())
+        for (i in 0 until arr.length()) parseSong(arr.optJSONObject(i))?.let { out.add(it) }
+        return out
+    }
+
+    /** smartbox 快搜结果（少但稳定），歌曲 / 歌手 / 专辑三类都有。 */
+    data class SmartBox(
+        val songs: List<Song> = emptyList(),
+        val singers: List<SingerApi.Singer> = emptyList(),
+        val albums: List<AlbumApi.Album> = emptyList(),
+    )
+
+    /** 最后的兜底：smartbox 快搜，没有登录态也能搜到几首。 */
+    fun smartBox(keyword: String): SmartBox = runCatching {
+        val url = "https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg?key=" +
+            java.net.URLEncoder.encode(keyword, "UTF-8") + "&format=json&inCharset=utf-8&outCharset=utf-8"
+        val text = QqClient.get(url, emptyMap()).use { it.body?.string().orEmpty() }
+        if (text.isEmpty()) return SmartBox()
+        val d = JSONObject(text).optJSONObject("data") ?: return SmartBox()
+        val songs = ArrayList<Song>()
+        d.optJSONObject("song")?.optJSONArray("itemlist")?.let { list ->
+            for (i in 0 until list.length()) {
+                val o = list.optJSONObject(i) ?: continue
+                val mid = o.optString("mid").ifEmpty { o.optString("id") }
+                if (mid.isEmpty()) continue
+                songs.add(
+                    Song(
+                        id = o.optInt("id", 0),
+                        mid = mid,
+                        name = o.optString("name"),
+                        singers = o.optString("singer").replace("/", " / "),
+                        album = "",
+                        albumMid = "",
+                        interval = 0,
+                        mediaMid = mid,
+                        singerMid = "",
+                    )
+                )
+            }
+        }
+        val singers = ArrayList<SingerApi.Singer>()
+        d.optJSONObject("singer")?.optJSONArray("itemlist")?.let { list ->
+            for (i in 0 until list.length()) {
+                val o = list.optJSONObject(i) ?: continue
+                val mid = o.optString("mid")
+                val name = o.optString("name")
+                if (mid.isNotEmpty() && name.isNotEmpty()) singers.add(SingerApi.Singer(mid, name))
+            }
+        }
+        val albums = ArrayList<AlbumApi.Album>()
+        d.optJSONObject("album")?.optJSONArray("itemlist")?.let { list ->
+            for (i in 0 until list.length()) {
+                val o = list.optJSONObject(i) ?: continue
+                val mid = o.optString("mid")
+                if (mid.isEmpty()) continue
+                albums.add(
+                    AlbumApi.Album(
+                        mid, o.optString("name"), o.optString("singer"),
+                        o.optString("pic").replaceFirst("http://", "https://"),
+                    )
+                )
+            }
+        }
+        SmartBox(songs, singers, albums)
+    }.getOrDefault(SmartBox())
+
+    /** 歌曲显示名：优先 title（同名不同版本靠它区分），带高亮标签的字符串一律不采用。 */
+    private fun displayName(o: JSONObject): String {
+        val n = o.optString("name")
+        val t = o.optString("title")
+        return when {
+            t.isEmpty() || t.contains("<") -> n
+            n.isEmpty() -> t
+            t.length > n.length -> t
+            else -> n
+        }
     }
 
     fun parseSong(o: JSONObject?): Song? {
@@ -88,7 +193,7 @@ object MusicApi {
         return Song(
             id = o.optInt("id", o.optInt("songId", 0)),
             mid = mid,
-            name = o.optString("name", o.optString("title")),
+            name = displayName(o),
             singers = names.toString(),
             album = album?.optString("name").orEmpty(),
             albumMid = album?.optString("mid").orEmpty(),

@@ -376,6 +376,58 @@ object Extras {
                 )
             }
         }
+        if (songs.isNotEmpty() || playlists.isNotEmpty() || singers.isNotEmpty() || albums.isNotEmpty()) {
+            return@runCatching SearchResult(songs, playlists, singers, albums)
+        }
+        // 移动端搜索在部分登录态下会整块回空：退到综合搜索适配器（匿名也返回曲目）
+        val fallbackBody = MusicApi.adaptorBody(keyword, page) ?: return@runCatching SearchResult()
+        fallbackBody.optJSONObject("item_song")?.optJSONArray("items")?.let { arr ->
+            for (i in 0 until arr.length()) MusicApi.parseSong(arr.optJSONObject(i))?.let { songs.add(it) }
+        }
+        fallbackBody.optJSONObject("item_songlist")?.optJSONArray("items")?.let { arr ->
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val id = o.optString("dissid").ifEmpty { o.optString("tid") }.ifEmpty { o.optString("id") }
+                if (id.isEmpty()) continue
+                playlists.add(
+                    PlaylistApi.Item(
+                        id, o.optString("dirId"),
+                        o.optString("dissname").ifEmpty { o.optString("name") }.ifEmpty { o.optString("title") },
+                        o.optInt("songnum", 0),
+                        PlaylistApi.coverOf(o),
+                    )
+                )
+            }
+        }
+        fallbackBody.optJSONObject("item_album")?.optJSONArray("items")?.let { arr ->
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val m = o.optString("albumMid").ifEmpty { o.optString("mid") }
+                if (m.isEmpty()) continue
+                albums.add(
+                    AlbumApi.Album(
+                        m,
+                        o.optString("albumName").ifEmpty { o.optString("name") }.ifEmpty { o.optString("title") },
+                        o.optString("singerName").ifEmpty { o.optString("singer") },
+                        PlaylistApi.coverOf(o),
+                    )
+                )
+            }
+        }
+        fallbackBody.optJSONObject("singer")?.optJSONArray("items")?.let { arr ->
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                val m = o.optString("mid").ifEmpty { o.optString("singer_mid") }
+                val n = o.optString("name").ifEmpty { o.optString("singer_name") }
+                if (m.isNotEmpty() && n.isNotEmpty()) singers.add(SingerApi.Singer(m, n))
+            }
+        }
+        if (songs.isEmpty() && singers.isEmpty() && albums.isEmpty()) {
+            val box = MusicApi.smartBox(keyword)
+            songs.addAll(box.songs)
+            singers.addAll(box.singers)
+            albums.addAll(box.albums)
+        }
         SearchResult(songs, playlists, singers, albums)
     }.getOrDefault(SearchResult())
 

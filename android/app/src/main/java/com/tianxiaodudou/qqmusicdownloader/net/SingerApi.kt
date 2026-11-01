@@ -43,7 +43,11 @@ object SingerApi {
         p.put("order", 1)
         p.put("number", num)
         p.put("begin", 0)
-        val data = QqClient.cgi("musichall.song_list_server", "GetSingerSongList", p)
+        // 登录态异常时退回匿名（歌手曲目是公开数据）
+        val data = runCatching { QqClient.cgi("musichall.song_list_server", "GetSingerSongList", p) }
+            .getOrElse {
+                QqClient.cgi("musichall.song_list_server", "GetSingerSongList", p, style = QqClient.CommStyle.ANON)
+            }
         val arr = data.optJSONArray("songList") ?: data.optJSONArray("song_list")
             ?: data.optJSONArray("songlist") ?: return emptyList()
         val out = ArrayList<MusicApi.Song>()

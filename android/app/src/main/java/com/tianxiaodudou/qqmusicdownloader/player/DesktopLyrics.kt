@@ -43,6 +43,13 @@ object DesktopLyrics {
 
     fun isShowing(): Boolean = view != null
 
+    /** 主题切换后重建悬浮窗，颜色立即跟随。 */
+    fun refresh(ctx: Context) {
+        if (view == null) return
+        hide()
+        show(ctx)
+    }
+
     private fun show(ctx: Context) {
         if (view != null) return
         val w = ctx.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
@@ -80,7 +87,7 @@ object DesktopLyrics {
     /** 悬浮歌词的绘制：暗色打底 + 已唱部分用品牌色按宽度裁切。 */
     private class LyricView(ctx: Context) : View(ctx) {
 
-        private val colors = com.tianxiaodudou.qqmusicdownloader.ui.theme.DarkColors
+        private val colors = com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeStore.colors
         private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.argb(
                 224,

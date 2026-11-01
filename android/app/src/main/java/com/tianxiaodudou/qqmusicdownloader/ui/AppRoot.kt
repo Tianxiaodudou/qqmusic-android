@@ -361,6 +361,8 @@ private fun MinePage(
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
     var desktopLyrics by remember { mutableStateOf(Settings.desktopLyrics(context)) }
     var btLyrics by remember { mutableStateOf(Settings.btLyrics(context)) }
+    var themeMode by remember { mutableStateOf(Settings.themeMode(context)) }
+    var showTheme by remember { mutableStateOf(false) }
     // 悬浮窗权限走系统授权页，回来后再真正拉起悬浮歌词
     val overlayPermission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val ok = android.provider.Settings.canDrawOverlays(context)
@@ -528,6 +530,7 @@ private fun MinePage(
                     com.tianxiaodudou.qqmusicdownloader.player.DesktopLyrics.setEnabled(context, want)
                 }
             }
+            MineRow("主题", themeMode.label) { showTheme = true }
             MineRow(
                 "蓝牙歌词",
                 if (btLyrics) "已开启 · 车机标题显示当前歌词" else "已关闭 · 车机显示歌名",
@@ -620,6 +623,37 @@ private fun MinePage(
                 }
             },
             confirmButton = { AppTextButton(onClick = { showPaid = false }) { Text("关闭") } },
+        )
+    }
+
+    if (showTheme) {
+        AlertDialog(
+            onDismissRequest = { showTheme = false },
+            title = { Text("主题") },
+            text = {
+                Column {
+                    com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode.entries.forEach { opt ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    themeMode = opt
+                                    com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeStore.set(context, opt)
+                                    com.tianxiaodudou.qqmusicdownloader.player.DesktopLyrics.refresh(context)
+                                    showTheme = false
+                                }
+                                .padding(vertical = AppTheme.dimens.spacingMd),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                if (themeMode == opt) "● " else "○ ",
+                                color = if (themeMode == opt) AppTheme.colors.brand else AppTheme.colors.textSecondary,
+                            )
+                            Text(opt.label, style = AppTheme.typography.body)
+                        }
+                    }
+                }
+            },
+            confirmButton = { AppTextButton("关闭") { showTheme = false } },
         )
     }
 

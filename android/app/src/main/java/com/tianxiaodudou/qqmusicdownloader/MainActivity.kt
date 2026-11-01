@@ -24,6 +24,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         QqClient.init(applicationContext)
         QqClient.session = Session.load(this)
+        com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeStore.init(this)
         askNotificationPermission()
         enableEdgeToEdge()
         setContent {

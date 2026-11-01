@@ -55,6 +55,7 @@ object Settings {
     private const val K_AUTO_DOWNGRADE = "auto_downgrade"
     private const val K_DESKTOP_LYRICS = "desktop_lyrics"
     private const val K_BT_LYRICS = "bt_lyrics"
+    private const val K_THEME = "theme_mode"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -73,6 +74,23 @@ object Settings {
         HomeModule("charts", "排行榜"),
         HomeModule("guess", "猜你喜欢"),
     )
+
+    /** 主题模式：跟随系统 / 日间 / 夜间（默认跟随系统）。 */
+    fun themeMode(context: Context): com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode =
+        when (prefs(context).getString(K_THEME, "system")) {
+            "light" -> com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode.LIGHT
+            "dark" -> com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode.DARK
+            else -> com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode.SYSTEM
+        }
+
+    fun setThemeMode(context: Context, mode: com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode) {
+        val v = when (mode) {
+            com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode.LIGHT -> "light"
+            com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode.DARK -> "dark"
+            else -> "system"
+        }
+        prefs(context).edit().putString(K_THEME, v).apply()
+    }
 
     /** 蓝牙歌词：把当前歌词行写进 MediaMetadata 的 Title（非标准协议，默认关闭）。 */
     fun btLyrics(context: Context): Boolean = prefs(context).getBoolean(K_BT_LYRICS, false)

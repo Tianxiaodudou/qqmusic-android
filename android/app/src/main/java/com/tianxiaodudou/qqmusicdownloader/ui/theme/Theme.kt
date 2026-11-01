@@ -5,29 +5,34 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val Brand = Color(0xFF1FC365)
-val BrandDim = Color(0xFF178A49)
-val Bg = Color(0xFF0F1115)
-val Surface1 = Color(0xFF171A21)
-val Surface2 = Color(0xFF1F2430)
-val TextMain = Color(0xFFF2F4F8)
-val TextSub = Color(0xFF9AA3B2)
+/** 兼容用常量：新代码请用 AppTheme.colors.xxx，这些只是 DarkColors 的别名。 */
+val Brand = DarkColors.brand
+val BrandDim = DarkColors.brandDim
+val Bg = DarkColors.bg
+val Surface1 = DarkColors.surface1
+val Surface2 = DarkColors.surface3
+val TextMain = DarkColors.textPrimary
+val TextSub = DarkColors.textSecondary
 
 private val DarkScheme = darkColorScheme(
-    primary = Brand,
-    onPrimary = Color(0xFF04150C),
-    secondary = BrandDim,
-    onSecondary = Color(0xFFF2F4F8),
-    background = Bg,
-    onBackground = TextMain,
-    surface = Surface1,
-    onSurface = TextMain,
-    surfaceVariant = Surface2,
-    onSurfaceVariant = TextSub,
-    outline = Color(0xFF2A3040),
+    primary = DarkColors.brand,
+    onPrimary = DarkColors.textOnBrand,
+    secondary = DarkColors.brandDim,
+    onSecondary = DarkColors.textPrimary,
+    background = DarkColors.bg,
+    onBackground = DarkColors.textPrimary,
+    surface = DarkColors.surface1,
+    onSurface = DarkColors.textPrimary,
+    surfaceVariant = DarkColors.surface3,
+    onSurfaceVariant = DarkColors.textSecondary,
+    outline = DarkColors.lineStrong,
+    error = DarkColors.error,
+    onError = Color.White,
 )
 
 @Composable
 fun QQMusicTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = DarkScheme, content = content)
+    AppThemeProvider {
+        MaterialTheme(colorScheme = DarkScheme, content = content)
+    }
 }

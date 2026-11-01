@@ -12,28 +12,32 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 
-internal val CardBg = Color(0xFF171B22)
-internal val CardBorder = Color(0xFF232A35)
-internal val DimText = Color(0xFF8C96A6)
-internal val BrandGreen = Color(0xFF1FC365)
+/**
+ * 基础组件层：颜色、圆角、字号、间距全部来自 AppTheme，页面只调组件。
+ * 这三个 val 仅用于尚未改造的页面做兜底，新代码请用 AppTheme。
+ */
+internal val CardBg
+    @Composable get() = AppTheme.colors.surface1
+internal val CardBorder
+    @Composable get() = AppTheme.colors.line
+internal val DimText
+    @Composable get() = AppTheme.colors.textSecondary
+internal val BrandGreen
+    @Composable get() = AppTheme.colors.brand
 
 /** 首页入口小方块：图标 + 文字。 */
 @Composable
@@ -43,40 +47,56 @@ fun EntryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = AppTheme.colors
+    val shapes = AppTheme.shapes
+    val dimens = AppTheme.dimens
+    val type = AppTheme.typography
     Column(
         modifier
-            .height(76.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(CardBg)
+            .height(dimens.tileHeight)
+            .clip(shapes.cardMedium)
+            .background(colors.surface1)
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(vertical = dimens.spacingMd),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(Color(0x221FC365)),
+            Modifier.size(dimens.tileIconBlock).clip(shapes.iconBlock).background(colors.brandBorder),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = BrandGreen, modifier = Modifier.size(17.dp))
+            Icon(icon, contentDescription = null, tint = colors.brand, modifier = Modifier.size(dimens.tileIcon))
         }
-        Spacer(Modifier.height(6.dp))
-        Text(label, fontSize = 11.sp, color = Color(0xFFD7DEE8), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(dimens.spacingXs))
+        Text(
+            label,
+            style = type.caption,
+            color = colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
 /** 方形封面：空地址显示 ♪ 占位。 */
 @Composable
-fun SquareCover(url: String, dim: androidx.compose.ui.unit.Dp = 48.dp, radius: androidx.compose.ui.unit.Dp = 8.dp) {
+fun SquareCover(url: String, dim: androidx.compose.ui.unit.Dp? = null, radius: androidx.compose.ui.unit.Dp? = null) {
+    val colors = AppTheme.colors
+    val shapes = AppTheme.shapes
+    val dimens = AppTheme.dimens
+    val size = dim ?: dimens.coverMd
+    val corner = radius ?: dimens.coverRadius
     Box(
-        Modifier.size(dim).clip(RoundedCornerShape(radius)).background(Color(0xFF222833)),
+        Modifier.size(size).clip(androidx.compose.foundation.shape.RoundedCornerShape(corner))
+            .background(colors.coverPlaceholder),
         contentAlignment = Alignment.Center,
     ) {
-        Text("♪", fontSize = 15.sp, color = DimText)
+        Text("♪", style = AppTheme.typography.title, color = colors.textSecondary)
         if (url.isNotEmpty()) {
             coil3.compose.AsyncImage(
                 model = url,
                 contentDescription = null,
-                modifier = Modifier.size(dim).clip(RoundedCornerShape(radius)),
+                modifier = Modifier.size(size).clip(androidx.compose.foundation.shape.RoundedCornerShape(corner)),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             )
         }
@@ -90,20 +110,26 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = AppTheme.colors
+    val shapes = AppTheme.shapes
+    val dimens = AppTheme.dimens
     Column(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(CardBg),
+            .padding(horizontal = dimens.pagePadding, vertical = dimens.spacing6)
+            .clip(shapes.cardLarge)
+            .background(colors.surface1),
     ) {
         if (title.isNotEmpty()) {
             Text(
                 title,
-                fontSize = 11.sp,
-                color = DimText,
+                style = AppTheme.typography.caption,
+                color = colors.textSecondary,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 2.dp),
+                modifier = Modifier.padding(
+                    start = dimens.pagePadding, top = dimens.spacingLg,
+                    end = dimens.pagePadding, bottom = dimens.spacing2,
+                ),
             )
         }
         content()
@@ -119,34 +145,38 @@ fun FoldSection(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val colors = AppTheme.colors
+    val shapes = AppTheme.shapes
+    val dimens = AppTheme.dimens
     Column(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(CardBg),
+            .padding(horizontal = dimens.pagePadding, vertical = dimens.spacing5)
+            .clip(shapes.cardLarge)
+            .background(colors.surface1),
     ) {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onToggle)
+                .padding(horizontal = dimens.pagePadding, vertical = dimens.spacing14),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 title,
-                fontSize = 14.sp,
+                style = AppTheme.typography.body,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFFE9EDF4),
+                color = colors.textPrimary,
                 modifier = Modifier.weight(1f),
             )
             Icon(
                 if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                 contentDescription = null,
-                tint = DimText,
-                modifier = Modifier.size(20.dp),
+                tint = colors.textSecondary,
+                modifier = Modifier.size(dimens.iconMd),
             )
         }
         if (expanded) {
             content()
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(dimens.spacingXs))
         }
     }
 }
@@ -156,9 +186,13 @@ fun FoldSection(
 fun BlockTitle(text: String) {
     Text(
         text,
-        fontSize = 15.sp,
+        style = AppTheme.typography.title,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onBackground,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp),
+        color = AppTheme.colors.textPrimary,
+        modifier = Modifier.padding(
+            start = AppTheme.dimens.pagePadding, end = AppTheme.dimens.pagePadding,
+            top = AppTheme.dimens.spacingMd, bottom = AppTheme.dimens.spacingSm,
+        ),
     )
 }
+

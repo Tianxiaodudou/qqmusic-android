@@ -1,5 +1,17 @@
 # 更新日志
 
+## v2.12.0 (2026-11-01)
+
+### 主题系统（第一步：定义层 + 组件层）
+- 新增 ui/theme 定义层：AppColors / AppShapes / AppStrokes / AppTypography / AppDimens / AppTheme，
+  统一走 CompositionLocalProvider 注入，结构支持以后加浅色或其他皮肤
+- DarkColors 从现有页面取值并重排语义（背景 4 档、文字 5 档、品牌 3 档、状态 4 组、控件色、描边、歌词色）
+- 基础组件（入口卡、方形封面、分组卡、折叠卡、小节标题）改为只引用 AppTheme，不再写死颜色/圆角/字号
+- 兼容层：Theme.kt 的 Brand/Bg/Surface/Text 常量保留为 DarkColors 别名，未改造的页面继续编译
+
+### 下一步（进行中）
+- 逐页把 Color(0x…) / .sp / .dp 字面值换成主题变量（播放页、列表、歌词页优先）
+- 之后接入 MediaSession 系统接管、桌面逐字歌词、蓝牙歌词 Title
 ## v2.11.0 (2026-11-01)
 
 ### 新增设置项

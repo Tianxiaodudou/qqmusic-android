@@ -15,6 +15,12 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // 服务活着（播放中）就按设置维持桌面歌词悬浮窗
+        runCatching {
+            if (com.tianxiaodudou.qqmusicdownloader.net.Settings.desktopLyrics(this)) {
+                DesktopLyrics.setEnabled(this, true)
+            }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -26,6 +32,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        DesktopLyrics.setEnabled(this, false)
+        LyricsRuntime.stop()
         instance = null
         super.onDestroy()
     }

@@ -357,6 +357,15 @@ private fun MinePage(
     // 「我的」页分组折叠：默认全收起，同一时间只允许展开一个
     var openSection by remember { mutableStateOf("") }
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
+    var desktopLyrics by remember { mutableStateOf(Settings.desktopLyrics(context)) }
+    // 悬浮窗权限走系统授权页，回来后再真正拉起悬浮歌词
+    val overlayPermission = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val ok = android.provider.Settings.canDrawOverlays(context)
+        desktopLyrics = ok
+        Settings.setDesktopLyrics(context, ok)
+        com.tianxiaodudou.qqmusicdownloader.player.DesktopLyrics.setEnabled(context, ok)
+        if (!ok) toast = "没有悬浮窗权限，桌面歌词无法显示"
+    }
     fun toggleSection(key: String) { openSection = if (openSection == key) "" else key }
 
     LaunchedEffect(Unit) {
@@ -495,6 +504,26 @@ private fun MinePage(
             ) {
                 autoDowngrade = !autoDowngrade
                 Settings.setAutoDowngrade(context, autoDowngrade)
+            }
+            MineRow(
+                "桌面歌词",
+                if (desktopLyrics) "已开启 · 悬浮窗可拖动" else "已关闭 · 需要悬浮窗权限",
+            ) {
+                val want = !desktopLyrics
+                if (want && !android.provider.Settings.canDrawOverlays(context)) {
+                    runCatching {
+                        overlayPermission.launch(
+                            android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                android.net.Uri.parse("package:" + context.packageName),
+                            )
+                        )
+                    }
+                } else {
+                    desktopLyrics = want
+                    Settings.setDesktopLyrics(context, want)
+                    com.tianxiaodudou.qqmusicdownloader.player.DesktopLyrics.setEnabled(context, want)
+                }
             }
             MineRow("付费内容", paidPolicy.label) { showPaid = true }
             MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }

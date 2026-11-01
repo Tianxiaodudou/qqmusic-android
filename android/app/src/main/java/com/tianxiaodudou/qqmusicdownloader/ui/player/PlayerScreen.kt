@@ -319,7 +319,6 @@ fun PlayerScreen(onExit: () -> Unit) {
                     positionProvider = { previewMs ?: PlayerController.positionNow() },
                     offsetMs = offsetMs,
                     style = style,
-                    coverUrl = cover,
                     playing = PlayerController.playing,
                     flashIndex = flashIndex,
                     onSeekLine = ::jumpToLine,

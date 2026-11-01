@@ -79,7 +79,6 @@ fun LyricsPane(
     positionProvider: () -> Long,
     offsetMs: Int,
     style: Settings.LyricStyle,
-    coverUrl: String,
     playing: Boolean,
     flashIndex: Int,
     onSeekLine: (LyricApi.Line) -> Unit,
@@ -89,7 +88,6 @@ fun LyricsPane(
 ) {
     var follow by remember { mutableStateOf(true) }
     var manualTick by remember { mutableIntStateOf(0) }
-    var tapFade by remember { mutableStateOf(false) }
 
     // 逐字高亮是逐帧刷新的：按屏幕刷新率从播放器外推当前位置，
     // 既不会 12fps 一跳一跳，也不会落后于音频。
@@ -144,28 +142,6 @@ fun LyricsPane(
     BoxWithConstraints(modifier.fillMaxSize().nestedScroll(scrollWatcher)) {
         val areaHeight = maxHeight
 
-        // 小封面：视觉锚点，手动滚动/点歌词时淡出
-        val coverAlpha by animateFloatAsState(
-            targetValue = if (follow && !tapFade) 0.62f else 0f,
-            animationSpec = tween(420),
-            label = "coverAlpha",
-        )
-        LaunchedEffect(tapFade) {
-            if (tapFade) {
-                delay(2600)
-                tapFade = false
-            }
-        }
-        val angle = remember { Animatable(0f) }
-        LaunchedEffect(playing, coverUrl) {
-            if (playing) {
-                angle.animateTo(
-                    targetValue = angle.value + 360f,
-                    animationSpec = infiniteRepeatable(tween(24000, easing = LinearEasing)),
-                )
-            }
-        }
-
         if (lines.isEmpty()) {
             Column(
                 Modifier.fillMaxSize().padding(horizontal = 32.dp),
@@ -187,7 +163,7 @@ fun LyricsPane(
                 state = listState,
                 modifier = Modifier.fillMaxSize().alpha(contentAlpha),
                 contentPadding = PaddingValues(
-                    top = areaHeight * 0.30f,
+                    top = areaHeight * 0.22f,
                     bottom = areaHeight * 0.55f,
                 ),
             ) {
@@ -217,10 +193,7 @@ fun LyricsPane(
                         Modifier
                             .fillMaxWidth()
                             .combinedClickable(
-                                onClick = {
-                                    tapFade = true
-                                    onSeekLine(line)
-                                },
+                                onClick = { onSeekLine(line) },
                                 onLongClick = { onLongPressLine(line) },
                             )
                             .padding(horizontal = 24.dp, vertical = if (isCurrent) 9.dp else 7.dp),
@@ -289,24 +262,6 @@ fun LyricsPane(
                 }
             }
 
-            // 小封面叠在歌词上方居中，不占列表空间
-            if (coverUrl.isNotEmpty()) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 6.dp)
-                        .size(84.dp)
-                        .alpha(coverAlpha)
-                        .graphicsLayer { rotationZ = angle.value },
-                ) {
-                    AsyncImage(
-                        model = coverUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                    )
-                }
-            }
         }
 
         // 回到当前

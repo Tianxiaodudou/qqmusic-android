@@ -356,6 +356,7 @@ private fun MinePage(
     var loginState by remember { mutableStateOf("检查中…") }
     // 「我的」页分组折叠：默认全收起，同一时间只允许展开一个
     var openSection by remember { mutableStateOf("") }
+    var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
     fun toggleSection(key: String) { openSection = if (openSection == key) "" else key }
 
     LaunchedEffect(Unit) {
@@ -488,6 +489,13 @@ private fun MinePage(
             MineRow("首页模块", "各模块显示 / 隐藏与条数", divider = false) { Nav.push(Route.HomeModules) }
         }
         FoldSection("播放与下载", openSection == "play", onToggle = { toggleSection("play") }) {
+            MineRow(
+                "缓冲卡顿自动降音质",
+                if (autoDowngrade) "已开启 · 卡住 6 秒自动降一档" else "已关闭 · 卡顿也保持当前音质",
+            ) {
+                autoDowngrade = !autoDowngrade
+                Settings.setAutoDowngrade(context, autoDowngrade)
+            }
             MineRow("付费内容", paidPolicy.label) { showPaid = true }
             MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }
             MineRow("下载目录", dirLabel.ifEmpty { "未选择" }) { onPickDir() }

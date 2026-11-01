@@ -111,6 +111,8 @@ fun HomeScreen(
     val view = viewStack.last()
     fun open(v: HomeView) { viewStack = viewStack + v }
     fun back() { if (viewStack.size > 1) viewStack = viewStack.dropLast(1) }
+    // 模块页逐级返回（模块 -> 榜单/专辑/歌手 -> 歌曲），到首页才交给上层
+    BackHandler(enabled = viewStack.size > 1) { back() }
     var songs by remember { mutableStateOf<List<MusicApi.Song>?>(null) }
     var error by remember { mutableStateOf("") }
 

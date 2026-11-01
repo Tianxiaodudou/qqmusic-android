@@ -52,6 +52,7 @@ object Settings {
     private const val K_ROMA = "style_roma"
     private const val K_EQ = "eq_preset"
     private const val K_PAID = "paid_policy"
+    private const val K_AUTO_DOWNGRADE = "auto_downgrade"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -70,6 +71,14 @@ object Settings {
         HomeModule("charts", "排行榜"),
         HomeModule("guess", "猜你喜欢"),
     )
+
+    /** 播放缓冲卡顿时是否允许自动降一档音质（默认允许）。 */
+    fun autoDowngrade(context: Context): Boolean =
+        prefs(context).getBoolean(K_AUTO_DOWNGRADE, true)
+
+    fun setAutoDowngrade(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(K_AUTO_DOWNGRADE, on).apply()
+    }
 
     fun homeEnabled(context: Context, key: String): Boolean =
         prefs(context).getBoolean("home_" + key + "_on", true)

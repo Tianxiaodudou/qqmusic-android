@@ -403,6 +403,8 @@ object PlayerController {
             load(song, startAt = positionMs, autoPlay = true)
             return
         }
+        // 用户关掉了自动降档：卡顿就卡着，不偷偷改音质
+        if (!Settings.autoDowngrade(ctx)) return
         if (stallDowngrades >= 2) return
         val cap = forcedQuality ?: Settings.quality(ctx)
         val lower = Settings.Quality.entries.filter { it.ordinal < cap.ordinal }.maxByOrNull { it.ordinal } ?: return

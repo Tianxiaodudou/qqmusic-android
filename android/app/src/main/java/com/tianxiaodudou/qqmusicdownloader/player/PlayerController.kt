@@ -78,6 +78,12 @@ object PlayerController {
     private var retriedQuality = false
     private var forcedQuality: Settings.Quality? = null
     private var mediaCache: androidx.media3.datasource.cache.SimpleCache? = null
+
+    /** 交给 PlaybackService / 系统媒体控制用的会话。 */
+    var mediaSession: androidx.media3.session.MediaSession? = null
+        private set
+
+    private val sessionContext: Context? get() = appContext
     /** 卡顿降档计数与计时：同一首歌最多降两档，避免来回跳。 */
     private var stallDowngrades = 0
     private var bufferingSince = 0L
@@ -185,6 +191,22 @@ object PlayerController {
             }
         })
         AudioFx.attach(ctx, p.audioSessionId, Settings.eqPreset(ctx))
+
+        // 系统接管：通知栏 / 锁屏 / 蓝牙 / 耳机按键
+        runCatching {
+            val sessionActivity = android.app.PendingIntent.getActivity(
+                ctx,
+                0,
+                android.content.Intent(ctx, com.tianxiaodudou.qqmusicdownloader.MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+            // 先把服务拉起来，再建会话：MediaSessionService.onGetSession 直接返回这个实例
+            ctx.startService(android.content.Intent(ctx, PlaybackService::class.java))
+            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, p)
+                .setSessionActivity(sessionActivity)
+                .build()
+        }
 
         scope?.launch {
             var lastSavedSec = -1L
@@ -430,11 +452,31 @@ object PlayerController {
         AudioFx.release()
         exo?.release()
         exo = null
+        runCatching { mediaSession?.release() }
+        mediaSession = null
         runCatching { mediaCache?.release() }
         mediaCache = null
+        runCatching { appContext?.stopService(android.content.Intent(appContext!!, PlaybackService::class.java)) }
     }
 
     // ---------------- 内部实现 ----------------
+
+    /** 带元数据的 MediaItem：通知栏、锁屏、蓝牙车机都从这里取标题/歌手/封面/时长。 */
+    private fun mediaItemOf(song: MusicApi.Song, uri: Uri): MediaItem {
+        val artwork = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 500)
+        val metadata = androidx.media3.common.MediaMetadata.Builder()
+            .setTitle(song.name)
+            .setArtist(song.singers)
+            .setAlbumTitle(song.album)
+            .setDurationMs(song.interval * 1000L)
+            .apply { if (artwork.isNotEmpty()) setArtworkUri(Uri.parse(artwork)) }
+            .build()
+        return MediaItem.Builder()
+            .setMediaId(song.mid)
+            .setUri(uri)
+            .setMediaMetadata(metadata)
+            .build()
+    }
 
     private data class Source(
         val uri: Uri,
@@ -473,7 +515,7 @@ object PlayerController {
                 sourceLabel = "本地缓存" + if (localHit.label.isNotEmpty()) " · " + localHit.label else ""
                 sourcePath = localHit.file.absolutePath
                 actualQuality = if (localHit.quality.isNotEmpty()) localHit.quality else qualityText(localHit.code)
-                pl.setMediaItem(MediaItem.fromUri(Uri.fromFile(localHit.file)))
+                pl.setMediaItem(mediaItemOf(song, Uri.fromFile(localHit.file)))
                 val startPos = when {
                     startAt > 0 -> startAt
                     resumeAt > 0 -> resumeAt
@@ -497,7 +539,7 @@ object PlayerController {
             sourceLabel = src.label
             sourcePath = src.path
             actualQuality = src.quality
-            pl.setMediaItem(MediaItem.fromUri(src.uri))
+            pl.setMediaItem(mediaItemOf(song, src.uri))
             val startPos = when {
                 startAt > 0 -> startAt
                 resumeAt > 0 -> resumeAt

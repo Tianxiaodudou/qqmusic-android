@@ -1,5 +1,20 @@
 # 更新日志
 
+## v2.14.0 (2026-11-01)
+
+### 系统接管（P0：MediaSession）
+- 新增 PlaybackService（MediaSessionService）：把播放器的 MediaSession 交给系统，
+  通知栏、锁屏、蓝牙车机、耳机/表冠按键都能控制播放、暂停、上一首/下一首与进度
+- 每首歌都构造带元数据的 MediaItem：标题、歌手、专辑、时长、cover（artworkUri 500 封面），
+  通知栏与锁屏直接显示；播放状态/进度/速度由播放器自动同步，无需手动拼 PlaybackState
+- 会话 activity 指向 MainActivity（singleTop），点通知回到播放页
+- Manifest：前台服务类型 mediaPlayback、MEDIA_BUTTON intent-filter、MediaButtonReceiver，
+  权限 WAKE_LOCK / FOREGROUND_SERVICE / FOREGROUND_SERVICE_MEDIA_PLAYBACK / POST_NOTIFICATIONS
+- Android 13+ 启动时申请通知权限；退到后台仍可继续播放，划掉任务时未在播放则停服务
+
+### 说明
+- UI 仍直接读 PlayerController 的状态（同一份 ExoPlayer），没有额外接一层 MediaController 转发；
+  系统侧通过 MediaSession 拿到的状态与 UI 完全一致
 ## v2.13.0 (2026-11-01)
 
 ### 主题系统（第二步：页面颜色全部走主题变量）

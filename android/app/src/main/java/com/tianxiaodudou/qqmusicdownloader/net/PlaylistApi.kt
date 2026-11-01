@@ -1,11 +1,56 @@
 package com.tianxiaodudou.qqmusicdownloader.net
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 
 /** 歌单：我的歌单列表 + 歌单里的歌曲。 */
 object PlaylistApi {
 
-    data class Item(val id: String, val dirId: String, val name: String, val count: Int)
+    data class Item(
+        val id: String,
+        val dirId: String,
+        val name: String,
+        val count: Int,
+        val cover: String = "",
+    )
+
+    /** 歌单封面的候选字段（公开歌单有 picurl，自建歌单常见只有 albumPicUrl / bigpicUrl）。 */
+    fun coverOf(o: JSONObject): String {
+        for (k in listOf("picurl", "picUrl", "bigpicUrl", "bigPicUrl", "albumPicUrl", "album_pic_url", "cover", "logo", "pic")) {
+            val v = o.optString(k)
+            if (v.startsWith("http")) return v
+        }
+        return ""
+    }
+
+    /** 自建歌单服务端只给空封面时，退化成第一首歌的专辑封面。 */
+    fun fallbackCover(item: Item): String = runCatching {
+        if (item.count <= 0) return ""
+        val first = songs(item, page = 1, num = 1).firstOrNull() ?: return ""
+        if (first.albumMid.isEmpty()) "" else
+            "https://y.gtimg.cn/music/photo_new/T002R300x300M000" + first.albumMid + ".jpg"
+    }.getOrDefault("")
+
+    /** 批量补封面：只对空封面的歌单补，最多并发 3 个请求。 */
+    suspend fun withCovers(items: List<Item>): List<Item> {
+        if (items.none { it.cover.isEmpty() && it.count > 0 }) return items
+        val out = items.toMutableList()
+        for (range in items.indices.chunked(3)) {
+            coroutineScope {
+                val done = range.map { i ->
+                    async(Dispatchers.IO) {
+                        val item = out[i]
+                        if (item.cover.isEmpty()) item.copy(cover = fallbackCover(item)) else item
+                    }
+                }.awaitAll()
+                done.forEachIndexed { k, v -> out[range[k]] = v }
+            }
+        }
+        return out
+    }
 
     fun mine(): List<Item> {
         val uin = QqClient.session?.uin ?: return emptyList()
@@ -25,6 +70,7 @@ object PlaylistApi {
                     dirId = o.optString("dirId").ifEmpty { o.optString("dirid") },
                     name = o.optString("dirName").ifEmpty { o.optString("name") },
                     count = o.optInt("songNum", o.optInt("songnum", 0)),
+                    cover = coverOf(o),
                 )
             )
         }

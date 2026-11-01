@@ -63,6 +63,19 @@ object RecommendApi {
         return out
     }
 
+    /** 按条数取推荐歌单：接口单页最多 20，翻页凑够 n 条。 */
+    fun songlistsUpTo(n: Int): List<Songlist> {
+        val out = ArrayList<Songlist>()
+        var page = 1
+        while (out.size < n && page <= 6) {
+            val batch = runCatching { songlists(page = page, num = 20) }.getOrDefault(emptyList())
+            if (batch.isEmpty()) break
+            out.addAll(batch)
+            page += 1
+        }
+        return out.distinctBy { it.id }.take(n.coerceAtLeast(1))
+    }
+
     /** 新歌速递，type: 1内地 2欧美 3日本 4韩国 5最新 6港台。 */
     fun newSongs(type: Int = 5): List<MusicApi.Song> {
         val p = JSONObject().put("type", type)
@@ -71,6 +84,16 @@ object RecommendApi {
         val out = ArrayList<MusicApi.Song>()
         for (i in 0 until arr.length()) MusicApi.parseSong(arr.optJSONObject(i))?.let { out.add(it) }
         return out
+    }
+
+    /** 按条数取新歌：单次调用条数固定，按地区轮询凑够 n 条。 */
+    fun newSongsUpTo(n: Int): List<MusicApi.Song> {
+        val out = ArrayList<MusicApi.Song>()
+        for (t in listOf(5, 1, 2, 3, 4, 6)) {
+            if (out.size >= n) break
+            out.addAll(runCatching { newSongs(t) }.getOrDefault(emptyList()))
+        }
+        return out.distinctBy { it.id }.take(n.coerceAtLeast(1))
     }
 
     data class FeedCard(val kind: String, val id: String, val name: String, val sub: String, val cover: String)
@@ -104,7 +127,7 @@ object RecommendApi {
             }
             if (cards.isNotEmpty()) {
                 out.add(FeedGroup(title, cards.take(limit)))
-                if (out.size >= 2) break
+                if (out.size >= 3) break
             }
         }
         return out
@@ -126,6 +149,19 @@ object RecommendApi {
     }
 
     /** 每日推荐（私人雷达），对应 fpk 的 TrackRelationServer / GetRadarSong。 */
+    /** 按条数取每日推荐：单页约 20 条，翻页凑够 n 条。 */
+    fun radarUpTo(n: Int): List<MusicApi.Song> {
+        val out = ArrayList<MusicApi.Song>()
+        var page = 1
+        while (out.size < n && page <= 5) {
+            val batch = runCatching { radar(page) }.getOrDefault(emptyList())
+            if (batch.isEmpty()) break
+            out.addAll(batch)
+            page += 1
+        }
+        return out.distinctBy { it.id }.take(n.coerceAtLeast(1))
+    }
+
     fun radar(page: Int = 1): List<MusicApi.Song> {
         val p = JSONObject()
         p.put("Page", page)

@@ -305,6 +305,7 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
         withContext(Dispatchers.IO) {
             if (albums) list = runCatching { Extras.favAlbums() }.getOrDefault(emptyList())
             else playlists = runCatching { Extras.favPlaylists() }.getOrDefault(emptyList())
+                .let { PlaylistApi.withCovers(it) }
         }
     }
     DetailScaffold(if (albums) "收藏的专辑" else "收藏的歌单", onBack = { Nav.pop() }) {
@@ -346,7 +347,11 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(p.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        SquareCover(p.cover)
+                        Text(
+                            p.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(start = 12.dp),
+                        )
                         Text(p.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

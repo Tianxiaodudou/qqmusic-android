@@ -102,20 +102,22 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
     val context = androidx.compose.ui.platform.LocalContext.current
     fun on(key: String) = Settings.homeEnabled(context, key)
     fun n(key: String) = Settings.homeCount(context, key)
+    // 统一在客户端兜一层条数上限：服务端对 num/Size 不总是买账，不裁剪就等于设置无效。
+    fun <T> List<T>.cap(key: String): List<T> = take(n(key).coerceAtLeast(1))
     val cfgVersion = HomeConfig.version
 
     LaunchedEffect(cfgVersion) {
         withContext(Dispatchers.IO) {
             if (on("charts")) runCatching { TopApi.charts().take(n("charts")) }.onSuccess { charts = it }.onFailure { charts = emptyList() } else charts = emptyList()
             if (on("songlists")) {
-                runCatching { RecommendApi.songlists(num = n("songlists")) }
+                runCatching { RecommendApi.songlistsUpTo(n("songlists")) }
                     .onSuccess { l ->
                         songlists = l
                         Covers.prefetch(context, l.map { it.pic })
                     }
                     .onFailure { songlists = emptyList() }
             } else songlists = emptyList()
-            if (on("newsongs")) runCatching { RecommendApi.newSongs().take(n("newsongs")) }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() } else newSongs = emptyList()
+            if (on("newsongs")) runCatching { RecommendApi.newSongsUpTo(n("newsongs")) }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() } else newSongs = emptyList()
             if (on("feed")) {
                 runCatching { RecommendApi.homeFeed(limit = n("feed")) }
                     .onSuccess { g ->
@@ -124,9 +126,9 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
                     }
                     .onFailure { feed = emptyList() }
             } else feed = emptyList()
-            if (on("albums")) runCatching { AlbumApi.newAlbums(num = n("albums")) }.onSuccess { albums = it }.onFailure { albums = emptyList() }
-            if (on("singers")) runCatching { SingerApi.list().take(n("singers")) }.onSuccess { singers = it }.onFailure { singers = emptyList() }
-            if (on("hot")) runCatching { MusicApi.hotKeys().take(n("hot")) }.onSuccess { hot = it }.onFailure { hot = emptyList() }
+            if (on("albums")) runCatching { AlbumApi.newAlbumsUpTo(n("albums")) }.onSuccess { albums = it }.onFailure { albums = emptyList() }
+            if (on("singers")) runCatching { SingerApi.list().cap("singers") }.onSuccess { singers = it }.onFailure { singers = emptyList() }
+            if (on("hot")) runCatching { MusicApi.hotKeys().cap("hot") }.onSuccess { hot = it }.onFailure { hot = emptyList() }
         }
         if (charts.isNullOrEmpty() && songlists.isNullOrEmpty() && newSongs.isNullOrEmpty()) {
             error = "推荐加载失败，请检查登录状态"
@@ -137,7 +139,7 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         if (v is HomeView.Feed) return@LaunchedEffect
         if (v is HomeView.Hot && v.kw.isEmpty()) {
             hot = null
-            val r = withContext(Dispatchers.IO) { runCatching { MusicApi.hotKeys().take(n("hot")) } }
+            val r = withContext(Dispatchers.IO) { runCatching { MusicApi.hotKeys().cap("hot") } }
             r.onSuccess { hot = it }.onFailure { hot = emptyList() }
             return@LaunchedEffect
         }
@@ -147,13 +149,13 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         }
         if (v is HomeView.Singers) {
             singers = null
-            val r = withContext(Dispatchers.IO) { runCatching { SingerApi.list().take(n("singers")) } }
+            val r = withContext(Dispatchers.IO) { runCatching { SingerApi.list().cap("singers") } }
             r.onSuccess { singers = it }.onFailure { singers = emptyList() }
             return@LaunchedEffect
         }
         if (v is HomeView.Albums) {
             albums = null
-            val r = withContext(Dispatchers.IO) { runCatching { AlbumApi.newAlbums(num = n("albums")) } }
+            val r = withContext(Dispatchers.IO) { runCatching { AlbumApi.newAlbumsUpTo(n("albums")) } }
             r.onSuccess { albums = it }.onFailure { albums = emptyList() }
             return@LaunchedEffect
         }
@@ -162,22 +164,23 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         val r = withContext(Dispatchers.IO) {
             runCatching {
                 when (v) {
-                    is HomeView.Guess -> RecommendApi.guess(num = n("guess"))
-                    is HomeView.Radar -> RecommendApi.radar().take(n("radar"))
-                    is HomeView.Chart -> TopApi.songs(v.chart, num = n("charts"))
+                    is HomeView.Guess -> RecommendApi.guess(num = n("guess")).cap("guess")
+                    is HomeView.Radar -> RecommendApi.radarUpTo(n("radar"))
+                    is HomeView.Chart -> TopApi.songs(v.chart, num = n("charts")).cap("charts")
                     is HomeView.Songlist -> PlaylistApi.songs(
-                        PlaylistApi.Item(v.item.id, v.item.dirId, v.item.name, v.item.songNum),
+                        PlaylistApi.Item(v.item.id, v.item.dirId, v.item.name, v.item.songNum, v.item.pic),
                         num = n("songlists"),
-                    )
-                    is HomeView.AlbumSongs -> AlbumApi.songs(v.album.mid, num = n("albums"))
-                    is HomeView.Hot -> MusicApi.search(v.kw).take(n("hot"))
-                    is HomeView.SingerSongs -> SingerApi.songs(v.singer.mid, num = n("singers"))
+                    ).cap("songlists")
+                    is HomeView.AlbumSongs -> AlbumApi.songs(v.album.mid, num = n("albums")).cap("albums")
+                    is HomeView.Hot -> MusicApi.search(v.kw).cap("hot")
+                    is HomeView.SingerSongs -> SingerApi.songs(v.singer.mid, num = n("singers")).cap("singers")
                     is HomeView.Card -> {
                         if (v.card.kind == "song") {
                             val sid = v.card.id.toLongOrNull()
                             if (sid == null) emptyList() else listOfNotNull(MusicApi.detail(sid))
                         } else {
-                            PlaylistApi.songs(PlaylistApi.Item(v.card.id, "0", v.card.name, 0))
+                            PlaylistApi.songs(PlaylistApi.Item(v.card.id, "0", v.card.name, 0), num = n("songlists"))
+                                .cap("songlists")
                         }
                     }
                     else -> emptyList()

@@ -53,14 +53,23 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     var favs by remember { mutableStateOf<List<PlaylistApi.Item>?>(null) }
     var pendingDelete by remember { mutableStateOf<PlaylistApi.Item?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         val r = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() } }
-        r.onSuccess { playlists = it }.onFailure { error = it.message ?: "歌单加载失败"; playlists = emptyList() }
+        r.onSuccess { list ->
+            playlists = list
+            val filled = withContext(Dispatchers.IO) { runCatching { PlaylistApi.withCovers(list) }.getOrDefault(list) }
+            playlists = filled
+            Covers.prefetch(context, filled.map { it.cover })
+        }.onFailure { error = it.message ?: "歌单加载失败"; playlists = emptyList() }
     }
     LaunchedEffect(showFav) {
         if (showFav && favs == null) {
-            favs = withContext(Dispatchers.IO) { runCatching { Extras.favPlaylists() }.getOrDefault(emptyList()) }
+            favs = withContext(Dispatchers.IO) {
+                val l = runCatching { Extras.favPlaylists() }.getOrDefault(emptyList())
+                runCatching { PlaylistApi.withCovers(l) }.getOrDefault(l)
+            }
         }
     }
     LaunchedEffect(opened) {
@@ -158,7 +167,11 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(item.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                SquareCover(item.cover)
+                                Text(
+                                    item.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).padding(start = 10.dp),
+                                )
                                 Text(item.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -183,7 +196,8 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                                 .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(Modifier.weight(1f)) {
+                            SquareCover(item.cover)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
                                 Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
                                 Text(
                                     item.count.toString() + " 首",

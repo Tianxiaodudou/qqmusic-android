@@ -60,6 +60,25 @@ fun EntryTile(
     }
 }
 
+/** 方形封面：空地址显示 ♪ 占位。 */
+@Composable
+fun SquareCover(url: String, dim: androidx.compose.ui.unit.Dp = 48.dp, radius: androidx.compose.ui.unit.Dp = 8.dp) {
+    Box(
+        Modifier.size(dim).clip(RoundedCornerShape(radius)).background(Color(0xFF222833)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("♪", fontSize = 15.sp, color = DimText)
+        if (url.isNotEmpty()) {
+            coil3.compose.AsyncImage(
+                model = url,
+                contentDescription = null,
+                modifier = Modifier.size(dim).clip(RoundedCornerShape(radius)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
+        }
+    }
+}
+
 /** 设置/内容分组卡片。 */
 @Composable
 fun SectionCard(

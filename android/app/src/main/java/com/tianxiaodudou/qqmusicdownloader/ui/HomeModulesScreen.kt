@@ -42,7 +42,7 @@ fun HomeModulesScreen() {
         LazyColumn(Modifier.fillMaxSize()) {
             item {
                 Text(
-                    "关掉的模块不会出现在首页入口墙，也不会发请求；条数控制每个模块加载/展示多少条。",
+                    "关掉的模块不会出现在首页入口墙，也不会发请求；条数就是点进模块后列表的条数（服务端单页有上限时客户端会翻页凑够）。",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -68,6 +68,12 @@ fun HomeModulesScreen() {
                     }
                     if (enabled) {
                         Spacer(Modifier.height(6.dp))
+                        Text(
+                            "当前 " + count + " 条",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             COUNT_OPTIONS.forEach { opt ->
                                 Box(

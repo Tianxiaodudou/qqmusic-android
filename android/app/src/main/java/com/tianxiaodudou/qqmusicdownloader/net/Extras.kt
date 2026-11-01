@@ -403,8 +403,15 @@ object Extras {
             val o = arr.optJSONObject(i) ?: continue
             val id = o.optString("tid").ifEmpty { o.optString("dissid") }
             if (id.isEmpty()) continue
-            out.add(PlaylistApi.Item(id, o.optString("dirId"), o.optString("name").ifEmpty { o.optString("title") },
-                o.optInt("songnum", 0)))
+            out.add(
+                PlaylistApi.Item(
+                    id = id,
+                    dirId = o.optString("dirId"),
+                    name = o.optString("name").ifEmpty { o.optString("title") },
+                    count = o.optInt("songnum", 0),
+                    cover = PlaylistApi.coverOf(o),
+                )
+            )
         }
         out
     }.getOrDefault(emptyList())

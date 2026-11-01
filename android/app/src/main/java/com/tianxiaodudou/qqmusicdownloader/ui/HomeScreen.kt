@@ -26,6 +26,9 @@ import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
@@ -92,14 +95,15 @@ fun HomeScreen(
     onPlay: (List<MusicApi.Song>, Int) -> Unit,
     onDownload: (MusicApi.Song) -> Unit,
     onSearch: (String) -> Unit = {},
+    onOpenSearch: () -> Unit = {},
 ) {
-    var charts by remember { mutableStateOf<List<TopApi.Chart>?>(null) }
-    var songlists by remember { mutableStateOf<List<RecommendApi.Songlist>?>(null) }
-    var newSongs by remember { mutableStateOf<List<MusicApi.Song>?>(null) }
-    var feed by remember { mutableStateOf<List<RecommendApi.FeedGroup>?>(null) }
-    var albums by remember { mutableStateOf<List<AlbumApi.Album>?>(null) }
-    var hot by remember { mutableStateOf<List<String>?>(null) }
-    var singers by remember { mutableStateOf<List<SingerApi.Singer>?>(null) }
+    var charts by remember { mutableStateOf(HomeCache.charts) }
+    var songlists by remember { mutableStateOf(HomeCache.songlists) }
+    var newSongs by remember { mutableStateOf(HomeCache.newSongs) }
+    var feed by remember { mutableStateOf(HomeCache.feed) }
+    var albums by remember { mutableStateOf(HomeCache.albums) }
+    var hot by remember { mutableStateOf(HomeCache.hot) }
+    var singers by remember { mutableStateOf(HomeCache.singers) }
     // 模块页也是分层的（模块 -> 榜单/专辑/歌手 -> 歌曲），用一个栈记录，返回逐级回退
     var viewStack by remember { mutableStateOf(listOf<HomeView>(HomeView.Feed)) }
     val view = viewStack.last()
@@ -116,6 +120,10 @@ fun HomeScreen(
     val cfgVersion = HomeConfig.version
 
     LaunchedEffect(cfgVersion) {
+        val force = HomeConfig.takeForce()
+        // 有缓存又不是强制刷新：直接用上次的结果，切标签/进出模块都不再发请求
+        if (!force && HomeCache.charts != null) return@LaunchedEffect
+        if (force) HomeCache.clear()
         withContext(Dispatchers.IO) {
             if (on("charts")) runCatching { TopApi.charts().take(n("charts")) }.onSuccess { charts = it }.onFailure { charts = emptyList() } else charts = emptyList()
             if (on("songlists")) {
@@ -144,6 +152,13 @@ fun HomeScreen(
         if (charts.isNullOrEmpty() && songlists.isNullOrEmpty() && newSongs.isNullOrEmpty()) {
             error = "推荐加载失败，请检查登录状态"
         }
+        HomeCache.charts = charts
+        HomeCache.songlists = songlists
+        HomeCache.newSongs = newSongs
+        HomeCache.feed = feed
+        HomeCache.albums = albums
+        HomeCache.singers = singers
+        HomeCache.hot = hot
     }
     LaunchedEffect(view) {
         val v = view
@@ -219,6 +234,28 @@ fun HomeScreen(
     val v = view
     if (v is HomeView.Feed) {
         LazyColumn(Modifier.fillMaxSize()) {
+            item {
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "首页",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onOpenSearch, modifier = Modifier.size(40.dp)) {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = "搜索",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(21.dp),
+                        )
+                    }
+                }
+            }
             item {
                 Column(Modifier.fillMaxWidth()) {
                     BlockTitle("发现")

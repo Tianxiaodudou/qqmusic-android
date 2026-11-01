@@ -77,6 +77,10 @@ object PlayerController {
 
     private var retriedQuality = false
     private var forcedQuality: Settings.Quality? = null
+    private var mediaCache: androidx.media3.datasource.cache.SimpleCache? = null
+    /** 卡顿降档计数与计时：同一首歌最多降两档，避免来回跳。 */
+    private var stallDowngrades = 0
+    private var bufferingSince = 0L
     private var loadedSong: MusicApi.Song? = null
 
     private data class CachedUrl(val url: String, val label: String, val quality: String, val at: Long)
@@ -90,10 +94,38 @@ object PlayerController {
         if (exo != null) return
         val ctx = context.applicationContext
         appContext = ctx
+        // 播放缓存：缓冲过的字节落盘（LRU 1.5GB），重听同一首/回拖不再重新下载，
+        // 高音质下卡顿主要靠「缓存 + 更大的缓冲窗口」缓解（ExoPlayer 本身是单连接拉流）。
+        val cache = runCatching {
+            androidx.media3.datasource.cache.SimpleCache(
+                java.io.File(ctx.cacheDir, "media_cache"),
+                androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(1500L * 1024 * 1024),
+            )
+        }.getOrNull()
+        mediaCache = cache
+        val upstream = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setUserAgent(com.tianxiaodudou.qqmusicdownloader.net.QqClient.userAgent())
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(20_000)
+            .setAllowCrossProtocolRedirects(true)
+        val cacheFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
+            .setUpstreamDataSourceFactory(upstream)
+        if (cache != null) {
+            cacheFactory.setCache(cache)
+            cacheFactory.setCacheWriteDataSinkFactory(
+                androidx.media3.datasource.cache.CacheDataSink.Factory()
+                    .setCache(cache)
+                    .setFragmentSize(4L * 1024 * 1024),
+            )
+        }
         val p = ExoPlayer.Builder(ctx)
+            .setMediaSourceFactory(
+                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(cacheFactory),
+            )
             .setLoadControl(
                 androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(20_000, 90_000, 1_500, 3_000)
+                    // 起播 2s、保底 30s、上限 180s：高音质码流给足余量
+                    .setBufferDurationsMs(30_000, 180_000, 2_000, 5_000)
                     .build(),
             )
             .build()
@@ -110,7 +142,8 @@ object PlayerController {
                 playing = isPlaying
                 if (isPlaying) {
                     retriedQuality = false
-                    forcedQuality = null
+                    // 已经因为卡顿降过档就别再抬回去，否则会反复卡
+                    if (stallDowngrades == 0) forcedQuality = null
                 }
             }
 
@@ -159,6 +192,18 @@ object PlayerController {
                             appContext?.let { ResumeStore.save(it, song.mid, positionMs, durationMs) }
                         }
                     }
+                }
+                // 缓冲卡住超过 6 秒就自动降一档音质重来（高码率网络跟不上时最有效）
+                val pl2 = exo
+                val now = SystemClock.elapsedRealtime()
+                if (pl2 != null && pl2.playbackState == Player.STATE_BUFFERING && pl2.playWhenReady) {
+                    if (bufferingSince == 0L) bufferingSince = now
+                    if (now - bufferingSince > 6_000) {
+                        bufferingSince = 0
+                        downgradeForStall()
+                    }
+                } else {
+                    bufferingSince = 0
                 }
                 val end = sleepEndAt
                 if (end > 0 && System.currentTimeMillis() >= end) {
@@ -331,6 +376,19 @@ object PlayerController {
         }
     }
 
+    /** 网络顶不住当前码率：降一档重新解析（同一首最多两次），并提示用户。 */
+    private fun downgradeForStall() {
+        val ctx = appContext ?: return
+        val song = current ?: return
+        if (loading || stallDowngrades >= 2) return
+        val cap = forcedQuality ?: Settings.quality(ctx)
+        val lower = Settings.Quality.entries.filter { it.ordinal < cap.ordinal }.maxByOrNull { it.ordinal } ?: return
+        stallDowngrades += 1
+        forcedQuality = lower
+        error = null
+        load(song, startAt = positionMs, autoPlay = true)
+    }
+
     fun clearQueue() {
         queue = emptyList()
         index = -1
@@ -347,6 +405,8 @@ object PlayerController {
         AudioFx.release()
         exo?.release()
         exo = null
+        runCatching { mediaCache?.release() }
+        mediaCache = null
     }
 
     // ---------------- 内部实现 ----------------
@@ -364,6 +424,7 @@ object PlayerController {
                 ResumeStore.save(ctx, prev.mid, prevPos, durationMs)
             }
         }
+        if (loadedSong?.mid != song.mid) stallDowngrades = 0
         loadedSong = song
         loading = true
         error = null

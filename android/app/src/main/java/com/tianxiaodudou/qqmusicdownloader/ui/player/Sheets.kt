@@ -576,10 +576,32 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
 
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.55f).padding(bottom = 12.dp)) {
         SheetHeader("加到歌单", "选择要加入的歌单")
+        if (busy) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = Accent,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("正在加入…", fontSize = 12.sp, color = SheetSub)
+            }
+        }
         val data = lists
         if (data == null) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("加载中…", fontSize = 13.sp, color = SheetSub)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = Accent,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("正在读取歌单…", fontSize = 12.sp, color = SheetSub)
+                }
             }
         } else if (data.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.AlertDialog
@@ -172,6 +173,31 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                     }
                     NavigationBar(containerColor = Color(0xFF11141A), tonalElevation = 0.dp) {
                         Tab.entries.forEach { item ->
+                            if (item == Tab.Search) {
+                                // 搜索入口已挪到首页右上角，这个位置改成手动刷新首页
+                                NavigationBarItem(
+                                    selected = false,
+                                    onClick = {
+                                        if (tab != Tab.Home) tab = Tab.Home
+                                        HomeConfig.refresh()
+                                        Toast.makeText(context, "正在刷新首页…", Toast.LENGTH_SHORT).show()
+                                    },
+                                    icon = {
+                                        Icon(
+                                            Icons.Rounded.Refresh,
+                                            contentDescription = "刷新首页",
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    },
+                                    label = { Text("刷新", fontSize = 10.sp) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        indicatorColor = Color(0xFF1B2A22),
+                                    ),
+                                )
+                                return@forEach
+                            }
                             NavigationBarItem(
                                 selected = tab == item,
                                 onClick = { tab = item },
@@ -208,6 +234,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                             SearchBus.submit(kw)
                             tab = Tab.Search
                         },
+                        onOpenSearch = { tab = Tab.Search },
                     )
                     Tab.Search -> SearchScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })
                     Tab.Library -> LibraryScreen(onPlay = { list, i -> playAt(list, i) }, onDownload = { Downloader.enqueue(context, it) })

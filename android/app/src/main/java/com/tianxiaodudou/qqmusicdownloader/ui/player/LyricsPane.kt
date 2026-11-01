@@ -211,6 +211,9 @@ fun LyricsPane(
                                     textAlign = TextAlign.Start,
                                     overflow = TextOverflow.Visible,
                                 )
+                                var textLayout by remember(line.text, fontSize) {
+                                    androidx.compose.runtime.mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null)
+                                }
                                 Text(
                                     text = line.text,
                                     fontSize = fontSize.sp,
@@ -219,12 +222,36 @@ fun LyricsPane(
                                     color = LyricSung,
                                     textAlign = TextAlign.Start,
                                     overflow = TextOverflow.Visible,
+                                    onTextLayout = { textLayout = it },
                                     modifier = Modifier.drawWithContent {
-                                        // 逐字进度在 draw 阶段读时钟：只重绘不重组，
-                                        // 按字宽比例裁剪，扫过的部分是连续的，不会一个字一个字跳。
+                                        // 逐字进度在 draw 阶段读时钟：只重绘不重组。
+                                        // 超过一行时按「视觉行」分别裁剪，否则第二行会在进度一开始就整行染色。
                                         val progress = lineProgress(line, clock.longValue, nextStart)
-                                        clipRect(right = size.width * progress) {
-                                            this@drawWithContent.drawContent()
+                                        val layout = textLayout
+                                        if (layout == null || layout.lineCount <= 1) {
+                                            clipRect(right = size.width * progress) {
+                                                this@drawWithContent.drawContent()
+                                            }
+                                        } else {
+                                            val total = line.text.length.coerceAtLeast(1)
+                                            val consumed = (progress * total).toInt()
+                                            for (i in 0 until layout.lineCount) {
+                                                val start = layout.getLineStart(i)
+                                                val end = layout.getLineEnd(i)
+                                                if (end <= start) continue
+                                                val local = ((consumed - start).toFloat() / (end - start)).coerceIn(0f, 1f)
+                                                if (local <= 0f) continue
+                                                val left = layout.getLineLeft(i)
+                                                val width = layout.getLineRight(i) - left
+                                                clipRect(
+                                                    left = left,
+                                                    top = layout.getLineTop(i),
+                                                    right = left + width * local,
+                                                    bottom = layout.getLineBottom(i),
+                                                ) {
+                                                    this@drawWithContent.drawContent()
+                                                }
+                                            }
                                         }
                                     },
                                 )

@@ -233,6 +233,27 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                     fixId = current.name,
                     onPlay = onPlay,
                     onDownload = onDownload,
+                    // 自己的歌单才允许移出歌曲（收藏别人的歌单不动）
+                    onRemove = { picked ->
+                        scope.launch {
+                            val dirId = current.dirId.toIntOrNull() ?: 0
+                            val tid = current.id.toIntOrNull() ?: 0
+                            val ok = withContext(Dispatchers.IO) {
+                                runCatching { PlaylistApi.removeSongs(dirId, tid, picked) }.getOrDefault(false)
+                            }
+                            if (ok) {
+                                val gone = picked.map { it.mid }.toSet()
+                                songs = songs?.filterNot { gone.contains(it.mid) }
+                                playlists = playlists?.map {
+                                    if (it.id == current.id) it.copy(count = (it.count - picked.size).coerceAtLeast(0)) else it
+                                }
+                                opened = playlists?.firstOrNull { it.id == current.id } ?: current
+                                android.widget.Toast.makeText(context, "已移出 " + picked.size + " 首", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                android.widget.Toast.makeText(context, "移出失败，可能需要重新登录", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
                 )
             }
         }

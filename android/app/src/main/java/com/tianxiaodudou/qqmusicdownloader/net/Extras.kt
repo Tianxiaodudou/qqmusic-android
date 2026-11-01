@@ -422,6 +422,9 @@ object Extras {
                 if (m.isNotEmpty() && n.isNotEmpty()) singers.add(SingerApi.Singer(m, n))
             }
         }
+        if (songs.isEmpty()) {
+            songs.addAll(runCatching { MusicApi.legacySearch(keyword, page) }.getOrDefault(emptyList()))
+        }
         if (songs.isEmpty() && singers.isEmpty() && albums.isEmpty()) {
             val box = MusicApi.smartBox(keyword)
             songs.addAll(box.songs)

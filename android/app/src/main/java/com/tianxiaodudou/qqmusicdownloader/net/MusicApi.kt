@@ -45,6 +45,7 @@ object MusicApi {
         if (q.isEmpty()) return emptyList()
         runCatching { searchMobile(q, page) }.getOrDefault(emptyList()).let { if (it.isNotEmpty()) return it }
         runCatching { searchAdaptor(q, page) }.getOrDefault(emptyList()).let { if (it.isNotEmpty()) return it }
+        runCatching { legacySearch(q, page) }.getOrDefault(emptyList()).let { if (it.isNotEmpty()) return it }
         return smartBox(q).songs
     }
 
@@ -72,7 +73,7 @@ object MusicApi {
     }
 
     /** 综合搜索（music.adaptor.SearchAdaptor）的 body，歌曲在 item_song.items。 */
-    fun adaptorBody(keyword: String, page: Int = 1): JSONObject? = runCatching {
+    fun adaptorBody(keyword: String, page: Int = 1): JSONObject? {
         val p = JSONObject()
         p.put("searchid", UUID.randomUUID().toString().replace("-", ""))
         p.put("search_type", 100)
@@ -81,13 +82,40 @@ object MusicApi {
         p.put("page_id", page)
         p.put("highlight", true)
         p.put("grp", true)
-        val data = QqClient.cgi("music.adaptor.SearchAdaptor", "do_search_v2", p)
-        data.optJSONObject("body") ?: data
-    }.getOrNull()
+        fun once(style: QqClient.CommStyle?): JSONObject? = runCatching {
+            val data = QqClient.cgi("music.adaptor.SearchAdaptor", "do_search_v2", p, style = style)
+            data.optJSONObject("body") ?: data
+        }.getOrNull()
+        val first = once(null)
+        if (first != null && hasSongs(first)) return first
+        // 登录态下偶发整块空：匿名再试一次（公开搜索，不依赖票据）
+        val anon = once(QqClient.CommStyle.ANON)
+        return if (anon != null && hasSongs(anon)) anon else (first ?: anon)
+    }
+
+    private fun hasSongs(body: JSONObject): Boolean =
+        (body.optJSONObject("item_song")?.optJSONArray("items")?.length() ?: 0) > 0
 
     private fun searchAdaptor(keyword: String, page: Int): List<Song> {
         val body = adaptorBody(keyword, page) ?: return emptyList()
         val arr = body.optJSONObject("item_song")?.optJSONArray("items") ?: return emptyList()
+        val out = ArrayList<Song>(arr.length())
+        for (i in 0 until arr.length()) parseSong(arr.optJSONObject(i))?.let { out.add(it) }
+        return out
+    }
+
+    /**
+     * 老版网页搜索 client_search_cp：匿名可用、一次 20 条、字段完整（含专辑 mid，所以有封面）。
+     * 前面几条链路都空的时候靠它兜底，避免只剩 smartbox 的 4 条。
+     */
+    fun legacySearch(keyword: String, page: Int = 1, num: Int = 20): List<Song> {
+        val url = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?p=" + page +
+            "&n=" + num + "&w=" + java.net.URLEncoder.encode(keyword, "UTF-8") +
+            "&format=json&cr=1&new_json=1&t=0&aggr=1&lossless=0&catZhida=1&platform=wk_v17&needNewCode=0"
+        val text = QqClient.get(url, emptyMap()).use { it.body?.string().orEmpty() }
+        if (text.isEmpty()) return emptyList()
+        val arr = JSONObject(text).optJSONObject("data")?.optJSONObject("song")?.optJSONArray("list")
+            ?: return emptyList()
         val out = ArrayList<Song>(arr.length())
         for (i in 0 until arr.length()) parseSong(arr.optJSONObject(i))?.let { out.add(it) }
         return out
@@ -128,6 +156,16 @@ object MusicApi {
                 )
             }
         }
+        // smartbox 只给 mid/名称，没有专辑与时长；补一次 songDetail，列表才有封面
+        val enriched = songs.map { s ->
+            if (s.id <= 0) return@map s
+            val full = runCatching { detail(s.id.toLong()) }.getOrNull() ?: return@map s
+            full.copy(
+                name = full.name.ifEmpty { s.name },
+                singers = full.singers.ifEmpty { s.singers },
+                mid = full.mid.ifEmpty { s.mid },
+            )
+        }
         val singers = ArrayList<SingerApi.Singer>()
         d.optJSONObject("singer")?.optJSONArray("itemlist")?.let { list ->
             for (i in 0 until list.length()) {
@@ -151,7 +189,7 @@ object MusicApi {
                 )
             }
         }
-        SmartBox(songs, singers, albums)
+        SmartBox(enriched, singers, albums)
     }.getOrDefault(SmartBox())
 
     /** 歌曲显示名：优先 title（同名不同版本靠它区分），带高亮标签的字符串一律不采用。 */

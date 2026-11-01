@@ -100,7 +100,11 @@ fun HomeScreen(
     var albums by remember { mutableStateOf<List<AlbumApi.Album>?>(null) }
     var hot by remember { mutableStateOf<List<String>?>(null) }
     var singers by remember { mutableStateOf<List<SingerApi.Singer>?>(null) }
-    var view by remember { mutableStateOf<HomeView>(HomeView.Feed) }
+    // 模块页也是分层的（模块 -> 榜单/专辑/歌手 -> 歌曲），用一个栈记录，返回逐级回退
+    var viewStack by remember { mutableStateOf(listOf<HomeView>(HomeView.Feed)) }
+    val view = viewStack.last()
+    fun open(v: HomeView) { viewStack = viewStack + v }
+    fun back() { if (viewStack.size > 1) viewStack = viewStack.dropLast(1) }
     var songs by remember { mutableStateOf<List<MusicApi.Song>?>(null) }
     var error by remember { mutableStateOf("") }
 
@@ -197,8 +201,8 @@ fun HomeScreen(
         r.onSuccess { songs = it }.onFailure { error = it.message ?: "歌曲加载失败"; songs = emptyList() }
     }
 
-    BackHandler(enabled = view !is HomeView.Feed) {
-        view = HomeView.Feed
+    BackHandler(enabled = viewStack.size > 1) {
+        back()
         songs = null
     }
 
@@ -229,7 +233,7 @@ fun HomeScreen(
                                     EntryTile(
                                         icon = icons[e.first] ?: Icons.Rounded.MusicNote,
                                         label = e.first,
-                                        onClick = { view = e.second },
+                                        onClick = { open(e.second) },
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
@@ -250,7 +254,7 @@ fun HomeScreen(
                     items(g.cards) { c ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { view = HomeView.Card(c) }
+                                .clickable { open(HomeView.Card(c)) }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -274,7 +278,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { view = HomeView.Feed; albums = null }) { Text("返回") }
+                TextButton(onClick = { back(); albums = null }) { Text("返回") }
                 Text("新碟上架", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             val al = albums
@@ -289,7 +293,7 @@ fun HomeScreen(
                     items(al) { a ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { view = HomeView.AlbumSongs(a) }
+                                .clickable { open(HomeView.AlbumSongs(a)) }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -312,7 +316,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { view = HomeView.Feed }) { Text("返回") }
+                TextButton(onClick = { back() }) { Text("返回") }
                 Text("推荐歌单", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             val sl = songlists
@@ -327,7 +331,7 @@ fun HomeScreen(
                     items(sl) { s ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { view = HomeView.Songlist(s) }
+                                .clickable { open(HomeView.Songlist(s)) }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -352,7 +356,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { view = HomeView.Feed }) { Text("返回") }
+                TextButton(onClick = { back() }) { Text("返回") }
                 Text("排行榜", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             val cs = charts
@@ -367,7 +371,7 @@ fun HomeScreen(
                     items(cs) { c ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { view = HomeView.Chart(c) }
+                                .clickable { open(HomeView.Chart(c)) }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -392,7 +396,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { view = HomeView.Feed; singers = null }) { Text("返回") }
+                TextButton(onClick = { back(); singers = null }) { Text("返回") }
                 Text("热门歌手", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             val sl = singers
@@ -407,7 +411,7 @@ fun HomeScreen(
                     items(sl) { s ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                                .clickable { view = HomeView.SingerSongs(s) }
+                                .clickable { open(HomeView.SingerSongs(s)) }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -423,7 +427,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { view = HomeView.Feed; hot = null }) { Text("返回") }
+                TextButton(onClick = { back(); hot = null }) { Text("返回") }
                 Text("热搜榜", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             val hk = hot
@@ -470,7 +474,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { view = HomeView.Feed; songs = null }) { Text("返回") }
+                TextButton(onClick = { back(); songs = null }) { Text("返回") }
                 Text(
                     title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,

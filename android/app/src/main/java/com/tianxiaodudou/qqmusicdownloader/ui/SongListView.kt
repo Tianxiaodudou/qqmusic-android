@@ -107,6 +107,8 @@ fun SongListView(
     playlistId: Long? = null,
     onPlay: (List<MusicApi.Song>, Int) -> Unit,
     onDownload: (MusicApi.Song) -> Unit,
+    /** 传了就在多选工具条里多一个「移出歌单」（只有自己的歌单需要）。 */
+    onRemove: ((List<MusicApi.Song>) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -397,6 +399,19 @@ fun SongListView(
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text("下载", fontSize = 12.sp) }
+                if (onRemove != null) {
+                    Button(
+                        onClick = {
+                            if (chosen.isEmpty()) {
+                                toast("先选几首")
+                            } else {
+                                onRemove(chosen)
+                                finishSelection()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("移出歌单", fontSize = 12.sp) }
+                }
             }
         }
     }

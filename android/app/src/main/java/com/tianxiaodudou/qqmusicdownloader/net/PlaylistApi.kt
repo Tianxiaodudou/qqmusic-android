@@ -113,6 +113,20 @@ object PlaylistApi {
         )
     }
 
+    /** 从自己的歌单里移出歌曲（dirId/tid 用歌单自身的那对）。 */
+    fun removeSongs(dirId: Int, tid: Int, songs: List<MusicApi.Song>): Boolean {
+        if (songs.isEmpty()) return false
+        val info = org.json.JSONArray()
+        for (s in songs) info.put(org.json.JSONObject().put("songId", s.id).put("songType", 0))
+        val p = JSONObject()
+        p.put("dirId", dirId)
+        p.put("tid", tid)
+        p.put("bFmtUtf8", true)
+        p.put("v_songInfo", info)
+        val data = QqClient.cgi("music.musicasset.PlaylistDetailWrite", "DelSonglist", p)
+        return data.optInt("retCode", 0) == 0
+    }
+
     /** 收藏别人的公开歌单（disstid）。加密 uin 与明文 uin 都试一遍，兼容老登录态。 */
     fun favPlaylist(disstid: Long): Boolean {
         val s = QqClient.session ?: return false

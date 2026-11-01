@@ -441,17 +441,18 @@ object PlayerController {
             for (q in chain) {
                 val url = runCatching { MusicApi.streamUrlOf(replaced, q.code) }.getOrNull()
                 if (!url.isNullOrEmpty()) {
-                    return Source(Uri.parse(if (alt) cdnUrl(url) else url), "替换音源 · " + q.label, "")
+                    return Source(Uri.parse(if (alt) cdnUrl(url) else url), "替换音源 · " + q.label, "", qualityText(q.code))
                 }
             }
         }
         throw IllegalStateException("拿不到播放地址（可能需要会员或已下架）")
     }
 
+    /** 播放页徽章显示「音质名称」，不是文件格式（FLAC/OGG 那种）。 */
     private fun qualityText(code: String): String = when {
-        code == "M500" -> "128k"
-        code == "M800" -> "320k"
-        code == "F000" -> "FLAC"
+        code == "M500" -> "标准"
+        code == "M800" -> "高品质"
+        code == "F000" -> "无损"
         code == "O801" -> "Hi-Res"
         code == "AI00" -> "母带"
         code == "D004" -> "杜比"

@@ -46,7 +46,13 @@ object MusicApi {
         p.put("highlight", true)
         p.put("grp", true)
         p.put("selectors", JSONObject())
-        val data = QqClient.cgi("music.search.SearchCgiService", "DoSearchForQQMusicDesktop", p)
+        // 与搜索页保持一致：移动端方法在 Android comm 下最稳，桌面方法常回空。
+        val data = QqClient.cgi(
+            "music.search.SearchCgiService",
+            "DoSearchForQQMusicMobile",
+            p,
+            style = QqClient.CommStyle.ANDROID,
+        )
         val arr = data.optJSONObject("body")?.optJSONObject("song")?.optJSONArray("list") ?: return emptyList()
         val out = ArrayList<Song>(arr.length())
         for (i in 0 until arr.length()) {
@@ -57,6 +63,9 @@ object MusicApi {
 
     fun parseSong(o: JSONObject?): Song? {
         if (o == null) return null
+        // 专辑曲目 / 歌手歌曲 / 雷达推荐等的元素常是 { songInfo: {...} } 包一层，
+        // 不解包的话每个元素都拿不到 mid，整页就成了「暂无歌曲」。
+        o.optJSONObject("songInfo")?.let { return parseSong(it) }
         val mid = o.optString("mid")
         if (mid.isEmpty()) return null
         val names = StringBuilder()

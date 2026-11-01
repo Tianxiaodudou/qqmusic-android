@@ -80,7 +80,8 @@ object AlbumApi {
         p.put("begin", 0)
         p.put("num", num)
         val data = QqClient.cgi("music.musichallAlbum.AlbumSongList", "GetAlbumSongList", p)
-        val arr = data.optJSONArray("song_list") ?: data.optJSONArray("songlist") ?: return emptyList()
+        val arr = data.optJSONArray("songList") ?: data.optJSONArray("song_list")
+            ?: data.optJSONArray("songlist") ?: return emptyList()
         val out = ArrayList<MusicApi.Song>()
         for (i in 0 until arr.length()) MusicApi.parseSong(arr.optJSONObject(i))?.let { out.add(it) }
         if (out.isEmpty()) throw QqError("专辑无歌曲")

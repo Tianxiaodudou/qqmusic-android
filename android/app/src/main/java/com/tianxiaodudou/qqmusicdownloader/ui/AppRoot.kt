@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -319,6 +320,9 @@ private fun MinePage(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val main = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
     var loginState by remember { mutableStateOf("检查中…") }
+    // 「我的」页分组折叠：默认全收起，同一时间只允许展开一个
+    var openSection by remember { mutableStateOf("") }
+    fun toggleSection(key: String) { openSection = if (openSection == key) "" else key }
 
     LaunchedEffect(Unit) {
         val ok = runCatching { LoginApi.ensureFresh(context) }.getOrDefault(false)
@@ -444,12 +448,12 @@ private fun MinePage(
         }
 
         Spacer(Modifier.height(6.dp))
-        SectionCard("内容与发现") {
+        FoldSection("内容与发现", openSection == "content", onToggle = { toggleSection("content") }) {
             MineRow("收藏的专辑", "收藏的数字专辑") { Nav.push(Route.FavLibrary(true)) }
             MineRow("关注与粉丝", "关注的歌手 / 用户、粉丝、好友") { Nav.push(Route.Social) }
             MineRow("首页模块", "各模块显示 / 隐藏与条数", divider = false) { Nav.push(Route.HomeModules) }
         }
-        SectionCard("播放与下载") {
+        FoldSection("播放与下载", openSection == "play", onToggle = { toggleSection("play") }) {
             MineRow("付费内容", paidPolicy.label) { showPaid = true }
             MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }
             MineRow("下载目录", dirLabel.ifEmpty { "未选择" }) { onPickDir() }
@@ -463,7 +467,7 @@ private fun MinePage(
                 toast = "已清理 " + (freed / 1024 / 1024) + " MB"
             }
         }
-        SectionCard("账号与关于") {
+        FoldSection("账号与关于", openSection == "about", onToggle = { toggleSection("about") }) {
             MineRow("登录状态", loginState) {
                 if (loginState.contains("过期")) onLogout()
             }
@@ -567,11 +571,18 @@ private fun MinePage(
                         Spacer(Modifier.height(8.dp))
                         Text("正在下载 $progress%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        Text(
-                            rel.notes.take(260).ifEmpty { "包含问题修复与体验改进" },
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Text("更新日志", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(4.dp))
+                        Box(
+                            Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
+                        ) {
+                            Text(
+                                plainNotes(rel.notes).ifEmpty { "包含问题修复与体验改进" },
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             },
@@ -618,6 +629,22 @@ private fun MinePage(
             dismissButton = { TextButton(onClick = { updateError = "" }) { Text("关闭") } },
         )
     }
+}
+
+/** Release 正文是 Markdown，弹窗里去掉标题井号与加粗星号，保留分条。 */
+private fun plainNotes(text: String): String {
+    if (text.isBlank()) return ""
+    val lines = text.lines().map { raw ->
+        var t = raw.trimEnd()
+        t = when {
+            t.startsWith("###") -> t.removePrefix("###").trim()
+            t.startsWith("##") -> t.removePrefix("##").trim()
+            t.startsWith("#") -> t.removePrefix("#").trim()
+            else -> t
+        }
+        t.replace("**", "").replace("`", "").trimEnd()
+    }
+    return lines.dropWhile { it.isBlank() }.joinToString("\n").trim()
 }
 
 @Composable

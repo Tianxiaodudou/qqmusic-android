@@ -44,7 +44,8 @@ object SingerApi {
         p.put("number", num)
         p.put("begin", 0)
         val data = QqClient.cgi("musichall.song_list_server", "GetSingerSongList", p)
-        val arr = data.optJSONArray("song_list") ?: data.optJSONArray("songlist") ?: return emptyList()
+        val arr = data.optJSONArray("songList") ?: data.optJSONArray("song_list")
+            ?: data.optJSONArray("songlist") ?: return emptyList()
         val out = ArrayList<MusicApi.Song>()
         for (i in 0 until arr.length()) MusicApi.parseSong(arr.optJSONObject(i))?.let { out.add(it) }
         return out

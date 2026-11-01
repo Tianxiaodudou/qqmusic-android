@@ -6,12 +6,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -103,6 +107,47 @@ fun SectionCard(
             )
         }
         content()
+    }
+}
+
+/** 可折叠分组卡片：标题行点击展开/收起，同一屏只留标题，避免「我的」页越滚越长。 */
+@Composable
+fun FoldSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBg),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFFE9EDF4),
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                contentDescription = null,
+                tint = DimText,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        if (expanded) {
+            content()
+            Spacer(Modifier.height(4.dp))
+        }
     }
 }
 

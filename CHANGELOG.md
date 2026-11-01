@@ -1,5 +1,16 @@
 # 更新日志
 
+## v2.5.9 (2026-11-01)
+
+### 修复
+- **检查更新看不到更新日志**：之前只读 GitHub API 的 release body，手机上网关一挡（API 被限流/不可达）就退化到
+  「只用 302 跳转拿版本号」，断更日志也随之丢失。现在分开取：
+  1. GitHub API 正文
+  2. jsDelivr 上按 tag 取的 CHANGELOG.md（同源、国内可达、不受 API 限流）
+  3. raw.githubusercontent 的 CHANGELOG.md
+  4. releases.atom 的正文
+  按顺序取到第一个非空即止，所以「有版本号没日志」的情况不会再出现
+
 ## v2.5.8 (2026-11-01)
 
 ### 新增

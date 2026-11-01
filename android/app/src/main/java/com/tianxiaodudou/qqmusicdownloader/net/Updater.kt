@@ -29,12 +29,15 @@ object Updater {
         val byApi = runCatching { fromApi() }
         if (byApi.isSuccess) {
             val rel = byApi.getOrNull() ?: return@withContext null
-            return@withContext if (isNewer(rel.version, currentVersion)) rel else null
+            if (!isNewer(rel.version, currentVersion)) return@withContext null
+            // API 走通但正文为空（偶发）时也去捞一次更新日志
+            return@withContext if (rel.notes.isNotBlank()) rel else rel.copy(notes = notesOf(rel.version))
         }
         val ver = runCatching { versionFromRedirect() }.getOrNull()
             ?: throw java.io.IOException("连不上更新服务器（api.github.com / github.com 都不通）")
         if (!isNewer(ver, currentVersion)) return@withContext null
-        Release(ver, assetUrl(ver), "", REPO + "/releases/tag/v" + ver)
+        // 只拿到版本号时（API 被墙/限流）也不能丢更新日志：从仓库的 CHANGELOG / atom 里取
+        Release(ver, assetUrl(ver), notesOf(ver), REPO + "/releases/tag/v" + ver)
     }
 
     private fun fromApi(): Release? {
@@ -75,6 +78,81 @@ object Updater {
             val finalUrl = resp.request.url.toString()
             val m = Regex("""/releases/tag/v?([0-9][0-9.]*)""").find(finalUrl) ?: return null
             return m.groupValues[1]
+        }
+    }
+
+    /**
+     * 取某个版本的更新日志：先读仓库里的 CHANGELOG.md（和 Release 正文同源），
+     * 再退到 releases.atom（GitHub 不封 atom，API 被限流时仍可用）。
+     */
+    private fun notesOf(version: String): String {
+        runCatching { notesFromChangelog(version) }.getOrNull()?.takeIf { it.isNotBlank() }?.let { return it }
+        return runCatching { notesFromAtom(version) }.getOrDefault("")
+    }
+
+    private fun notesFromChangelog(version: String): String {
+        // 国内直连 raw.githubusercontent 经常不通，先用 jsDelivr CDN 取同一份 CHANGELOG
+        val v = version.removePrefix("v").trim()
+        val sources = listOf(
+            // jsDelivr 按 tag 取：不会被 @main 的缓存拖成旧内容
+            "https://cdn.jsdelivr.net/gh/Tianxiaodudou/qqmusic-android@v" + v + "/CHANGELOG.md",
+            "https://cdn.jsdelivr.net/gh/Tianxiaodudou/qqmusic-android@main/CHANGELOG.md",
+            "https://raw.githubusercontent.com/Tianxiaodudou/qqmusic-android/v" + v + "/CHANGELOG.md",
+            "https://raw.githubusercontent.com/Tianxiaodudou/qqmusic-android/main/CHANGELOG.md",
+        )
+        for (url in sources) {
+            val md = runCatching { fetchText(url) }.getOrDefault("")
+            if (md.isNotEmpty()) {
+                sectionOf(md, version).takeIf { it.isNotBlank() }?.let { return it }
+            }
+        }
+        return ""
+    }
+
+    private fun fetchText(url: String): String {
+        val req = Request.Builder().url(url).header("User-Agent", QqClient.userAgent()).build()
+        QqClient.http.newCall(req).execute().use { resp ->
+            return if (resp.isSuccessful) resp.body?.string().orEmpty() else ""
+        }
+    }
+
+    private fun sectionOf(text: String, version: String): String {
+        if (text.isEmpty()) return ""
+        val v = version.removePrefix("v").trim()
+        val lines = text.lines()
+        // 精确匹配「## v2.5.9」，避免 2.5.9 命中 2.5.90 之类
+        val head = Regex("""^##\s*v?""" + Regex.escape(v) + """(\s|$)""")
+        val start = lines.indexOfFirst { head.containsMatchIn(it.trim()) }
+        if (start < 0) return ""
+        val out = StringBuilder()
+        for (i in start + 1 until lines.size) {
+            if (lines[i].startsWith("## ")) break
+            out.appendLine(lines[i])
+        }
+        return out.toString().trim()
+    }
+
+    private fun notesFromAtom(version: String): String {
+        val req = Request.Builder()
+            .url(REPO + "/releases.atom")
+            .header("User-Agent", QqClient.userAgent())
+            .build()
+        QqClient.http.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) return ""
+            val xml = resp.body?.string().orEmpty()
+            val v = version.removePrefix("v").trim()
+            if (!xml.contains("v" + v)) return ""
+            val entry = Regex("<entry>(.*?)</entry>", RegexOption.DOT_MATCHES_ALL)
+                .findAll(xml)
+                .map { it.groupValues[1] }
+                .firstOrNull { it.contains("v" + v) } ?: return ""
+            val content = Regex("<content[^>]*>(.*?)</content>", RegexOption.DOT_MATCHES_ALL)
+                .find(entry)?.groupValues?.get(1) ?: return ""
+            return content
+                .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+                .replace("&quot;", "\"").replace("<br />", "\n").replace("<br/>", "\n")
+                .replace(Regex("<[^>]+>"), "")
+                .trim()
         }
     }
 

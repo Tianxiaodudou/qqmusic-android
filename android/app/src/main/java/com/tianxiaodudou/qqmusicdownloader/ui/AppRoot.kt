@@ -584,7 +584,7 @@ private fun MinePage(
                             Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
                         ) {
                             Text(
-                                plainNotes(rel.notes).ifEmpty { "包含问题修复与体验改进" },
+                                plainNotes(rel.notes).ifEmpty { "这次发布没有取到更新日志，点「浏览器下载」可以看完整说明" },
                                 fontSize = 12.sp,
                                 lineHeight = 18.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

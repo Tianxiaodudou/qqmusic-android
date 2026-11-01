@@ -158,18 +158,17 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
     Column(Modifier.fillMaxSize().padding(horizontal = AppTheme.dimens.pagePadding)) {
         Spacer(Modifier.height(AppTheme.dimens.spacingMd))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
+            AppInput(
                 value = keyword,
                 onValueChange = {
                     keyword = it
                     searched = false
                 },
-                singleLine = true,
-                placeholder = { Text("歌名 / 歌手 / 专辑 / 歌单") },
+                placeholder = "歌名 / 歌手 / 专辑 / 歌单",
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(AppTheme.dimens.spacingSm))
-            Button(onClick = { doSearch() }) { Text("搜索") }
+            AppPrimaryButton("搜索") { doSearch() }
         }
 
         // 联想词 / 热搜

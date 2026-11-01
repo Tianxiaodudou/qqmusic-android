@@ -1,5 +1,13 @@
 # 更新日志
 
+## v2.20.0 (2026-11-02)
+
+### 主题系统（第六步：组件层补齐）
+- 新增组件：AppPrimaryButton（主按钮）、AppSecondaryButton（描边按钮）、AppTextButton（文字按钮）、
+  AppIconButton（图标按钮，固定 44dp 热区）、AppSwitch（开关）、AppLinearProgress（进度条）、
+  AppInput（输入框）、AppSheet（底部弹层容器：统一圆角/拖柄/底色）
+- 已接入：歌曲列表多选工具条四个按钮、首页模块开关、搜索页输入框与搜索按钮、更新弹窗下载进度条
+- 组件内部只引用 AppTheme，页面不再直接写 Material 组件的颜色参数
 ## v2.19.0 (2026-11-02)
 
 ### 主题系统（第五步：字面值清零 + 基础组件成型）

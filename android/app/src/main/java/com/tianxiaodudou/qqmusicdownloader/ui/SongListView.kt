@@ -395,51 +395,35 @@ fun SongListView(
 
         if (selecting) {
             Row(
-                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
+                Modifier.fillMaxWidth().background(AppTheme.colors.surface2)
                     .padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacing6),
             ) {
-                Button(
-                    onClick = {
-                        if (chosen.isEmpty()) {
-                            toast("先选几首")
-                            return@Button
-                        }
-                        PlayerController.enqueue(chosen)
-                        toast("已加入播放队列 " + chosen.size + " 首")
-                        finishSelection()
-                    },
-                    modifier = Modifier.weight(1f),
-                ) { Text("加入队列", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                Button(
-                    onClick = {
+                AppPrimaryButton("加入队列", Modifier.weight(1f)) {
+                    if (chosen.isEmpty()) {
+                        toast("先选几首")
+                        return@AppPrimaryButton
+                    }
+                    PlayerController.enqueue(chosen)
+                    toast("已加入播放队列 " + chosen.size + " 首")
+                    finishSelection()
+                }
+                AppPrimaryButton("收藏到歌单", Modifier.weight(1f)) {
+                    if (chosen.isEmpty()) toast("先选几首") else picker = true
+                }
+                AppPrimaryButton("下载", Modifier.weight(1f)) {
+                    if (chosen.isEmpty()) toast("先选几首") else chosen.forEach { onDownload(it) }
+                    finishSelection()
+                }
+                if (onRemove != null) {
+                    AppPrimaryButton("移出歌单", Modifier.weight(1f)) {
                         if (chosen.isEmpty()) {
                             toast("先选几首")
                         } else {
-                            picker = true
+                            onRemove(chosen)
+                            finishSelection()
                         }
-                    },
-                    modifier = Modifier.weight(1f),
-                ) { Text("收藏到歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                Button(
-                    onClick = {
-                        if (chosen.isEmpty()) toast("先选几首") else chosen.forEach { onDownload(it) }
-                        finishSelection()
-                    },
-                    modifier = Modifier.weight(1f),
-                ) { Text("下载", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                if (onRemove != null) {
-                    Button(
-                        onClick = {
-                            if (chosen.isEmpty()) {
-                                toast("先选几首")
-                            } else {
-                                onRemove(chosen)
-                                finishSelection()
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("移出歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                    }
                 }
             }
         }

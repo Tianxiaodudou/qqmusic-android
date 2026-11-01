@@ -55,16 +55,12 @@ fun HomeModulesScreen() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(m.title, fontSize = AppTheme.typography.body.fontSize, modifier = Modifier.weight(1f))
-                    Switch(
+                    AppSwitch(
                         checked = enabled,
                         onCheckedChange = {
                             Settings.setHomeEnabled(context, m.key, it)
                             HomeConfig.bump()
                         },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = AppTheme.colors.switchThumb,
-                            checkedTrackColor = AppTheme.colors.switchTrack,
-                        ),
                     )
                 }
             }

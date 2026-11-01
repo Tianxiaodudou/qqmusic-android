@@ -256,3 +256,158 @@ fun EmptyState(text: String, modifier: Modifier = Modifier, action: (@Composable
     }
 }
 
+
+/** 主按钮：品牌色底 + 深色文字。 */
+@Composable
+fun AppPrimaryButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = AppTheme.shapes.button,
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = AppTheme.colors.brand,
+            contentColor = AppTheme.colors.textOnBrand,
+            disabledContainerColor = AppTheme.colors.surface3,
+            disabledContentColor = AppTheme.colors.textDisabled,
+        ),
+    ) { Text(text, style = AppTheme.typography.button) }
+}
+
+/** 次按钮：描边。 */
+@Composable
+fun AppSecondaryButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = AppTheme.shapes.button,
+        border = AppTheme.strokes.normal,
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+            contentColor = AppTheme.colors.textPrimary,
+        ),
+    ) { Text(text, style = AppTheme.typography.button) }
+}
+
+/** 文字按钮。 */
+@Composable
+fun AppTextButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            horizontal = AppTheme.dimens.spacing10,
+            vertical = AppTheme.dimens.spacingXs,
+        ),
+    ) {
+        Text(
+            text,
+            style = AppTheme.typography.button,
+            color = if (enabled) AppTheme.colors.textPrimary else AppTheme.colors.textDisabled,
+        )
+    }
+}
+
+/** 图标按钮（固定热区）。 */
+@Composable
+fun AppIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    tint: androidx.compose.ui.graphics.Color? = null,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    androidx.compose.material3.IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.size(AppTheme.dimens.touchTarget),
+    ) {
+        androidx.compose.material3.Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = tint ?: AppTheme.colors.textPrimary,
+            modifier = Modifier.size(AppTheme.dimens.iconLg),
+        )
+    }
+}
+
+/** 开关。 */
+@Composable
+fun AppSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    androidx.compose.material3.Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        colors = androidx.compose.material3.SwitchDefaults.colors(
+            checkedThumbColor = AppTheme.colors.switchThumb,
+            checkedTrackColor = AppTheme.colors.switchTrack,
+        ),
+    )
+}
+
+/** 进度条（线性）。 */
+@Composable
+fun AppLinearProgress(progress: Float, modifier: Modifier = Modifier) {
+    androidx.compose.material3.LinearProgressIndicator(
+        progress = { progress.coerceIn(0f, 1f) },
+        modifier = modifier,
+        color = AppTheme.colors.progress,
+        trackColor = AppTheme.colors.progressTrack,
+    )
+}
+
+/** 输入框。 */
+@Composable
+fun AppInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    singleLine: Boolean = true,
+) {
+    androidx.compose.material3.OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        singleLine = singleLine,
+        shape = AppTheme.shapes.input,
+        textStyle = AppTheme.typography.body,
+        placeholder = {
+            if (placeholder.isNotEmpty()) {
+                Text(placeholder, style = AppTheme.typography.body, color = AppTheme.colors.textSecondary)
+            }
+        },
+    )
+}
+
+/** 底部弹层容器：统一圆角、拖柄与背景色。 */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AppSheet(onDismiss: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = AppTheme.colors.surface1,
+        shape = AppTheme.shapes.sheet,
+        dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle(color = AppTheme.colors.lineStrong) },
+        content = content,
+    )
+}
+

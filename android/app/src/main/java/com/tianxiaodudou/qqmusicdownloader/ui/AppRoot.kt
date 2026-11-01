@@ -647,7 +647,7 @@ private fun MinePage(
             text = {
                 Column {
                     if (downloading) {
-                        LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
+                        AppLinearProgress(progress / 100f, Modifier.fillMaxWidth())
                         Spacer(Modifier.height(AppTheme.dimens.spacingSm))
                         Text("正在下载 $progress%", fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {

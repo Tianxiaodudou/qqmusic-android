@@ -83,7 +83,17 @@ object PlayerController {
     private var bufferingSince = 0L
     private var loadedSong: MusicApi.Song? = null
 
-    private data class CachedUrl(val url: String, val label: String, val quality: String, val at: Long)
+    private data class CachedUrl(
+        val url: String,
+        val label: String,
+        val quality: String,
+        val at: Long,
+        val code: String = "",
+    )
+
+    /** 音质代码 -> 档位序号（用于「不能超过上限」的判断）。 */
+    private fun codeOrdinal(code: String): Int =
+        Settings.Quality.entries.firstOrNull { it.code == code }?.ordinal ?: 0
 
     /** 下一首/上一首的直链预取缓存，10 分钟内有效。 */
     private val urlCache = java.util.concurrent.ConcurrentHashMap<String, CachedUrl>()
@@ -341,6 +351,10 @@ object PlayerController {
     fun setQuality(q: Settings.Quality) {
         val ctx = appContext ?: return
         Settings.setQuality(ctx, q)
+        // 上限变了：之前按旧上限解析的直链、以及卡顿降档的强制档位全部作废
+        urlCache.clear()
+        forcedQuality?.let { if (it.ordinal > q.ordinal) forcedQuality = null }
+        stallDowngrades = 0
         val song = current ?: return
         load(song, startAt = positionMs, autoPlay = playing)
     }
@@ -383,7 +397,13 @@ object PlayerController {
     private fun downgradeForStall() {
         val ctx = appContext ?: return
         val song = current ?: return
-        if (loading || stallDowngrades >= 2) return
+        if (loading) return
+        // 整首已经并行下好：直接切本地，音质不降也比网络流畅
+        if (AudioFetch.cached(ctx, song.mid) != null) {
+            load(song, startAt = positionMs, autoPlay = true)
+            return
+        }
+        if (stallDowngrades >= 2) return
         val cap = forcedQuality ?: Settings.quality(ctx)
         val lower = Settings.Quality.entries.filter { it.ordinal < cap.ordinal }.maxByOrNull { it.ordinal } ?: return
         stallDowngrades += 1
@@ -414,7 +434,13 @@ object PlayerController {
 
     // ---------------- 内部实现 ----------------
 
-    private data class Source(val uri: Uri, val label: String, val path: String, val quality: String = "")
+    private data class Source(
+        val uri: Uri,
+        val label: String,
+        val path: String,
+        val quality: String = "",
+        val code: String = "",
+    )
 
     private fun load(song: MusicApi.Song, startAt: Long = 0, autoPlay: Boolean = true, alt: Boolean = false) {
         val pl = exo ?: return
@@ -438,12 +464,14 @@ object PlayerController {
         val resumeAt = if (startAt <= 0) ResumeStore.get(ctx, song.mid) else 0L
         loadJob = scope?.launch {
             // 整首已经并行下到本地：直接本地播放，起播和拖动都不碰网络
+            val cap = forcedQuality ?: Settings.quality(ctx)
             val localHit = withContext(Dispatchers.IO) { AudioFetch.cached(ctx, song.mid) }
+                ?.takeIf { it.code.isEmpty() || codeOrdinal(it.code) <= cap.ordinal }
             if (localHit != null) {
-                sourceLabel = "本地缓存" + if (localHit.second.isNotEmpty()) " · " + localHit.second else ""
-                sourcePath = localHit.first.absolutePath
-                actualQuality = localHit.third
-                pl.setMediaItem(MediaItem.fromUri(Uri.fromFile(localHit.first)))
+                sourceLabel = "本地缓存" + if (localHit.label.isNotEmpty()) " · " + localHit.label else ""
+                sourcePath = localHit.file.absolutePath
+                actualQuality = if (localHit.quality.isNotEmpty()) localHit.quality else qualityText(localHit.code)
+                pl.setMediaItem(MediaItem.fromUri(Uri.fromFile(localHit.file)))
                 val startPos = when {
                     startAt > 0 -> startAt
                     resumeAt > 0 -> resumeAt
@@ -478,6 +506,18 @@ object PlayerController {
             if (autoPlay) pl.play()
             loading = false
             prefetchAround()
+            // 起播稳定后再把当前这首整首并行拉下来（4 连接）：网络一抖就切本地，不用等降档
+            val directUrl = src.uri.toString()
+            if (directUrl.startsWith("http")) {
+                scope?.launch {
+                    delay(2_500)
+                    if (current?.mid == song.mid && AudioFetch.cached(ctx, song.mid) == null) {
+                        runCatching {
+                            AudioFetch.ensure(ctx, song.mid, directUrl, src.label, src.quality, src.code)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -485,11 +525,15 @@ object PlayerController {
         // 命中预取：直接起播，不再等接口
         urlCache[song.mid]?.let { c ->
             if (System.currentTimeMillis() - c.at < 10 * 60_000L) {
-                return Source(Uri.parse(c.url), c.label, "", c.quality)
+                return Source(Uri.parse(c.url), c.label, "", c.quality, c.code)
             }
             urlCache.remove(song.mid)
         }
         val wanted = forcedQuality ?: Settings.quality(ctx)
+        // 预取缓存里可能是上限下调之前解析的高音质直链，超出上限的一律作废
+        urlCache[song.mid]?.let { c ->
+            if (c.code.isNotEmpty() && codeOrdinal(c.code) > wanted.ordinal) urlCache.remove(song.mid)
+        }
         // 设置里选的是「上限」：只会从目标档位往下退，绝不升到更高档位
         val chain = Settings.Quality.entries
             .filter { it.ordinal <= wanted.ordinal }
@@ -507,6 +551,7 @@ object PlayerController {
                     q.label + " · " + q.detail,
                     "",
                     qualityText(q.code),
+                    q.code,
                 )
             }
         }
@@ -514,7 +559,13 @@ object PlayerController {
         for (q in chain) {
             val url = runCatching { MusicApi.streamUrlOf(song, q.code) }.getOrNull()
             if (!url.isNullOrEmpty()) {
-                return Source(Uri.parse(if (alt) cdnUrl(url) else url), q.label + " · " + q.detail, "", qualityText(q.code))
+                return Source(
+                    Uri.parse(if (alt) cdnUrl(url) else url),
+                    q.label + " · " + q.detail,
+                    "",
+                    qualityText(q.code),
+                    q.code,
+                )
             }
         }
 
@@ -524,7 +575,13 @@ object PlayerController {
             for (q in chain) {
                 val url = runCatching { MusicApi.streamUrlOf(replaced, q.code) }.getOrNull()
                 if (!url.isNullOrEmpty()) {
-                    return Source(Uri.parse(if (alt) cdnUrl(url) else url), "替换音源 · " + q.label, "", qualityText(q.code))
+                    return Source(
+                        Uri.parse(if (alt) cdnUrl(url) else url),
+                        "替换音源 · " + q.label,
+                        "",
+                        qualityText(q.code),
+                        q.code,
+                    )
                 }
             }
         }
@@ -567,12 +624,13 @@ object PlayerController {
                         q.label + " · " + q.detail,
                         qualityText(code),
                         System.currentTimeMillis(),
+                        code,
                     )
                     // 只预下紧挨着的下一首，而且当前播放已经缓冲住 15s 以上才开工，别抢带宽
                     val ahead = bufferedMs - positionMs
                     if (n == 0 && ahead > 15_000 && AudioFetch.cached(ctx, s.mid) == null) {
                         runCatching {
-                            AudioFetch.ensure(ctx, s.mid, map[code]!!, q.label, qualityText(code))
+                            AudioFetch.ensure(ctx, s.mid, map[code]!!, q.label, qualityText(code), code)
                         }
                     }
                 }

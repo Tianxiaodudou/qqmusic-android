@@ -29,14 +29,20 @@ object AudioFetch {
     private fun audioFile(ctx: Context, mid: String): File = File(dir(ctx), mid + ".audio")
     private fun metaFile(ctx: Context, mid: String): File = File(dir(ctx), mid + ".meta")
 
-    /** 已经完整下好的本地文件（带音质说明），没有则 null。 */
-    fun cached(ctx: Context, mid: String): Triple<File, String, String>? {
+    /** 本地已下好的整首音频：文件、音质说明、音质名称、音质代码。 */
+    data class Cached(val file: File, val label: String, val quality: String, val code: String)
+
+    /** 已经完整下好的本地文件，没有则 null。 */
+    fun cached(ctx: Context, mid: String): Cached? {
         val f = audioFile(ctx, mid)
         if (!f.exists() || f.length() <= 0) return null
         val meta = runCatching { JSONObject(metaFile(ctx, mid).readText()) }.getOrNull()
-        val label = meta?.optString("label").orEmpty()
-        val quality = meta?.optString("quality").orEmpty()
-        return Triple(f, label, quality)
+        return Cached(
+            file = f,
+            label = meta?.optString("label").orEmpty(),
+            quality = meta?.optString("quality").orEmpty(),
+            code = meta?.optString("code").orEmpty(),
+        )
     }
 
     fun sizeBytes(ctx: Context, mid: String): Long = audioFile(ctx, mid).let { if (it.exists()) it.length() else 0 }
@@ -58,11 +64,12 @@ object AudioFetch {
         url: String,
         label: String,
         quality: String,
+        code: String = "",
     ): File? = withContext(Dispatchers.IO) {
-        cached(ctx, mid)?.let { return@withContext it.first }
+        cached(ctx, mid)?.let { return@withContext it.file }
         if (!running.add(mid)) return@withContext null
         try {
-            download(ctx, mid, url, label, quality)
+            download(ctx, mid, url, label, quality, code)
         } finally {
             running.remove(mid)
         }
@@ -74,6 +81,7 @@ object AudioFetch {
         url: String,
         label: String,
         quality: String,
+        code: String,
     ): File? = withContext(Dispatchers.IO) {
         val tmp = File(dir(ctx), mid + ".part")
         runCatching { tmp.delete() }
@@ -108,7 +116,8 @@ object AudioFetch {
         }
         runCatching {
             metaFile(ctx, mid).writeText(
-                JSONObject().put("label", label).put("quality", quality).put("size", total).toString(),
+                JSONObject().put("label", label).put("quality", quality)
+                    .put("code", code).put("size", total).toString(),
             )
         }
         prune(ctx)

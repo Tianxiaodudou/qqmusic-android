@@ -65,7 +65,7 @@ internal fun DetailScaffold(title: String, onBack: () -> Unit, content: @Composa
             IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
             }
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         content()
     }
@@ -88,24 +88,24 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
     DetailScaffold(detail?.name?.ifEmpty { name } ?: name, onBack = { Nav.pop() }) {
         val d = detail
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(92.dp).clip(RoundedCornerShape(10.dp)).background(AppTheme.colors.coverPlaceholder)) {
                     val cover = d?.cover?.takeIf { it.startsWith("http") } ?: coverUrl(mid)
                     AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(AppTheme.dimens.spacing14))
                 Column(Modifier.weight(1f)) {
-                    Text(d?.name?.ifEmpty { name } ?: name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(d?.singer.orEmpty(), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    Text(d?.name?.ifEmpty { name } ?: name, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(d?.singer.orEmpty(), fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     Text(
                         listOfNotNull(d?.publish?.takeIf { it.isNotEmpty() }, d?.genre?.takeIf { it.isNotEmpty() })
                             .joinToString(" · "),
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         d?.company?.takeIf { it.isNotEmpty() } ?: "",
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
@@ -114,16 +114,16 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
             if (!d?.desc.isNullOrEmpty()) {
                 Text(
                     d!!.desc,
-                    fontSize = 11.sp,
+                    fontSize = AppTheme.typography.caption.fontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingXs),
                 )
             }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }, modifier = Modifier.weight(1f)) {
-                    Text("播放全部", fontSize = 13.sp)
+                    Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
                 OutlinedButton(onClick = {
                     val id = d?.id ?: 0L
@@ -132,7 +132,7 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
                         faved = withContext(Dispatchers.IO) { Extras.favAlbum(id, !faved) }
                     }
                 }, modifier = Modifier.weight(1f)) {
-                    Text(if (faved) "已收藏" else "收藏专辑", fontSize = 13.sp)
+                    Text(if (faved) "已收藏" else "收藏专辑", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
             }
             val list = songs
@@ -172,22 +172,22 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
 
     DetailScaffold(info?.name?.ifEmpty { name } ?: name, onBack = { Nav.pop() }) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(72.dp).clip(RoundedCornerShape(50)).background(AppTheme.colors.coverPlaceholder)) {
                     val a = info?.avatar.orEmpty()
                     if (a.startsWith("http")) {
                         AsyncImage(model = a, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                     }
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(AppTheme.dimens.spacing14))
                 Column(Modifier.weight(1f)) {
-                    Text(info?.name?.ifEmpty { name } ?: name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text(info?.name?.ifEmpty { name } ?: name, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
                     Text(
                         listOfNotNull(
                             info?.songs?.takeIf { it.isNotEmpty() }?.let { it + " 首" },
                             info?.fans?.takeIf { it.isNotEmpty() }?.let { it + " 粉丝" },
                         ).joinToString(" · "),
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -195,25 +195,25 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
             if (desc.isNotEmpty()) {
                 Text(
                     desc,
-                    fontSize = 11.sp,
+                    fontSize = AppTheme.typography.caption.fontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingXs),
                 )
             }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingMd, vertical = AppTheme.dimens.spacing6)) {
                 listOf("热门歌曲", "专辑", "相似歌手").forEachIndexed { i, t ->
                     TextButton(onClick = { tab = i }) {
                         Text(
                             t,
-                            fontSize = 13.sp,
+                            fontSize = AppTheme.typography.bodySmall.fontSize,
                             color = if (tab == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                if (tab == 0) TextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = 12.sp) }
+                if (tab == 0) TextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
             when (tab) {
                 0 -> {
@@ -225,7 +225,7 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
                     items(albums) { a ->
                         Row(
                             Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.coverPlaceholder)) {
@@ -236,10 +236,10 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
-                            Spacer(Modifier.width(12.dp))
+                            Spacer(Modifier.width(AppTheme.dimens.spacingMd))
                             Column(Modifier.weight(1f)) {
-                                Text(a.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(a.singer, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                Text(a.name, fontSize = AppTheme.typography.body.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(a.singer, fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                             }
                         }
                     }
@@ -248,8 +248,8 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
                     items(similar) { s ->
                         Row(
                             Modifier.fillMaxWidth().clickable { Nav.push(Route.Singer(s.mid, s.name)) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                        ) { Text(s.name, fontSize = 14.sp) }
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingMd),
+                        ) { Text(s.name, fontSize = AppTheme.typography.body.fontSize) }
                     }
                 }
             }
@@ -274,8 +274,8 @@ fun PlaylistScreen(id: String, name: String, onPlay: (List<MusicApi.Song>, Int) 
 
     DetailScaffold(rname, onBack = { Nav.pop() }) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("共 " + (songs?.size ?: 0) + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm), verticalAlignment = Alignment.CenterVertically) {
+                Text("共 " + (songs?.size ?: 0) + " 首", fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = {
                     if (faved) return@TextButton
@@ -285,8 +285,8 @@ fun PlaylistScreen(id: String, name: String, onPlay: (List<MusicApi.Song>, Int) 
                         }
                         faved = ok
                     }
-                }) { Text(if (faved) "已收藏" else "收藏歌单", fontSize = 12.sp) }
-                TextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = 12.sp) }
+                }) { Text(if (faved) "已收藏" else "收藏歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                TextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
             val list = songs
             if (list == null) {
@@ -318,7 +318,7 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
                 items(data) { a ->
                     Row(
                         Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.coverPlaceholder)) {
@@ -329,10 +329,10 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(AppTheme.dimens.spacingMd))
                         Column(Modifier.weight(1f)) {
-                            Text(a.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(a.singer, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text(a.name, fontSize = AppTheme.typography.body.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(a.singer, fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
                     }
                 }
@@ -345,15 +345,15 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
                 items(data) { p ->
                     Row(
                         Modifier.fillMaxWidth().clickable { Nav.push(Route.Playlist(p.id, p.name)) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         SquareCover(p.cover)
                         Text(
-                            p.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(start = 12.dp),
+                            p.name, fontSize = AppTheme.typography.body.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(start = AppTheme.dimens.spacingMd),
                         )
-                        Text(p.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(p.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

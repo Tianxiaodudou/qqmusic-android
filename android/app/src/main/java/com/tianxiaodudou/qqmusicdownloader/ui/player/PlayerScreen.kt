@@ -258,7 +258,7 @@ fun PlayerScreen(onExit: () -> Unit) {
 
     if (song == null) {
         Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
-            Text("还没有正在播放的歌曲", color = TextLo, fontSize = 14.sp)
+            Text("还没有正在播放的歌曲", color = TextLo, fontSize = AppTheme.typography.body.fontSize)
         }
         return
     }
@@ -336,9 +336,9 @@ fun PlayerScreen(onExit: () -> Unit) {
                 if (loadingLyric) {
                     Text(
                         "歌词加载中…",
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         color = TextLo,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 16.dp),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = AppTheme.dimens.pagePadding),
                     )
                 }
                 if (sheet == PSheet.Sync) {
@@ -384,7 +384,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                 onNext = { PlayerController.next() },
                 onQueue = { sheet = PSheet.Queue },
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(AppTheme.dimens.spacing6))
         }
 
         val s = sheet
@@ -403,7 +403,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                         )
                         IconButton(
                             onClick = { sheet = null },
-                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp).size(40.dp),
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = AppTheme.dimens.spacing6).size(40.dp),
                         ) {
                             Icon(
                                 Icons.Rounded.Close,
@@ -592,24 +592,24 @@ fun PlayerScreen(onExit: () -> Unit) {
             text = {
                 Column {
                     Text(line.text)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(AppTheme.dimens.spacingSm))
                     Row {
                         TextButton(onClick = {
                             clipboard.setText(AnnotatedString(line.text))
                             shareLine = null
                             toast = "已复制这句"
-                        }) { Text("复制", fontSize = 12.sp) }
+                        }) { Text("复制", fontSize = AppTheme.typography.bodySmall.fontSize) }
                         TextButton(onClick = {
                             val text = line.text + "\n—— " + song.name + " · " + song.singers
                             val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
                             context.startActivity(Intent.createChooser(i, "分享歌词"))
                             shareLine = null
-                        }) { Text("分享", fontSize = 12.sp) }
+                        }) { Text("分享", fontSize = AppTheme.typography.bodySmall.fontSize) }
                         TextButton(onClick = {
                             val target = line
                             shareLine = null
                             dictLine = target
-                        }) { Text("查词", fontSize = 12.sp) }
+                        }) { Text("查词", fontSize = AppTheme.typography.bodySmall.fontSize) }
                     }
                 }
             },
@@ -624,14 +624,14 @@ fun PlayerScreen(onExit: () -> Unit) {
             text = {
                 Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
                     if (dictLoading) {
-                        Text("查询中…", fontSize = 12.sp, color = TextLo)
+                        Text("查询中…", fontSize = AppTheme.typography.bodySmall.fontSize, color = TextLo)
                     } else if (dictEntries.isEmpty()) {
-                        Text("这句没有生词解析", fontSize = 12.sp, color = TextLo)
+                        Text("这句没有生词解析", fontSize = AppTheme.typography.bodySmall.fontSize, color = TextLo)
                     } else {
                         dictEntries.forEach { e ->
                             Text(e.phrase, style = AppTheme.typography.body, color = AppTheme.colors.success)
-                            Text(e.explain, fontSize = 12.sp, color = TextHi)
-                            Spacer(Modifier.height(8.dp))
+                            Text(e.explain, fontSize = AppTheme.typography.bodySmall.fontSize, color = TextHi)
+                            Spacer(Modifier.height(AppTheme.dimens.spacingSm))
                         }
                     }
                 }
@@ -646,11 +646,11 @@ fun PlayerScreen(onExit: () -> Unit) {
             title = { Text("关于") },
             text = {
                 Column {
-                    Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 14.sp)
-                    Spacer(Modifier.height(8.dp))
+                    Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = AppTheme.typography.body.fontSize)
+                    Spacer(Modifier.height(AppTheme.dimens.spacingSm))
                     Text(
                         "全部请求在设备本地完成，不经过任何中转服务器。\n开源许可：MIT License\n接口参考：QQMusicApi",
-                        fontSize = 12.sp,
+                        fontSize = AppTheme.typography.bodySmall.fontSize,
                         color = TextLo,
                     )
                 }
@@ -680,7 +680,7 @@ private fun PlayerTopBar(
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 song.name,
-                fontSize = 15.sp,
+                fontSize = AppTheme.typography.title.fontSize,
                 color = TextHi,
                 maxLines = 1,
                 overflow = TextOverflow.MiddleEllipsis,
@@ -689,21 +689,21 @@ private fun PlayerTopBar(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     song.singers,
-                    fontSize = 11.sp,
+                    fontSize = AppTheme.typography.caption.fontSize,
                     color = TextLo,
                     maxLines = 1,
                     overflow = TextOverflow.MiddleEllipsis,
                 )
                 if (qualityText.isNotEmpty()) {
-                    Spacer(Modifier.width(5.dp))
+                    Spacer(Modifier.width(AppTheme.dimens.spacing5))
                     Text(
                         qualityText,
-                        fontSize = 9.sp,
+                        fontSize = AppTheme.typography.badge.fontSize,
                         color = AppTheme.colors.success,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
                             .background(AppTheme.colors.brandBorder)
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                            .padding(horizontal = AppTheme.dimens.spacing5, vertical = 1.dp),
                     )
                 }
             }
@@ -714,7 +714,7 @@ private fun PlayerTopBar(
                 Spacer(Modifier.width(3.dp))
                 Text(
                     if (sleepAfterCurrent) "当前曲后" else fmtShort(sleepRemainingMs),
-                    fontSize = 10.sp,
+                    fontSize = AppTheme.typography.badge.fontSize,
                     color = AppTheme.colors.warning,
                 )
                 Spacer(Modifier.width(2.dp))
@@ -742,7 +742,7 @@ private fun PlayerToolbar(
         animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
         label = "favScale",
     )
-    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing6, vertical = 2.dp)) {
         ToolItem(
             icon = { tint, size ->
                 Icon(
@@ -814,7 +814,7 @@ private fun ToolItem(
     ) {
         icon(tint, 21.dp)
         Spacer(Modifier.height(3.dp))
-        Text(label, fontSize = 10.sp, color = tint.copy(alpha = 0.82f), maxLines = 1)
+        Text(label, fontSize = AppTheme.typography.badge.fontSize, color = tint.copy(alpha = 0.82f), maxLines = 1)
     }
 }
 
@@ -838,9 +838,9 @@ private fun SeekRow(
             modifier = Modifier.fillMaxWidth(),
         )
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp)) {
-            Text(fmtMs(positionMs), fontSize = 10.5.sp, color = TextLo)
+            Text(fmtMs(positionMs), fontSize = AppTheme.typography.badge.fontSize, color = TextLo)
             Spacer(Modifier.weight(1f))
-            Text(fmtMs(durationMs), fontSize = 10.5.sp, color = TextLo)
+            Text(fmtMs(durationMs), fontSize = AppTheme.typography.badge.fontSize, color = TextLo)
         }
     }
 }
@@ -944,7 +944,7 @@ private fun PlayerControls(
     onQueue: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp).navigationBarsPadding(),
+        Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacingXs).navigationBarsPadding(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onMode, modifier = Modifier.size(44.dp)) {

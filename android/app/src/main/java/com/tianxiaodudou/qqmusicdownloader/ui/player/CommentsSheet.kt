@@ -61,14 +61,14 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.75f).padding(bottom = 8.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("评论 · " + song.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.75f).padding(bottom = AppTheme.dimens.spacingSm)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
+            Text("评论 · " + song.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             TextButton(onClick = { tab = 0 }) {
-                Text("热门", fontSize = 12.sp, color = if (tab == 0) AppTheme.colors.brand else AppTheme.colors.textSecondary)
+                Text("热门", fontSize = AppTheme.typography.bodySmall.fontSize, color = if (tab == 0) AppTheme.colors.brand else AppTheme.colors.textSecondary)
             }
             TextButton(onClick = { tab = 1 }) {
-                Text("最新", fontSize = 12.sp, color = if (tab == 1) AppTheme.colors.brand else AppTheme.colors.textSecondary)
+                Text("最新", fontSize = AppTheme.typography.bodySmall.fontSize, color = if (tab == 1) AppTheme.colors.brand else AppTheme.colors.textSecondary)
             }
         }
         if (toast.isNotEmpty()) {
@@ -84,7 +84,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
         } else {
             LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
                 items(data) { c ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = AppTheme.dimens.spacingSm)) {
                         Box(Modifier.size(34.dp).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
                             if (c.avatar.startsWith("http")) {
                                 AsyncImage(
@@ -102,7 +102,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
                             Row {
                                 Text(
                                     if (c.likes > 0) "赞 " + c.likes else "",
-                                    fontSize = 10.sp,
+                                    fontSize = AppTheme.typography.badge.fontSize,
                                     color = AppTheme.colors.textTertiary,
                                 )
                             }
@@ -112,17 +112,17 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacingXs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                placeholder = { Text("说点什么…", fontSize = 12.sp) },
+                placeholder = { Text("说点什么…", fontSize = AppTheme.typography.bodySmall.fontSize) },
                 modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(AppTheme.dimens.spacingSm))
             TextButton(onClick = {
                 val content = text.trim()
                 if (content.isEmpty() || sending) return@TextButton
@@ -139,7 +139,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
                         toast = "发送失败，可能需要重新登录"
                     }
                 }
-            }) { Text(if (sending) "发送中…" else "发送", fontSize = 13.sp) }
+            }) { Text(if (sending) "发送中…" else "发送", fontSize = AppTheme.typography.bodySmall.fontSize) }
         }
     }
 }

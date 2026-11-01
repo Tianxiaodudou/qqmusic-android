@@ -1,5 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -148,15 +150,15 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
 
     if (current == null) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(AppTheme.dimens.pagePadding), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     if (showFav) "收藏的歌单" else "我的歌单",
-                    fontSize = 18.sp,
+                    fontSize = AppTheme.typography.pageTitle.fontSize,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { showFav = !showFav }) { Text(if (showFav) "我的歌单" else "收藏的歌单", fontSize = 12.sp) }
-                if (!showFav) TextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = 12.sp) }
+                TextButton(onClick = { showFav = !showFav }) { Text(if (showFav) "我的歌单" else "收藏的歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                if (!showFav) TextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
             if (showFav) {
                 val favList = favs
@@ -171,15 +173,15 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                         items(favList) { item ->
                             Row(
                                 Modifier.fillMaxWidth().clickable { Nav.push(Route.Playlist(item.id, item.name)) }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing14),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 SquareCover(item.cover)
                                 Text(
-                                    item.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    item.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.weight(1f).padding(start = 10.dp),
                                 )
-                                Text(item.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(item.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -200,15 +202,15 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                             Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .combinedClickable(onClick = { opened = item }, onLongClick = { pendingDelete = item })
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing14),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             SquareCover(item.cover)
                             Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                                Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
+                                Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 Text(
                                     item.count.toString() + " 首",
-                                    fontSize = 11.sp,
+                                    fontSize = AppTheme.typography.caption.fontSize,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -219,9 +221,9 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
         }
     } else {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { opened = null }) { Text("返回") }
-                Text(current.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(current.name, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val list = songs
             if (list == null) {

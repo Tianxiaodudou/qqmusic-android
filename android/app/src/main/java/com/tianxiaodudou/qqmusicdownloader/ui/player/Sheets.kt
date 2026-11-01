@@ -91,12 +91,12 @@ private val Accent: Color
 @Composable
 private fun SheetHeader(title: String, subtitle: String = "", trailing: @Composable (() -> Unit)? = null) {
     Row(
-        Modifier.fillMaxWidth().padding(start = 22.dp, end = 12.dp, top = 2.dp, bottom = 12.dp),
+        Modifier.fillMaxWidth().padding(start = 22.dp, end = AppTheme.dimens.spacingMd, top = 2.dp, bottom = AppTheme.dimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = SheetTitle)
-            if (subtitle.isNotEmpty()) Text(subtitle, fontSize = 11.sp, color = SheetSub)
+            Text(title, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, color = SheetTitle)
+            if (subtitle.isNotEmpty()) Text(subtitle, fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
         }
         trailing?.invoke()
     }
@@ -104,7 +104,7 @@ private fun SheetHeader(title: String, subtitle: String = "", trailing: @Composa
 
 @Composable
 fun QualitySheet(current: Settings.Quality, onPick: (Settings.Quality) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.spacingMd)) {
         SheetHeader("音质上限", "账号无权限时自动降级；实际在播音质看播放页顶栏")
         Settings.Quality.entries.forEach { q ->
             Row(
@@ -112,8 +112,8 @@ fun QualitySheet(current: Settings.Quality, onPick: (Settings.Quality) -> Unit) 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(q.label, fontSize = 15.sp, color = SheetTitle)
-                    Text(q.detail, fontSize = 11.sp, color = SheetSub)
+                    Text(q.label, fontSize = AppTheme.typography.title.fontSize, color = SheetTitle)
+                    Text(q.detail, fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
                 }
                 if (q == current) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(20.dp))
             }
@@ -128,7 +128,7 @@ fun SyncSheet(offsetMs: Int, onChange: (Int) -> Unit, onReset: () -> Unit) {
         SheetHeader("歌词同步", "拖动让歌词和声音对齐，仅对当前歌曲生效")
         Text(
             text = offsetText(offsetMs),
-            fontSize = 26.sp,
+            fontSize = AppTheme.typography.pageTitle.fontSize,
             fontWeight = FontWeight.SemiBold,
             color = Accent,
             modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -143,12 +143,12 @@ fun SyncSheet(offsetMs: Int, onChange: (Int) -> Unit, onReset: () -> Unit) {
             colors = SliderDefaults.colors(thumbColor = Accent, activeTrackColor = Accent),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("−5.0s", fontSize = 11.sp, color = SheetSub)
-            Text("0", fontSize = 11.sp, color = SheetSub)
-            Text("+5.0s", fontSize = 11.sp, color = SheetSub)
+            Text("−5.0s", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
+            Text("0", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
+            Text("+5.0s", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
         }
         Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
+            Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacingSm),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedAction("−0.5s", Modifier.weight(1f)) {
@@ -162,9 +162,9 @@ fun SyncSheet(offsetMs: Int, onChange: (Int) -> Unit, onReset: () -> Unit) {
                 onChange(next)
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Text("仅对当前歌曲生效", fontSize = 11.sp, color = SheetSub)
-        TextButton(onClick = { value = 0f; onReset() }) { Text("重置为 0", fontSize = 13.sp, color = Accent) }
+        Spacer(Modifier.height(AppTheme.dimens.spacingMd))
+        Text("仅对当前歌曲生效", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
+        TextButton(onClick = { value = 0f; onReset() }) { Text("重置为 0", fontSize = AppTheme.typography.bodySmall.fontSize, color = Accent) }
     }
 }
 
@@ -183,7 +183,7 @@ private fun OutlinedAction(label: String, modifier: Modifier = Modifier, onClick
             .background(SheetRow)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(label, fontSize = 13.sp, color = SheetTitle) }
+    ) { Text(label, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetTitle) }
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -198,13 +198,13 @@ fun QueueSheet(
     onShuffleAll: () -> Unit,
 ) {
     var pendingDelete by remember { mutableStateOf<Int?>(null) }
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.62f).padding(bottom = 8.dp)) {
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.62f).padding(bottom = AppTheme.dimens.spacingSm)) {
         SheetHeader("播放队列 · " + queue.size + " 首", trailing = {
-            TextButton(onClick = onClear) { Text("清空", fontSize = 12.sp, color = SheetSub) }
+            TextButton(onClick = onClear) { Text("清空", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub) }
         })
         if (queue.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("队列是空的", fontSize = 13.sp, color = SheetSub)
+                Text("队列是空的", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
             }
         } else {
             LazyColumn(Modifier.weight(1f)) {
@@ -225,32 +225,32 @@ fun QueueSheet(
                                     modifier = Modifier.size(16.dp),
                                 )
                             } else {
-                                Text((i + 1).toString().padStart(2, '0'), fontSize = 11.sp, color = SheetSub)
+                                Text((i + 1).toString().padStart(2, '0'), fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
                             }
                         }
                         Column(Modifier.weight(1f)) {
                             Text(
                                 song.name,
-                                fontSize = 14.sp,
+                                fontSize = AppTheme.typography.body.fontSize,
                                 color = if (current) Accent else SheetTitle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
                                 song.singers,
-                                fontSize = 11.sp,
+                                fontSize = AppTheme.typography.caption.fontSize,
                                 color = SheetSub,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Text(fmtMs(song.interval * 1000L), fontSize = 11.sp, color = SheetSub)
+                        Text(fmtMs(song.interval * 1000L), fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
                     }
                 }
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = AppTheme.dimens.spacing6),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedAction("随机播放全部", Modifier.weight(1f)) { onShuffleAll() }
@@ -294,7 +294,7 @@ fun MoreSheet(
     onFeedback: () -> Unit,
     onAbout: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
         SheetHeader("更多")
         MenuRow(Icons.Rounded.Share, "分享歌曲", onClick = onShare)
         MenuRow(Icons.Rounded.Info, "歌曲信息", onClick = onInfo)
@@ -314,7 +314,7 @@ fun MoreSheet(
                 Modifier.fillMaxWidth().clickable(onClick = onClearOffsets)
                     .padding(horizontal = 22.dp, vertical = 9.dp),
             ) {
-                Text("清除所有歌曲的歌词偏移（" + offsetCount + " 首）", fontSize = 11.sp, color = SheetSub)
+                Text("清除所有歌曲的歌词偏移（" + offsetCount + " 首）", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
             }
         }
         MenuDivider()
@@ -325,7 +325,7 @@ fun MoreSheet(
 
 @Composable
 private fun MenuDivider() {
-    Box(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp).height(1.dp).background(SheetLine))
+    Box(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacing6).height(1.dp).background(SheetLine))
 }
 
 @Composable
@@ -341,23 +341,23 @@ private fun MenuRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, null, tint = AppTheme.colors.textPrimary, modifier = Modifier.size(AppTheme.dimens.iconMd))
-        Spacer(Modifier.width(14.dp))
-        Text(label, fontSize = 14.5.sp, color = SheetTitle, modifier = Modifier.weight(1f))
-        if (value.isNotEmpty()) Text(value, fontSize = 12.sp, color = SheetSub)
+        Spacer(Modifier.width(AppTheme.dimens.spacing14))
+        Text(label, fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
+        if (value.isNotEmpty()) Text(value, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
         Icon(Icons.Rounded.ChevronRight, null, tint = AppTheme.colors.textDisabled, modifier = Modifier.size(18.dp))
     }
 }
 
 @Composable
 fun EqSheet(current: Int, onPick: (Int) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
         SheetHeader("均衡器", "改变声音风格，不影响音质")
         AudioFx.PRESETS.forEachIndexed { i, name ->
             Row(
-                Modifier.fillMaxWidth().clickable { onPick(i) }.padding(horizontal = 22.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().clickable { onPick(i) }.padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(name, fontSize = 14.sp, color = SheetTitle, modifier = Modifier.weight(1f))
+                Text(name, fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
                 if (i == current) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(19.dp))
             }
         }
@@ -367,16 +367,16 @@ fun EqSheet(current: Int, onPick: (Int) -> Unit) {
 @Composable
 fun SpeedSheet(current: Float, onPick: (Float) -> Unit) {
     val options = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
         SheetHeader("播放速度")
         options.forEach { v ->
             Row(
-                Modifier.fillMaxWidth().clickable { onPick(v) }.padding(horizontal = 22.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().clickable { onPick(v) }.padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     if (v == 1f) "1.0x（原速）" else v.toString().removeSuffix(".0") + "x",
-                    fontSize = 14.sp,
+                    fontSize = AppTheme.typography.body.fontSize,
                     color = SheetTitle,
                     modifier = Modifier.weight(1f),
                 )
@@ -395,29 +395,29 @@ fun SleepSheet(
     onCancel: () -> Unit,
 ) {
     val remaining = ((sleepEndAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
         SheetHeader(
             "睡眠定时",
             if (afterCurrent) "当前歌曲播完就停" else if (sleepEndAt > 0) "还剩 " + fmtMs(remaining * 1000) else "到点自动停止播放",
         )
         listOf(15, 30, 60, 90).forEach { m ->
             Row(
-                Modifier.fillMaxWidth().clickable { onMinutes(m) }.padding(horizontal = 22.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().clickable { onMinutes(m) }.padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(m.toString() + " 分钟", fontSize = 14.sp, color = SheetTitle, modifier = Modifier.weight(1f))
+                Text(m.toString() + " 分钟", fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
             }
         }
         Row(
-            Modifier.fillMaxWidth().clickable { onAfterCurrent() }.padding(horizontal = 22.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().clickable { onAfterCurrent() }.padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("播完当前歌曲", fontSize = 14.sp, color = SheetTitle, modifier = Modifier.weight(1f))
+            Text("播完当前歌曲", fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
             if (afterCurrent) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(19.dp))
         }
         if (sleepEndAt > 0 || afterCurrent) {
-            TextButton(onClick = onCancel, modifier = Modifier.padding(horizontal = 12.dp)) {
-                Text("关闭定时", fontSize = 13.sp, color = SheetSub)
+            TextButton(onClick = onCancel, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacingMd)) {
+                Text("关闭定时", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
             }
         }
     }
@@ -425,7 +425,7 @@ fun SleepSheet(
 
 @Composable
 fun StyleSheet(style: Settings.LyricStyle, onChange: (Settings.LyricStyle) -> Unit, onReset: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
         SheetHeader("歌词样式", "字体大小、对齐、翻译与音译")
         SettingsRow("字体大小") {
             Segment(
@@ -443,17 +443,17 @@ fun StyleSheet(style: Settings.LyricStyle, onChange: (Settings.LyricStyle) -> Un
         }
         ToggleRow("显示翻译", style.showTrans) { onChange(style.copy(showTrans = it)) }
         ToggleRow("显示音译", style.showRoma) { onChange(style.copy(showRoma = it)) }
-        TextButton(onClick = onReset, modifier = Modifier.padding(horizontal = 12.dp)) {
-            Text("重置为默认", fontSize = 13.sp, color = SheetSub)
+        TextButton(onClick = onReset, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacingMd)) {
+            Text("重置为默认", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
         }
     }
 }
 
 @Composable
 private fun SettingsRow(label: String, content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp)) {
-        Text(label, fontSize = 13.sp, color = SheetSub)
-        Spacer(Modifier.height(6.dp))
+    Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingSm)) {
+        Text(label, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
+        Spacer(Modifier.height(AppTheme.dimens.spacing6))
         content()
     }
 }
@@ -472,7 +472,7 @@ private fun Segment(options: List<Pair<String, Float>>, selected: Float, onSelec
                     .clickable { onSelect(v) },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, fontSize = 12.5.sp, color = if (on) SheetTitle else SheetSub)
+                Text(label, fontSize = AppTheme.typography.bodySmall.fontSize, color = if (on) SheetTitle else SheetSub)
             }
         }
     }
@@ -481,10 +481,10 @@ private fun Segment(options: List<Pair<String, Float>>, selected: Float, onSelec
 @Composable
 private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacing6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, fontSize = 14.sp, color = SheetTitle, modifier = Modifier.weight(1f))
+        Text(label, fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onChange,
@@ -536,15 +536,15 @@ fun SongInfoSheet(
             if (e.third.isNotEmpty()) InfoRow("收藏", e.third)
         }
         hasSheet?.let { InfoRow("曲谱", if (it) "有" else "无") }
-        TextButton(onClick = onClose) { Text("关闭", fontSize = 13.sp, color = SheetSub) }
+        TextButton(onClick = onClose) { Text("关闭", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub) }
     }
 }
 
 @Composable
 private fun InfoRow(key: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
-        Text(key, fontSize = 12.sp, color = SheetSub, modifier = Modifier.width(52.dp))
-        Text(value, fontSize = 12.5.sp, color = SheetTitle, modifier = Modifier.weight(1f))
+    Row(Modifier.fillMaxWidth().padding(vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.Top) {
+        Text(key, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub, modifier = Modifier.width(52.dp))
+        Text(value, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
     }
 }
 
@@ -580,11 +580,11 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.55f).padding(bottom = 12.dp)) {
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.55f).padding(bottom = AppTheme.dimens.spacingMd)) {
         SheetHeader("加到歌单", "选择要加入的歌单")
         if (busy) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 androidx.compose.material3.CircularProgressIndicator(
@@ -592,8 +592,8 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
                     strokeWidth = 2.dp,
                     color = Accent,
                 )
-                Spacer(Modifier.width(8.dp))
-                Text("正在加入…", fontSize = 12.sp, color = SheetSub)
+                Spacer(Modifier.width(AppTheme.dimens.spacingSm))
+                Text("正在加入…", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
             }
         }
         val data = lists
@@ -605,29 +605,29 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
                         strokeWidth = 2.dp,
                         color = Accent,
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Text("正在读取歌单…", fontSize = 12.sp, color = SheetSub)
+                    Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+                    Text("正在读取歌单…", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
                 }
             }
         } else if (data.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("还没有自建歌单", fontSize = 13.sp, color = SheetSub)
+                Text("还没有自建歌单", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
             }
         } else {
             LazyColumn(Modifier.weight(1f)) {
                 items(data) { item ->
                     Row(
                         Modifier.fillMaxWidth().clickable { addTo(item) }
-                            .padding(horizontal = 22.dp, vertical = 12.dp),
+                            .padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(item.name, fontSize = 14.sp, color = SheetTitle, modifier = Modifier.weight(1f))
-                        Text(item.count.toString() + " 首", fontSize = 11.sp, color = SheetSub)
+                        Text(item.name, fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
+                        Text(item.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
                     }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = AppTheme.dimens.spacingXs), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedAction("收藏到「我喜欢」", Modifier.weight(1f)) { addTo(null) }
             OutlinedAction("新建歌单", Modifier.weight(1f)) { newName = ""; creating = true }
         }

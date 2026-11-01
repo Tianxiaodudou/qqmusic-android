@@ -3,6 +3,7 @@ package com.tianxiaodudou.qqmusicdownloader.player
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -78,14 +79,22 @@ object DesktopLyrics {
     /** 悬浮歌词的绘制：暗色打底 + 已唱部分用品牌色按宽度裁切。 */
     private class LyricView(ctx: Context) : View(ctx) {
 
-        private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#CC1B2029") }
+        private val colors = com.tianxiaodudou.qqmusicdownloader.ui.theme.DarkColors
+        private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.argb(
+                224,
+                (colors.surface2.red * 255).toInt(),
+                (colors.surface2.green * 255).toInt(),
+                (colors.surface2.blue * 255).toInt(),
+            )
+        }
         private val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#B9C2D0")
+            color = colors.lyricInactive.toArgb()
             textSize = 46f
             typeface = Typeface.DEFAULT_BOLD
         }
         private val sung = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#6FE7A5")
+            color = colors.lyricSung.toArgb()
             textSize = 46f
             typeface = Typeface.DEFAULT_BOLD
         }

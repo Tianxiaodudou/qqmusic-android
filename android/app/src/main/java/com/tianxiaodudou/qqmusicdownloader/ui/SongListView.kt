@@ -164,28 +164,28 @@ fun SongListView(
 
         // 工具条：未选择时给「多选」和「收藏歌单」，选择中给全选/反选/取消
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+            Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingMd, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (selecting) {
-                Text("已选 " + selected.size + " 首", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("已选 " + selected.size + " 首", fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 TextButton(
                     onClick = { selected = selectable.map { it.mid }.toSet() },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
-                ) { Text("全选", fontSize = 12.sp) }
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6),
+                ) { Text("全选", fontSize = AppTheme.typography.bodySmall.fontSize) }
                 TextButton(
                     onClick = { selected = selectable.map { it.mid }.toSet() - selected },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
-                ) { Text("反选", fontSize = 12.sp) }
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6),
+                ) { Text("反选", fontSize = AppTheme.typography.bodySmall.fontSize) }
                 TextButton(
                     onClick = { finishSelection() },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
-                ) { Text("取消", fontSize = 12.sp) }
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6),
+                ) { Text("取消", fontSize = AppTheme.typography.bodySmall.fontSize) }
             } else {
                 Text(
                     if (hiddenCount > 0) shown.size.toString() + " 首 · 隐藏 " + hiddenCount + " 首付费" else shown.size.toString() + " 首",
-                    fontSize = 12.sp,
+                    fontSize = AppTheme.typography.bodySmall.fontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.weight(1f))
@@ -197,8 +197,8 @@ fun SongListView(
                             faved = ok
                             toast(if (ok) "已收藏歌单" else "收藏失败，可能需要重新登录")
                         }
-                    }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
-                        Text(if (faved) "已收藏" else "收藏歌单", fontSize = 12.sp)
+                    }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6)) {
+                        Text(if (faved) "已收藏" else "收藏歌单", fontSize = AppTheme.typography.bodySmall.fontSize)
                     }
                 }
                 TextButton(onClick = {
@@ -208,14 +208,14 @@ fun SongListView(
                         PlayerController.enqueue(selectable)
                         toast("已把 " + selectable.size + " 首加入播放队列")
                     }
-                }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
-                    Text("全部入队", fontSize = 12.sp)
+                }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6)) {
+                    Text("全部入队", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
                 TextButton(onClick = {
                     selecting = true
                     selected = emptySet()
-                }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
-                    Text("多选", fontSize = 12.sp)
+                }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6)) {
+                    Text("多选", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
             }
         }
@@ -261,7 +261,7 @@ fun SongListView(
                                     }
                                 },
                             )
-                            .padding(start = if (selecting) 6.dp else 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                            .padding(start = if (selecting) 6.dp else 16.dp, end = AppTheme.dimens.pagePadding, top = 10.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (selecting) {
@@ -289,32 +289,32 @@ fun SongListView(
                                 }
                             }
                         }
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(AppTheme.dimens.spacingMd))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 song.name,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                fontSize = 15.sp,
+                                fontSize = AppTheme.typography.title.fontSize,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 song.singers + "  ·  " + fmtDuration(song.interval),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                fontSize = 11.sp,
+                                fontSize = AppTheme.typography.caption.fontSize,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         if (locked) {
                             Text(
                                 "付费",
-                                fontSize = 9.sp,
+                                fontSize = AppTheme.typography.badge.fontSize,
                                 color = AppTheme.colors.warning,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(AppTheme.colors.warningSoft)
-                                    .padding(horizontal = 5.dp, vertical = 2.dp),
+                                    .padding(horizontal = AppTheme.dimens.spacing5, vertical = 2.dp),
                             )
                         }
                         if (!selecting) {
@@ -348,7 +348,7 @@ fun SongListView(
                                         onDismissRequest = { moreFor = null },
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("收藏到歌单", fontSize = 13.sp) },
+                                            text = { Text("收藏到歌单", fontSize = AppTheme.typography.bodySmall.fontSize) },
                                             onClick = {
                                                 moreFor = null
                                                 selected = setOf(song.mid)
@@ -357,14 +357,14 @@ fun SongListView(
                                             },
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("查看歌手", fontSize = 13.sp) },
+                                            text = { Text("查看歌手", fontSize = AppTheme.typography.bodySmall.fontSize) },
                                             onClick = {
                                                 moreFor = null
                                                 if (song.singerMid.isNotEmpty()) Nav.push(Route.Singer(song.singerMid, song.singers))
                                             },
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("查看专辑", fontSize = 13.sp) },
+                                            text = { Text("查看专辑", fontSize = AppTheme.typography.bodySmall.fontSize) },
                                             onClick = {
                                                 moreFor = null
                                                 if (song.albumMid.isNotEmpty()) Nav.push(Route.Album(song.albumMid, song.album))
@@ -378,14 +378,14 @@ fun SongListView(
                 }
                 if (onLoadMore != null) {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(14.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.fillMaxWidth().padding(AppTheme.dimens.spacing14), contentAlignment = Alignment.Center) {
                             if (loadingMore) {
                                 androidx.compose.material3.CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
                                 )
                             } else {
-                                Text("上滑继续加载", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("上滑继续加载", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -396,7 +396,7 @@ fun SongListView(
         if (selecting) {
             Row(
                 Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Button(
@@ -410,7 +410,7 @@ fun SongListView(
                         finishSelection()
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text("加入队列", fontSize = 12.sp) }
+                ) { Text("加入队列", fontSize = AppTheme.typography.bodySmall.fontSize) }
                 Button(
                     onClick = {
                         if (chosen.isEmpty()) {
@@ -420,14 +420,14 @@ fun SongListView(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text("收藏到歌单", fontSize = 12.sp) }
+                ) { Text("收藏到歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
                 Button(
                     onClick = {
                         if (chosen.isEmpty()) toast("先选几首") else chosen.forEach { onDownload(it) }
                         finishSelection()
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text("下载", fontSize = 12.sp) }
+                ) { Text("下载", fontSize = AppTheme.typography.bodySmall.fontSize) }
                 if (onRemove != null) {
                     Button(
                         onClick = {
@@ -439,7 +439,7 @@ fun SongListView(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                    ) { Text("移出歌单", fontSize = 12.sp) }
+                    ) { Text("移出歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
                 }
             }
         }
@@ -533,10 +533,10 @@ private fun PlaylistPickerSheet(
     LaunchedEffect(Unit) {
         lists = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() }.getOrNull() ?: emptyList() }
     }
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = 12.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("收藏到歌单", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            TextButton(onClick = onNew) { Text("新建歌单", fontSize = 12.sp) }
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = AppTheme.dimens.spacingMd)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = AppTheme.dimens.spacingSm), verticalAlignment = Alignment.CenterVertically) {
+            Text("收藏到歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            TextButton(onClick = onNew) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
         }
         val data = lists
         if (data == null) {
@@ -546,11 +546,11 @@ private fun PlaylistPickerSheet(
                 items(data) { item ->
                     Row(
                         Modifier.fillMaxWidth().clickable { onPick(item) }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp, vertical = AppTheme.dimens.spacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(item.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(item.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(item.name, fontSize = AppTheme.typography.body.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(item.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

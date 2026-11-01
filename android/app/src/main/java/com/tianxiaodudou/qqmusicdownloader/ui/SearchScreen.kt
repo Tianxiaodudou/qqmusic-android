@@ -155,8 +155,8 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(12.dp))
+    Column(Modifier.fillMaxSize().padding(horizontal = AppTheme.dimens.pagePadding)) {
+        Spacer(Modifier.height(AppTheme.dimens.spacingMd))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = keyword,
@@ -168,47 +168,47 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                 placeholder = { Text("歌名 / 歌手 / 专辑 / 歌单") },
                 modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(AppTheme.dimens.spacingSm))
             Button(onClick = { doSearch() }) { Text("搜索") }
         }
 
         // 联想词 / 热搜
         if (suggestions.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacing6), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 suggestions.take(4).forEach { s ->
                     Text(
                         s,
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { doSearch(s) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                            .padding(horizontal = 10.dp, vertical = AppTheme.dimens.spacing5),
                     )
                 }
             }
         } else if (!searched && keyword.isBlank() && hot.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacing6), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 hot.take(4).forEach { s ->
                     Text(
                         s,
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { doSearch(s) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                            .padding(horizontal = 10.dp, vertical = AppTheme.dimens.spacing5),
                     )
                 }
             }
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
+            Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacingSm),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SEARCH_TYPES.forEachIndexed { i, pair ->
@@ -220,11 +220,11 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                             type = i
                             if (keyword.isNotBlank()) doSearch(keyword, i)
                         }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacing6),
                 ) {
                     Text(
                         pair.first,
-                        fontSize = 12.sp,
+                        fontSize = AppTheme.typography.bodySmall.fontSize,
                         color = if (type == i) AppTheme.colors.selectedText else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -235,7 +235,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
             Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
         if (error.isNotEmpty()) {
-            Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp))
+            Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(AppTheme.dimens.spacingSm))
         }
 
         when (type) {
@@ -258,8 +258,8 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                     items(result.singers) { s ->
                         Row(
                             Modifier.fillMaxWidth().clickable { Nav.push(Route.Singer(s.mid, s.name)) }
-                                .padding(horizontal = 4.dp, vertical = 12.dp),
-                        ) { Text(s.name, fontSize = 15.sp) }
+                                .padding(horizontal = AppTheme.dimens.spacingXs, vertical = AppTheme.dimens.spacingMd),
+                        ) { Text(s.name, fontSize = AppTheme.typography.title.fontSize) }
                     }
                 }
             }
@@ -273,11 +273,11 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                     items(result.albums) { a ->
                         Row(
                             Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
-                                .padding(horizontal = 4.dp, vertical = 12.dp),
+                                .padding(horizontal = AppTheme.dimens.spacingXs, vertical = AppTheme.dimens.spacingMd),
                         ) {
                             Column {
-                                Text(a.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(a.singer, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(a.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(a.singer, fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -293,11 +293,11 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                     items(result.playlists) { p ->
                         Row(
                             Modifier.fillMaxWidth().clickable { Nav.push(Route.Playlist(p.id, p.name)) }
-                                .padding(horizontal = 4.dp, vertical = 12.dp),
+                                .padding(horizontal = AppTheme.dimens.spacingXs, vertical = AppTheme.dimens.spacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(p.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text(p.count.toString() + " 首", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(p.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text(p.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

@@ -52,14 +52,14 @@ fun LoginScreen(onLoggedIn: (Session) -> Unit) {
     var mode by remember { mutableStateOf(LoginMode.QQ) }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().padding(AppTheme.dimens.spacingXl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("QQ音乐下载器", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-        Spacer(Modifier.height(4.dp))
+        Text("QQ音乐下载器", fontSize = AppTheme.typography.pageTitle.fontSize, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(Modifier.height(AppTheme.dimens.spacingXs))
         Text("登录 QQ 音乐账号", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppTheme.dimens.pagePadding))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LoginMode.entries.forEach { m ->
                 FilterChip(selected = mode == m, onClick = { mode = m }, label = { Text(m.label) })
@@ -140,9 +140,9 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
             if (bmp != null) Image(bitmap = bmp, contentDescription = "二维码", modifier = Modifier.size(200.dp))
             else Text("…", color = AppTheme.colors.textSecondary)
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacingMd))
         Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacingMd))
         OutlinedButton(onClick = { reload += 1 }) { Text("重新获取二维码") }
     }
 }
@@ -182,7 +182,7 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
             label = { Text("验证码") },
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing14))
         Button(
             enabled = !busy && phone.length >= 11 && code.length >= 4,
             onClick = {
@@ -197,7 +197,7 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
         ) { Text("登录") }
         if (status.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = AppTheme.typography.bodySmall.fontSize)
         }
     }
 }

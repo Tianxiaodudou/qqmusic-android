@@ -48,7 +48,7 @@ private fun SheetLoading() {
 @Composable
 private fun SheetEmpty(text: String) {
     Box(Modifier.fillMaxWidth().fillMaxHeight(0.4f), contentAlignment = Alignment.Center) {
-        Text(text, fontSize = 13.sp, color = SheetDim)
+        Text(text, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetDim)
     }
 }
 
@@ -59,7 +59,7 @@ fun SimilarSongsSheet(songId: Int, onPlay: (List<MusicApi.Song>, Int) -> Unit, o
         list = withContext(Dispatchers.IO) { runCatching { Extras.similarSongs(songId) }.getOrDefault(emptyList()) }
     }
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.7f).padding(bottom = 10.dp)) {
-        Text("相似歌曲", fontSize = 16.sp, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+        Text("相似歌曲", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
         val data = list
         if (data == null) SheetLoading()
         else if (data.isEmpty()) SheetEmpty("没有找到相似歌曲")
@@ -74,10 +74,10 @@ fun SimilarSongsSheet(songId: Int, onPlay: (List<MusicApi.Song>, Int) -> Unit, o
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, fontSize = 14.sp, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(s.singers, fontSize = 11.sp, color = SheetDim, maxLines = 1)
+                        Text(s.name, fontSize = AppTheme.typography.body.fontSize, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(s.singers, fontSize = AppTheme.typography.caption.fontSize, color = SheetDim, maxLines = 1)
                     }
-                    Text(fmtMs(s.interval * 1000L), fontSize = 10.sp, color = SheetDim)
+                    Text(fmtMs(s.interval * 1000L), fontSize = AppTheme.typography.badge.fontSize, color = SheetDim)
                 }
             }
         }
@@ -91,7 +91,7 @@ fun RelatedPlaylistsSheet(songId: Int, onClose: () -> Unit) {
         list = withContext(Dispatchers.IO) { runCatching { Extras.relatedPlaylists(songId) }.getOrDefault(emptyList()) }
     }
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.65f).padding(bottom = 10.dp)) {
-        Text("相关歌单", fontSize = 16.sp, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+        Text("相关歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
         val data = list
         if (data == null) SheetLoading()
         else if (data.isEmpty()) SheetEmpty("没有相关歌单")
@@ -101,11 +101,11 @@ fun RelatedPlaylistsSheet(songId: Int, onClose: () -> Unit) {
                     Modifier.fillMaxWidth().clickable {
                         onClose()
                         Nav.push(Route.Playlist(p.id, p.name))
-                    }.padding(horizontal = 22.dp, vertical = 12.dp),
+                    }.padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(p.name, fontSize = 14.sp, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Text(p.count.toString() + " 首", fontSize = 11.sp, color = SheetDim)
+                    Text(p.name, fontSize = AppTheme.typography.body.fontSize, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(p.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = SheetDim)
                 }
             }
         }
@@ -119,7 +119,7 @@ fun OtherVersionsSheet(song: MusicApi.Song, onPlay: (List<MusicApi.Song>, Int) -
         list = withContext(Dispatchers.IO) { runCatching { Extras.otherVersions(song) }.getOrDefault(emptyList()) }
     }
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = 10.dp)) {
-        Text("其他版本", fontSize = 16.sp, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+        Text("其他版本", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
         val data = list
         if (data == null) SheetLoading()
         else if (data.isEmpty()) SheetEmpty("没有其他版本")
@@ -133,10 +133,10 @@ fun OtherVersionsSheet(song: MusicApi.Song, onPlay: (List<MusicApi.Song>, Int) -
                     }.padding(horizontal = 22.dp, vertical = 11.dp),
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, fontSize = 14.sp, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(s.album, fontSize = 11.sp, color = SheetDim, maxLines = 1)
+                        Text(s.name, fontSize = AppTheme.typography.body.fontSize, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(s.album, fontSize = AppTheme.typography.caption.fontSize, color = SheetDim, maxLines = 1)
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(AppTheme.dimens.spacingSm))
                 }
             }
         }

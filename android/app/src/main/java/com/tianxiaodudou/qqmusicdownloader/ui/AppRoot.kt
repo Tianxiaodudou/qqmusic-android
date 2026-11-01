@@ -189,7 +189,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                                             modifier = Modifier.size(22.dp),
                                         )
                                     },
-                                    label = { Text("刷新", fontSize = 10.sp) },
+                                    label = { Text("刷新", fontSize = AppTheme.typography.badge.fontSize) },
                                     colors = NavigationBarItemDefaults.colors(
                                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -213,7 +213,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                                         modifier = Modifier.size(22.dp),
                                     )
                                 },
-                                label = { Text(item.label, fontSize = 10.sp) },
+                                label = { Text(item.label, fontSize = AppTheme.typography.badge.fontSize) },
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,
                                     selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -252,11 +252,11 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         if (showDownloads && !showPlayer) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
-                    Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = { showDownloads = false }, modifier = Modifier.size(44.dp)) {
                             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "返回")
                         }
-                        Text("下载管理", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text("下载管理", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
                     }
                     DownloadsScreen()
                 }
@@ -292,7 +292,7 @@ private fun MiniPlayer(onOpen: () -> Unit) {
             }
         }
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = AppTheme.dimens.spacingMd, vertical = AppTheme.dimens.spacingSm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val cover = coverUrl(song.albumMid, 300)
@@ -313,7 +313,7 @@ private fun MiniPlayer(onOpen: () -> Unit) {
                     if (PlayerController.loading) "正在准备音源…" else song.singers,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontSize = 10.5.sp,
+                    fontSize = AppTheme.typography.badge.fontSize,
                     color = AppTheme.colors.textSecondary,
                 )
             }
@@ -426,8 +426,8 @@ private fun MinePage(
             .padding(20.dp),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(18.dp)).background(CardBg).padding(16.dp),
+            Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding)
+                .clip(RoundedCornerShape(18.dp)).background(CardBg).padding(AppTheme.dimens.pagePadding),
         ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -436,11 +436,11 @@ private fun MinePage(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.size(AppTheme.dimens.coverLg).clip(CircleShape).background(AppTheme.colors.coverPlaceholder),
             )
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(AppTheme.dimens.spacing14))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = nickname,
-                    fontSize = 20.sp,
+                    fontSize = AppTheme.typography.pageTitle.fontSize,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
@@ -448,51 +448,51 @@ private fun MinePage(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         vipLabel,
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         color = if (isVip) AppTheme.colors.warning else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(if (isVip) AppTheme.colors.warningSoft else AppTheme.colors.chipBg)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .padding(horizontal = AppTheme.dimens.spacingSm, vertical = 3.dp),
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(AppTheme.dimens.spacingSm))
                     Text(
                         if (isVip) "VIP Lv." + (p?.vipLevel ?: 0) else "听歌 Lv." + (p?.musicLevel ?: 0),
-                        fontSize = 11.sp,
+                        fontSize = AppTheme.typography.caption.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacingSm))
         val dateFmt = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()) }
         val normalEnd = p?.normalVipEnd ?: 0L
         val superEnd = p?.superVipEnd ?: 0L
         if (normalEnd > 0) {
             Text(
                 "普通会员 " + dateFmt.format(java.util.Date(normalEnd)) + " 到期",
-                fontSize = 11.sp,
+                fontSize = AppTheme.typography.caption.fontSize,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         if (superEnd > 0) {
             Text(
                 "超级会员 " + dateFmt.format(java.util.Date(superEnd)) + " 到期",
-                fontSize = 11.sp,
+                fontSize = AppTheme.typography.caption.fontSize,
                 color = AppTheme.colors.warning,
             )
         }
         if (normalEnd <= 0 && superEnd <= 0) {
             Text(
                 if (isVip) "会员到期时间未知" else "未开通会员 · 开通可听无损",
-                fontSize = 11.sp,
+                fontSize = AppTheme.typography.caption.fontSize,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
         }
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing6))
         FoldSection("内容与发现", openSection == "content", onToggle = { toggleSection("content") }) {
             MineRow("收藏的专辑", "收藏的数字专辑") { Nav.push(Route.FavLibrary(true)) }
             MineRow("关注与粉丝", "关注的歌手 / 用户、粉丝、好友") { Nav.push(Route.Social) }
@@ -562,18 +562,18 @@ private fun MinePage(
             Spacer(Modifier.height(10.dp))
             Text(
                 toast,
-                fontSize = 12.sp,
+                fontSize = AppTheme.typography.bodySmall.fontSize,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = AppTheme.dimens.pagePadding),
             )
         }
 
         Spacer(Modifier.height(18.dp))
         Text(
             "QQ音乐播放器 " + BuildConfig.VERSION_NAME,
-            fontSize = 11.sp,
+            fontSize = AppTheme.typography.caption.fontSize,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding),
         )
         Spacer(Modifier.height(10.dp))
         OutlinedButton(
@@ -581,7 +581,7 @@ private fun MinePage(
                 scope.launch { withContext(Dispatchers.IO) { runCatching { Extras.logout() } } }
                 onLogout()
             },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding),
         ) { Text("退出登录") }
     }
 
@@ -593,10 +593,10 @@ private fun MinePage(
                 Column {
                     Text(
                         "付费单曲 / 需单独购买的数字专辑在列表里怎么处理（已购买的不受影响）",
-                        fontSize = 12.sp,
+                        fontSize = AppTheme.typography.bodySmall.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(AppTheme.dimens.spacing6))
                     Settings.PaidPolicy.entries.forEach { opt ->
                         Row(
                             Modifier.fillMaxWidth()
@@ -605,14 +605,14 @@ private fun MinePage(
                                     Settings.setPaidPolicy(context, opt)
                                     showPaid = false
                                 }
-                                .padding(vertical = 12.dp),
+                                .padding(vertical = AppTheme.dimens.spacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 if (paidPolicy == opt) "● " else "○ ",
                                 color = if (paidPolicy == opt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Text(opt.label, fontSize = 14.sp)
+                            Text(opt.label, fontSize = AppTheme.typography.body.fontSize)
                         }
                     }
                 }
@@ -627,11 +627,11 @@ private fun MinePage(
             title = { Text("关于") },
             text = {
                 Column {
-                    Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = 14.sp)
-                    Spacer(Modifier.height(6.dp))
+                    Text("QQ音乐播放器 " + BuildConfig.VERSION_NAME, fontSize = AppTheme.typography.body.fontSize)
+                    Spacer(Modifier.height(AppTheme.dimens.spacing6))
                     Text(
                         "完全本地运行：登录、搜索、歌单、播放、歌词都在设备上完成，不经过任何中转服务器。\n\n开源许可：MIT License\n接口参考：QQMusicApi\n问题反馈：github.com/Tianxiaodudou/qqmusic-android/issues",
-                        fontSize = 12.sp,
+                        fontSize = AppTheme.typography.bodySmall.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -648,18 +648,17 @@ private fun MinePage(
                 Column {
                     if (downloading) {
                         LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(8.dp))
-                        Text("正在下载 $progress%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+                        Text("正在下载 $progress%", fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        Text("更新日志", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(4.dp))
+                        Text("更新日志", fontSize = AppTheme.typography.bodySmall.fontSize, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.height(AppTheme.dimens.spacingXs))
                         Box(
                             Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
                         ) {
                             Text(
                                 plainNotes(rel.notes).ifEmpty { "这次发布没有取到更新日志，点「浏览器下载」可以看完整说明" },
-                                fontSize = 12.sp,
-                                lineHeight = 18.sp,
+                                style = AppTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -694,7 +693,7 @@ private fun MinePage(
             text = {
                 Text(
                     updateError + "\n\n可以直接到 Release 页面下载最新安装包。",
-                    fontSize = 12.sp,
+                    fontSize = AppTheme.typography.bodySmall.fontSize,
                 )
             },
             confirmButton = {
@@ -731,13 +730,13 @@ private fun plainNotes(text: String): String {
 private fun MineRow(title: String, subtitle: String, divider: Boolean = true, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingMd),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(title, fontSize = AppTheme.typography.body.fontSize, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle.isNotEmpty()) {
-                Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(subtitle, fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Text("›", style = AppTheme.typography.title, color = AppTheme.colors.textDisabled)

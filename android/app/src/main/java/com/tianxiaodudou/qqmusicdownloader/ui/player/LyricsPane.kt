@@ -159,8 +159,8 @@ fun LyricsPane(
                 ) { Text("♪", style = AppTheme.typography.pageTitle, color = AppTheme.colors.textSecondary) }
                 Spacer(Modifier.height(18.dp))
                 Text("暂无歌词", style = AppTheme.typography.title, color = AppTheme.colors.textPrimary)
-                Spacer(Modifier.height(6.dp))
-                TextButton(onClick = onLoadLyric) { Text("手动加载歌词", fontSize = 13.sp) }
+                Spacer(Modifier.height(AppTheme.dimens.spacing6))
+                TextButton(onClick = onLoadLyric) { Text("手动加载歌词", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
         } else {
             LazyColumn(
@@ -200,7 +200,7 @@ fun LyricsPane(
                                 onClick = { onSeekLine(line) },
                                 onLongClick = { onLongPressLine(line) },
                             )
-                            .padding(horizontal = 24.dp, vertical = if (isCurrent) 9.dp else 7.dp),
+                            .padding(horizontal = AppTheme.dimens.spacingXl, vertical = if (isCurrent) 9.dp else 7.dp),
                         horizontalAlignment = if (style.center) Alignment.CenterHorizontally else Alignment.Start,
                     ) {
                         if (isCurrent) {
@@ -296,7 +296,7 @@ fun LyricsPane(
         }
 
         // 回到当前
-        Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 8.dp)) {
+        Box(Modifier.align(Alignment.BottomEnd).padding(end = AppTheme.dimens.pagePadding, bottom = AppTheme.dimens.spacingSm)) {
             AnimatedVisibility(visible = !follow && lines.isNotEmpty()) {
                 Row(
                     Modifier
@@ -306,7 +306,7 @@ fun LyricsPane(
                             follow = true
                             scope.launch { runCatching { listState.animateScrollToItem(currentIndex.coerceAtLeast(0)) } }
                         }, onLongClick = {})
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                        .padding(horizontal = AppTheme.dimens.spacing14, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("回到当前", style = AppTheme.typography.bodySmall, color = AppTheme.colors.success)

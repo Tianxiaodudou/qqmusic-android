@@ -43,18 +43,18 @@ fun HomeModulesScreen() {
                 Text(
                     "关掉的模块不会出现在首页入口墙，也不会发请求。每个模块固定每页 " +
                         Settings.PAGE_SIZE + " 条，往下滑会继续加载。",
-                    fontSize = 11.sp,
+                    fontSize = AppTheme.typography.caption.fontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm),
                 )
             }
             items(Settings.HOME_MODULES) { m ->
                 val enabled = Settings.homeEnabled(context, m.key)
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing6),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(m.title, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(m.title, fontSize = AppTheme.typography.body.fontSize, modifier = Modifier.weight(1f))
                     Switch(
                         checked = enabled,
                         onCheckedChange = {

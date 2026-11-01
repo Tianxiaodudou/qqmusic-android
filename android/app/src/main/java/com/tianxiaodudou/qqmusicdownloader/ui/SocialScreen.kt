@@ -47,12 +47,12 @@ fun SocialScreen() {
     }
     DetailScaffold("关注与粉丝", onBack = { Nav.pop() }) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm)) {
                 listOf("关注歌手", "关注用户", "粉丝", "好友").forEachIndexed { i, t ->
                     TextButton(onClick = { tab = i }) {
                         Text(
                             t,
-                            fontSize = 12.sp,
+                            fontSize = AppTheme.typography.bodySmall.fontSize,
                             color = if (tab == i) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -68,17 +68,17 @@ fun SocialScreen() {
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(data) { u ->
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(40.dp).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
                                 if (u.avatar.startsWith("http")) {
                                     AsyncImage(model = u.avatar, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 }
                             }
-                            Spacer(Modifier.width(12.dp))
+                            Spacer(Modifier.width(AppTheme.dimens.spacingMd))
                             Column(Modifier.weight(1f)) {
-                                Text(u.name, fontSize = 14.sp)
+                                Text(u.name, fontSize = AppTheme.typography.body.fontSize)
                                 if (u.desc.isNotEmpty()) {
-                                    Text(u.desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(u.desc, fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }

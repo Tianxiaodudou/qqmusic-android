@@ -1,5 +1,13 @@
 # 更新日志
 
+## v2.22.0 (2026-11-02)
+
+### 系统接管（补齐文档要求的 UI ↔ Service 链路）
+- 新增 SessionBridge：UI 的传输命令（播放/暂停/上一首/下一首/seek/倍速）优先经 MediaController
+  发给 PlaybackService 里的 MediaSession，控制器未连上时自动退回直接操作播放器，不阻塞操作
+- 播放页与迷你播放器的按钮、进度条拖动、歌词跳转全部改走 SessionBridge（ui 层已经没有直接调
+  PlayerController 传输命令的地方）；状态展示仍读 PlayerController，避免两套状态源
+- 应用启动时连接一次控制器（MediaController.Builder + SessionToken 指向 PlaybackService）
 ## v2.21.0 (2026-11-02)
 
 ### 主题系统（第七步：原生控件全部收口到组件层）

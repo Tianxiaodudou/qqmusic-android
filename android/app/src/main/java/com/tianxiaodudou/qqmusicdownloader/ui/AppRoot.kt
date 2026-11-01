@@ -132,6 +132,8 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
 
     // 顺手把账号资料拉一次：既预热「我的」页，也能补上加密 uin（收藏歌单要用）
     LaunchedEffect(Unit) {
+        // 连一次媒体控制器：传输命令走 MediaSession，状态仍读 PlayerController
+        runCatching { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.connect(context) }
         withContext(Dispatchers.IO) {
             runCatching { LoginApi.ensureFresh(context) }
             runCatching { UserApi.fetch(context) }
@@ -317,14 +319,14 @@ private fun MiniPlayer(onOpen: () -> Unit) {
                     color = AppTheme.colors.textSecondary,
                 )
             }
-            AppIconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(
                     if (PlayerController.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "播放/暂停",
                     tint = AppTheme.colors.textPrimary,
                 )
             }
-            AppIconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = AppTheme.colors.textPrimary)
             }
         }

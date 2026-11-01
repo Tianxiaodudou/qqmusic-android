@@ -271,7 +271,7 @@ fun PlayerScreen(onExit: () -> Unit) {
 
     fun jumpToLine(line: LyricApi.Line) {
         val target = (line.timeMs - offsetMs).toLong().coerceAtLeast(0L)
-        PlayerController.seekTo(target)
+        com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.seekTo(target)
         previewMs = null
         flashIndex = lines.indexOf(line)
         seekPulse += 1
@@ -372,7 +372,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                 pulse = seekPulse,
                 onPreview = { previewMs = it },
                 onSeek = {
-                    PlayerController.seekTo(it)
+                    com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.seekTo(it)
                     previewMs = null
                 },
             )
@@ -382,9 +382,9 @@ fun PlayerScreen(onExit: () -> Unit) {
                 loading = PlayerController.loading,
                 mode = PlayerController.mode,
                 onMode = { PlayerController.cycleMode() },
-                onPrev = { PlayerController.prev() },
-                onToggle = { PlayerController.toggle() },
-                onNext = { PlayerController.next() },
+                onPrev = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.prev() },
+                onToggle = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.toggle() },
+                onNext = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.next() },
                 onQueue = { sheet = PSheet.Queue },
             )
             Spacer(Modifier.height(AppTheme.dimens.spacing6))
@@ -456,7 +456,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                         },
                         onShuffleAll = {
                             PlayerController.changeMode(PlayerController.Mode.SHUFFLE)
-                            PlayerController.next()
+                            com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.next()
                             sheet = null
                         },
                     )

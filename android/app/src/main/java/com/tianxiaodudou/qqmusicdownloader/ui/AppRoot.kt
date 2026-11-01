@@ -45,7 +45,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -90,6 +89,7 @@ import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import com.tianxiaodudou.qqmusicdownloader.ui.player.PlayerScreen
 import com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl
 import com.tianxiaodudou.qqmusicdownloader.ui.player.fmtMs
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -171,7 +171,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                     if (PlayerController.current != null) {
                         MiniPlayer(onOpen = { showPlayer = true })
                     }
-                    NavigationBar(containerColor = Color(0xFF11141A), tonalElevation = 0.dp) {
+                    NavigationBar(containerColor = AppTheme.colors.bgElevated, tonalElevation = 0.dp) {
                         Tab.entries.forEach { item ->
                             if (item == Tab.Search) {
                                 // 搜索入口已挪到首页右上角，这个位置改成手动刷新首页
@@ -193,7 +193,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                                     colors = NavigationBarItemDefaults.colors(
                                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        indicatorColor = Color(0xFF1B2A22),
+                                        indicatorColor = AppTheme.colors.brandSoft,
                                     ),
                                 )
                                 return@forEach
@@ -217,7 +217,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                                 colors = NavigationBarItemDefaults.colors(
                                     selectedIconColor = MaterialTheme.colorScheme.primary,
                                     selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = Color(0xFF1B2A22),
+                                    indicatorColor = AppTheme.colors.brandSoft,
                                 ),
                             )
                         }
@@ -285,8 +285,8 @@ private fun MiniPlayer(onOpen: () -> Unit) {
     val song = PlayerController.current ?: return
     val dur = PlayerController.durationMs
     val pos = PlayerController.positionMs
-    Column(Modifier.fillMaxWidth().background(Color(0xFF171B22))) {
-        Box(Modifier.fillMaxWidth().height(1.5.dp).background(Color(0xFF262C36))) {
+    Column(Modifier.fillMaxWidth().background(AppTheme.colors.surface1)) {
+        Box(Modifier.fillMaxWidth().height(1.5.dp).background(AppTheme.colors.progressTrack)) {
             if (dur > 0) {
                 Box(Modifier.fillMaxWidth((pos.toFloat() / dur).coerceIn(0f, 1f)).height(1.5.dp).background(MaterialTheme.colorScheme.primary))
             }
@@ -297,35 +297,35 @@ private fun MiniPlayer(onOpen: () -> Unit) {
         ) {
             val cover = coverUrl(song.albumMid, 300)
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF222833)),
+                Modifier.size(40.dp).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder),
                 contentAlignment = Alignment.Center,
             ) {
                 if (cover.isNotEmpty()) {
                     AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
-                    Text("♪", color = Color(0xFF8C96A6), fontSize = 16.sp)
+                    Text("♪", color = AppTheme.colors.textSecondary, style = AppTheme.typography.title)
                 }
             }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 13.5.sp, color = Color(0xFFE9EDF4))
+                Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textPrimary)
                 Text(
                     if (PlayerController.loading) "正在准备音源…" else song.singers,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 10.5.sp,
-                    color = Color(0xFF8C96A6),
+                    color = AppTheme.colors.textSecondary,
                 )
             }
             IconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(44.dp)) {
                 Icon(
                     if (PlayerController.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "播放/暂停",
-                    tint = Color(0xFFE9EDF4),
+                    tint = AppTheme.colors.textPrimary,
                 )
             }
             IconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(44.dp)) {
-                Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = Color(0xFFE9EDF4))
+                Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = AppTheme.colors.textPrimary)
             }
         }
     }
@@ -424,7 +424,7 @@ private fun MinePage(
                 model = avatar,
                 contentDescription = "头像",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFF222833)),
+                modifier = Modifier.size(AppTheme.dimens.coverLg).clip(CircleShape).background(AppTheme.colors.coverPlaceholder),
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -439,10 +439,10 @@ private fun MinePage(
                     Text(
                         vipLabel,
                         fontSize = 11.sp,
-                        color = if (isVip) Color(0xFFFFD479) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isVip) AppTheme.colors.warning else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .background(if (isVip) Color(0x33FFB300) else Color(0xFF232A35))
+                            .background(if (isVip) AppTheme.colors.warningSoft else AppTheme.colors.chipBg)
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                     )
                     Spacer(Modifier.width(8.dp))
@@ -469,7 +469,7 @@ private fun MinePage(
             Text(
                 "超级会员 " + dateFmt.format(java.util.Date(superEnd)) + " 到期",
                 fontSize = 11.sp,
-                color = Color(0xFFFFD479),
+                color = AppTheme.colors.warning,
             )
         }
         if (normalEnd <= 0 && superEnd <= 0) {
@@ -702,7 +702,7 @@ private fun MineRow(title: String, subtitle: String, divider: Boolean = true, on
                 Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Text("›", fontSize = 16.sp, color = Color(0xFF4A5262))
+        Text("›", style = AppTheme.typography.title, color = AppTheme.colors.textDisabled)
     }
-    if (divider) HorizontalDivider(color = Color(0xFF222833), thickness = 0.6.dp)
+    if (divider) HorizontalDivider(color = AppTheme.colors.line, thickness = 0.6.dp)
 }

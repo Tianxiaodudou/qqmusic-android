@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
 import androidx.activity.compose.BackHandler
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -88,7 +89,7 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
         val d = detail
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(92.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF232A35))) {
+                Box(Modifier.size(92.dp).clip(RoundedCornerShape(10.dp)).background(AppTheme.colors.coverPlaceholder)) {
                     val cover = d?.cover?.takeIf { it.startsWith("http") } ?: coverUrl(mid)
                     AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
@@ -172,7 +173,7 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
     DetailScaffold(info?.name?.ifEmpty { name } ?: name, onBack = { Nav.pop() }) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(72.dp).clip(RoundedCornerShape(50)).background(Color(0xFF232A35))) {
+                Box(Modifier.size(72.dp).clip(RoundedCornerShape(50)).background(AppTheme.colors.coverPlaceholder)) {
                     val a = info?.avatar.orEmpty()
                     if (a.startsWith("http")) {
                         AsyncImage(model = a, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -227,7 +228,7 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF232A35))) {
+                            Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.coverPlaceholder)) {
                                 AsyncImage(
                                     model = a.cover.takeIf { it.startsWith("http") } ?: coverUrl(a.mid),
                                     contentDescription = null,
@@ -320,7 +321,7 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
                             .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF232A35))) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.coverPlaceholder)) {
                             AsyncImage(
                                 model = a.cover.takeIf { it.startsWith("http") } ?: coverUrl(a.mid),
                                 contentDescription = null,

@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
 import androidx.activity.compose.BackHandler
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -214,7 +215,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                 Box(
                     Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(if (type == i) Color(0xFF1B2A22) else MaterialTheme.colorScheme.surfaceVariant)
+                        .background(if (type == i) AppTheme.colors.brandSoft else MaterialTheme.colorScheme.surfaceVariant)
                         .clickable {
                             type = i
                             if (keyword.isNotBlank()) doSearch(keyword, i)
@@ -224,7 +225,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                     Text(
                         pair.first,
                         fontSize = 12.sp,
-                        color = if (type == i) Color(0xFF6FE7A5) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (type == i) AppTheme.colors.selectedText else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

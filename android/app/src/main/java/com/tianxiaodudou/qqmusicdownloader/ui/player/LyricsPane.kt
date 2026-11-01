@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,9 +65,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-private val LyricBright = Color(0xFFF5F7FA)
-private val LyricSung = Color(0xFF6FE7A5)
-private val LyricDim = Color(0xFF9AA3B2)
+private val LyricBright: Color
+    @Composable get() = AppTheme.colors.lyricActive
+private val LyricSung: Color
+    @Composable get() = AppTheme.colors.lyricSung
+private val LyricDim: Color
+    @Composable get() = AppTheme.colors.lyricDim
 
 /**
  * 滚动歌词区：小封面 + 逐字歌词 + 手动滚动让位 + 点击跳转 + 长按分享。
@@ -150,11 +154,11 @@ fun LyricsPane(
             ) {
                 Box(
                     Modifier.size(84.dp).clip(CircleShape)
-                        .background(Brush.verticalGradient(listOf(Color(0xFF2A3140), Color(0xFF171B22)))),
+                        .background(Brush.verticalGradient(listOf(AppTheme.colors.surface3, AppTheme.colors.surface1))),
                     contentAlignment = Alignment.Center,
-                ) { Text("♪", fontSize = 30.sp, color = Color(0xFF8B95A7)) }
+                ) { Text("♪", style = AppTheme.typography.pageTitle, color = AppTheme.colors.textSecondary) }
                 Spacer(Modifier.height(18.dp))
-                Text("暂无歌词", fontSize = 15.sp, color = Color(0xFFB9C2D0))
+                Text("暂无歌词", style = AppTheme.typography.title, color = AppTheme.colors.textPrimary)
                 Spacer(Modifier.height(6.dp))
                 TextButton(onClick = onLoadLyric) { Text("手动加载歌词", fontSize = 13.sp) }
             }
@@ -207,7 +211,7 @@ fun LyricsPane(
                                     fontSize = fontSize.sp,
                                     lineHeight = (fontSize * 1.35f).sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFF7C8695),
+                                    color = AppTheme.colors.textSecondary.copy(alpha = 0.75f),
                                     textAlign = TextAlign.Start,
                                     overflow = TextOverflow.Visible,
                                 )
@@ -261,7 +265,7 @@ fun LyricsPane(
                                 text = line.text,
                                 fontSize = fontSize.sp,
                                 lineHeight = (fontSize * 1.35f).sp,
-                                color = Color(0xFFC9D1DE),
+                                color = AppTheme.colors.lyricInactive,
                                 textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
                                 overflow = TextOverflow.Visible,
                                 modifier = Modifier.alpha(alpha).fillMaxWidth(),
@@ -271,7 +275,7 @@ fun LyricsPane(
                             Text(
                                 line.translation,
                                 fontSize = (12.5f * style.scale).sp,
-                                color = Color(0xFF8C96A6),
+                                color = AppTheme.colors.textSecondary,
                                 textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
                                 modifier = Modifier.alpha(alpha * 0.9f).fillMaxWidth().padding(top = 2.dp),
                             )
@@ -280,7 +284,7 @@ fun LyricsPane(
                             Text(
                                 line.roma,
                                 fontSize = (12f * style.scale).sp,
-                                color = Color(0xFF76808F),
+                                color = AppTheme.colors.textTertiary,
                                 textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
                                 modifier = Modifier.alpha(alpha * 0.85f).fillMaxWidth().padding(top = 1.dp),
                             )
@@ -297,7 +301,7 @@ fun LyricsPane(
                 Row(
                     Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(Color(0xCC1B2029))
+                        .background(AppTheme.colors.surface2.copy(alpha = 0.92f))
                         .combinedClickable(onClick = {
                             follow = true
                             scope.launch { runCatching { listState.animateScrollToItem(currentIndex.coerceAtLeast(0)) } }
@@ -305,7 +309,7 @@ fun LyricsPane(
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("回到当前", fontSize = 12.sp, color = Color(0xFF9CE8BE))
+                    Text("回到当前", style = AppTheme.typography.bodySmall, color = AppTheme.colors.success)
                 }
             }
         }

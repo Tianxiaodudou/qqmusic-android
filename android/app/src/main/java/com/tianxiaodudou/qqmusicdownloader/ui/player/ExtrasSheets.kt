@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
 import androidx.compose.foundation.clickable
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,8 +35,10 @@ import com.tianxiaodudou.qqmusicdownloader.ui.Route
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private val SheetText = Color(0xFFF0F3F8)
-private val SheetDim = Color(0xFF8C96A6)
+private val SheetText: Color
+    @Composable get() = AppTheme.colors.textPrimary
+private val SheetDim: Color
+    @Composable get() = AppTheme.colors.textSecondary
 
 @Composable
 private fun SheetLoading() {

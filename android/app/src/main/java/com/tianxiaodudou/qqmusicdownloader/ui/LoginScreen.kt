@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
 import android.graphics.BitmapFactory
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -137,7 +138,7 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
         ) {
             val bmp = image
             if (bmp != null) Image(bitmap = bmp, contentDescription = "二维码", modifier = Modifier.size(200.dp))
-            else Text("…", color = Color(0xFF666666))
+            else Text("…", color = AppTheme.colors.textSecondary)
         }
         Spacer(Modifier.height(12.dp))
         Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant)

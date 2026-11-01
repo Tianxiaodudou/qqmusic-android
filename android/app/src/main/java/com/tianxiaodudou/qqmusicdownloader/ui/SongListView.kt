@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.sp
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import com.tianxiaodudou.qqmusicdownloader.player.Favorites
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +78,7 @@ private fun RowAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     enabled: Boolean = true,
-    tint: Color = Color(0xFF8C96A6),
+    tint: Color? = null,
     onClick: () -> Unit,
 ) {
     Box(
@@ -88,7 +89,7 @@ private fun RowAction(
         Icon(
             icon,
             contentDescription = label,
-            tint = if (enabled) tint else Color(0xFF3A4150),
+            tint = if (enabled) (tint ?: AppTheme.colors.textSecondary) else AppTheme.colors.textDisabled,
             modifier = Modifier.size(17.dp),
         )
     }
@@ -268,12 +269,12 @@ fun SongListView(
                         }
                         val playingThis = PlayerController.current?.mid == song.mid
                         Box(
-                            Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF232A35)),
+                            Modifier.size(AppTheme.dimens.coverSm).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder),
                             contentAlignment = Alignment.Center,
                         ) {
                             val cover = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 300)
                             // 没有封面/加载失败时也有个底，不至于空白
-                            Text("♪", fontSize = 16.sp, color = Color(0xFF5A6270))
+                            Text("♪", style = AppTheme.typography.title, color = AppTheme.colors.textTertiary)
                             if (cover.isNotEmpty()) {
                                 AsyncImage(
                                     model = cover,
@@ -283,8 +284,8 @@ fun SongListView(
                                 )
                             }
                             if (playingThis) {
-                                Box(Modifier.fillMaxSize().background(Color(0x99000000)), contentAlignment = Alignment.Center) {
-                                    Text("♪", fontSize = 14.sp, color = Color(0xFF6FE7A5))
+                                Box(Modifier.fillMaxSize().background(AppTheme.colors.overlay), contentAlignment = Alignment.Center) {
+                                    Text("♪", style = AppTheme.typography.body, color = AppTheme.colors.success)
                                 }
                             }
                         }
@@ -309,10 +310,10 @@ fun SongListView(
                             Text(
                                 "付费",
                                 fontSize = 9.sp,
-                                color = Color(0xFFFFB74D),
+                                color = AppTheme.colors.warning,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0x33FFB74D))
+                                    .background(AppTheme.colors.warningSoft)
                                     .padding(horizontal = 5.dp, vertical = 2.dp),
                             )
                         }
@@ -326,7 +327,7 @@ fun SongListView(
                                 RowAction(
                                     if (fav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                     if (fav) "取消收藏" else "收藏",
-                                    tint = if (fav) Color(0xFFE85D75) else Color(0xFF8C96A6),
+                                    tint = if (fav) AppTheme.colors.error else AppTheme.colors.textSecondary,
                                 ) {
                                     scope.launch {
                                         val ok = Favorites.toggle(song)

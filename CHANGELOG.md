@@ -1,5 +1,17 @@
 # 更新日志
 
+## v2.13.0 (2026-11-01)
+
+### 主题系统（第二步：页面颜色全部走主题变量）
+- 播放页、歌词页、底部弹层、歌曲列表、我的页、评论/扩展弹层、社交页、登录页、搜索页、首页、详情页、
+  模块设置页的颜色全部改成 AppTheme.colors / shapes / dimens / typography，不再有 Color(0x…) 字面值
+- 语义映射：背景 4 档、文字 5 档、品牌色、状态色、控件色、描边、歌词三色；
+  播放页进度条（已播/缓冲/轨道/圆点）分别走 progress / progressBuffered / textDisabled / bg
+- 若干文字块从 fontSize 字面值改为 typography 样式（标题/正文/说明/角标）
+
+### 下一步（进行中）
+- 剩余 .sp / .dp 字面值继续收敛到 AppTypography / AppDimens
+- MediaSession 系统接管（P0）、桌面逐字歌词（P1）、蓝牙歌词 Title（P2）
 ## v2.12.0 (2026-11-01)
 
 ### 主题系统（第一步：定义层 + 组件层）

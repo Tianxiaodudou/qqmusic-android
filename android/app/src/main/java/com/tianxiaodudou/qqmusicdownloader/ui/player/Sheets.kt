@@ -51,6 +51,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,11 +77,16 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private val SheetTitle = Color(0xFFF0F3F8)
-private val SheetSub = Color(0xFF8C96A6)
-private val SheetLine = Color(0xFF262C36)
-private val SheetRow = Color(0xFF1B2029)
-private val Accent = Color(0xFF1FC365)
+private val SheetTitle: Color
+    @Composable get() = AppTheme.colors.textPrimary
+private val SheetSub: Color
+    @Composable get() = AppTheme.colors.textSecondary
+private val SheetLine: Color
+    @Composable get() = AppTheme.colors.line
+private val SheetRow: Color
+    @Composable get() = AppTheme.colors.surface2
+private val Accent: Color
+    @Composable get() = AppTheme.colors.brand
 
 @Composable
 private fun SheetHeader(title: String, subtitle: String = "", trailing: @Composable (() -> Unit)? = null) {
@@ -334,11 +340,11 @@ private fun MenuRow(
             .padding(horizontal = 22.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = Color(0xFFB8C1CF), modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = AppTheme.colors.textPrimary, modifier = Modifier.size(AppTheme.dimens.iconMd))
         Spacer(Modifier.width(14.dp))
         Text(label, fontSize = 14.5.sp, color = SheetTitle, modifier = Modifier.weight(1f))
         if (value.isNotEmpty()) Text(value, fontSize = 12.sp, color = SheetSub)
-        Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFF4A5262), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.ChevronRight, null, tint = AppTheme.colors.textDisabled, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -462,7 +468,7 @@ private fun Segment(options: List<Pair<String, Float>>, selected: Float, onSelec
             val on = abs(v - selected) < 0.01f
             Box(
                 Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(8.dp))
-                    .background(if (on) Color(0xFF2A3440) else Color.Transparent)
+                    .background(if (on) AppTheme.colors.surface3 else Color.Transparent)
                     .clickable { onSelect(v) },
                 contentAlignment = Alignment.Center,
             ) {
@@ -482,7 +488,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
         Switch(
             checked = checked,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF06230F), checkedTrackColor = Accent),
+            colors = SwitchDefaults.colors(checkedThumbColor = AppTheme.colors.switchThumb, checkedTrackColor = Accent),
         )
     }
 }

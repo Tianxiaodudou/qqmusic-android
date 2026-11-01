@@ -66,6 +66,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -113,10 +114,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val Ink = Color(0xFF0B0D10)
-private val Brand = Color(0xFF1FC365)
-private val TextHi = Color(0xFFE9EDF4)
-private val TextLo = Color(0xFF8C96A6)
+private val Ink: Color
+    @Composable get() = AppTheme.colors.bg
+private val Brand: Color
+    @Composable get() = AppTheme.colors.brand
+private val TextHi: Color
+    @Composable get() = AppTheme.colors.textPrimary
+private val TextLo: Color
+    @Composable get() = AppTheme.colors.textSecondary
 
 /** 歌词缓存：同一首歌再次打开秒开。 */
 internal object LyricsCache {
@@ -337,7 +342,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                     )
                 }
                 if (sheet == PSheet.Sync) {
-                    Box(Modifier.fillMaxSize().background(Color(0x47000000)))
+                    Box(Modifier.fillMaxSize().background(AppTheme.colors.overlay))
                 }
             }
 
@@ -388,12 +393,12 @@ fun PlayerScreen(onExit: () -> Unit) {
             ModalBottomSheet(
                 onDismissRequest = { sheet = null },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = !queueSheet),
-                containerColor = Color(0xFF161A21),
-                scrimColor = if (s == PSheet.Sync) Color.Transparent else Color(0xA6000000),
+                containerColor = AppTheme.colors.surface1,
+                scrimColor = if (s == PSheet.Sync) Color.Transparent else AppTheme.colors.scrim,
                 dragHandle = {
                     Box(Modifier.fillMaxWidth().height(34.dp)) {
                         BottomSheetDefaults.DragHandle(
-                            color = Color(0xFF3D4553),
+                            color = AppTheme.colors.textDisabled,
                             modifier = Modifier.align(Alignment.Center),
                         )
                         IconButton(
@@ -403,7 +408,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                             Icon(
                                 Icons.Rounded.Close,
                                 contentDescription = "关闭",
-                                tint = Color(0xFF8C96A6),
+                                tint = AppTheme.colors.textSecondary,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
@@ -624,7 +629,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                         Text("这句没有生词解析", fontSize = 12.sp, color = TextLo)
                     } else {
                         dictEntries.forEach { e ->
-                            Text(e.phrase, fontSize = 14.sp, color = Color(0xFF6FE7A5))
+                            Text(e.phrase, style = AppTheme.typography.body, color = AppTheme.colors.success)
                             Text(e.explain, fontSize = 12.sp, color = TextHi)
                             Spacer(Modifier.height(8.dp))
                         }
@@ -694,10 +699,10 @@ private fun PlayerTopBar(
                     Text(
                         qualityText,
                         fontSize = 9.sp,
-                        color = Color(0xFF6FE7A5),
+                        color = AppTheme.colors.success,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0x221FC365))
+                            .background(AppTheme.colors.brandBorder)
                             .padding(horizontal = 5.dp, vertical = 1.dp),
                     )
                 }
@@ -705,12 +710,12 @@ private fun PlayerTopBar(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (sleepRemainingMs > 0 || sleepAfterCurrent) {
-                Icon(Icons.Rounded.Bedtime, contentDescription = null, tint = Color(0xFF8FB8FF), modifier = Modifier.size(14.dp))
+                Icon(Icons.Rounded.Bedtime, contentDescription = null, tint = AppTheme.colors.warning, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(3.dp))
                 Text(
                     if (sleepAfterCurrent) "当前曲后" else fmtShort(sleepRemainingMs),
                     fontSize = 10.sp,
-                    color = Color(0xFF8FB8FF),
+                    color = AppTheme.colors.warning,
                 )
                 Spacer(Modifier.width(2.dp))
             }
@@ -748,7 +753,7 @@ private fun PlayerToolbar(
                 )
             },
             label = if (fav) "已收藏" else "收藏",
-            tint = if (fav) Color(0xFFFF6B81) else TextHi,
+            tint = if (fav) AppTheme.colors.error else TextHi,
             onClick = onFav,
             modifier = Modifier.weight(1f),
         )
@@ -769,7 +774,7 @@ private fun PlayerToolbar(
         ToolItem(
             icon = { tint, size ->
                 Box {
-                    Icon(Icons.Rounded.Sync, null, tint = if (lyricEnabled) tint else Color(0xFF4A515E), modifier = Modifier.size(size))
+                    Icon(Icons.Rounded.Sync, null, tint = if (lyricEnabled) tint else AppTheme.colors.textDisabled, modifier = Modifier.size(size))
                     if (offsetMs != 0) {
                         Box(
                             Modifier.align(Alignment.TopEnd).size(6.dp).clip(CircleShape).background(Brand)
@@ -778,7 +783,7 @@ private fun PlayerToolbar(
                 }
             },
             label = offsetLabel(offsetMs),
-            tint = if (lyricEnabled) TextHi else Color(0xFF5A6270),
+            tint = if (lyricEnabled) TextHi else AppTheme.colors.textTertiary,
             onClick = onSync,
             modifier = Modifier.weight(1f),
         )
@@ -892,32 +897,37 @@ private fun SeekBar(
                 }
             },
     ) {
+        // Canvas 的 draw lambda 不是 @Composable，颜色先在组合期取出来
+        val trackColor = AppTheme.colors.textDisabled
+        val bufferedColor = AppTheme.colors.progressBuffered
+        val playedColor = AppTheme.colors.brand
+        val knobRing = AppTheme.colors.bg
         Canvas(Modifier.fillMaxSize()) {
             val cy = size.height / 2f
             val h = 3.5.dp.toPx()
             drawRoundRect(
-                color = Color(0xFF3A4150),
+                color = trackColor,
                 topLeft = Offset(0f, cy - h / 2),
                 size = Size(size.width, h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
             )
             // 已缓冲（白）
             drawRoundRect(
-                color = Color(0x8CE6ECF5),
+                color = bufferedColor,
                 topLeft = Offset(0f, cy - h / 2),
                 size = Size(size.width * bufFrac, h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
             )
             // 已播放（绿）
             drawRoundRect(
-                color = Brand,
+                color = playedColor,
                 topLeft = Offset(0f, cy - h / 2),
                 size = Size(size.width * frac, h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2),
             )
             val r = (if (dragging) 9f else 5.5f).dp.toPx() * pulseScale.value
-            drawCircle(color = Color(0xFF0B0D10), radius = r + 2.dp.toPx(), center = Offset(size.width * frac, cy))
-            drawCircle(color = Brand, radius = r, center = Offset(size.width * frac, cy))
+            drawCircle(color = knobRing, radius = r + 2.dp.toPx(), center = Offset(size.width * frac, cy))
+            drawCircle(color = playedColor, radius = r, center = Offset(size.width * frac, cy))
         }
     }
 }
@@ -976,12 +986,12 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
-            Text("…", fontSize = 22.sp, color = Color(0xFF06230F))
+            Text("…", style = AppTheme.typography.pageTitle, color = AppTheme.colors.textOnBrand)
         } else {
             Icon(
                 if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (playing) "暂停" else "播放",
-                tint = Color(0xFF06230F),
+                tint = AppTheme.colors.textOnBrand,
                 modifier = Modifier.size(34.dp),
             )
         }

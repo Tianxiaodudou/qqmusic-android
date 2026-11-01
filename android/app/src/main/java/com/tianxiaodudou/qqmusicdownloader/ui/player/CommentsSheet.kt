@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
 import androidx.compose.foundation.background
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,27 +65,27 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("评论 · " + song.name, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             TextButton(onClick = { tab = 0 }) {
-                Text("热门", fontSize = 12.sp, color = if (tab == 0) Color(0xFF1FC365) else Color(0xFF8C96A6))
+                Text("热门", fontSize = 12.sp, color = if (tab == 0) AppTheme.colors.brand else AppTheme.colors.textSecondary)
             }
             TextButton(onClick = { tab = 1 }) {
-                Text("最新", fontSize = 12.sp, color = if (tab == 1) Color(0xFF1FC365) else Color(0xFF8C96A6))
+                Text("最新", fontSize = 12.sp, color = if (tab == 1) AppTheme.colors.brand else AppTheme.colors.textSecondary)
             }
         }
         if (toast.isNotEmpty()) {
-            Text(toast, fontSize = 11.sp, color = Color(0xFF8C96A6), modifier = Modifier.padding(horizontal = 18.dp))
+            Text(toast, style = AppTheme.typography.caption, color = AppTheme.colors.textSecondary, modifier = Modifier.padding(horizontal = 18.dp))
         }
         val data = list
         if (data == null) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else if (data.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                Text("还没有评论", fontSize = 13.sp, color = Color(0xFF8C96A6))
+                Text("还没有评论", style = AppTheme.typography.bodySmall, color = AppTheme.colors.textSecondary)
             }
         } else {
             LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
                 items(data) { c ->
                     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)) {
-                        Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF232A35))) {
+                        Box(Modifier.size(34.dp).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
                             if (c.avatar.startsWith("http")) {
                                 AsyncImage(
                                     model = c.avatar,
@@ -96,13 +97,13 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(c.nick, fontSize = 12.sp, color = Color(0xFF9AA3B2))
-                            Text(c.content, fontSize = 13.sp, color = Color(0xFFE9EDF4))
+                            Text(c.nick, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textSecondary)
+                            Text(c.content, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textPrimary)
                             Row {
                                 Text(
                                     if (c.likes > 0) "赞 " + c.likes else "",
                                     fontSize = 10.sp,
-                                    color = Color(0xFF6F7A8A),
+                                    color = AppTheme.colors.textTertiary,
                                 )
                             }
                         }

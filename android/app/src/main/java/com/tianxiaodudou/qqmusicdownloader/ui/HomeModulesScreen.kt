@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
 import androidx.compose.foundation.background
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,8 +62,8 @@ fun HomeModulesScreen() {
                             HomeConfig.bump()
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFF06230F),
-                            checkedTrackColor = Color(0xFF1FC365),
+                            checkedThumbColor = AppTheme.colors.switchThumb,
+                            checkedTrackColor = AppTheme.colors.switchTrack,
                         ),
                     )
                 }

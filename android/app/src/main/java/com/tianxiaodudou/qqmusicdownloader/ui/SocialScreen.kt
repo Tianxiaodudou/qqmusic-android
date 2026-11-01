@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
 import androidx.compose.foundation.background
+import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -68,7 +69,7 @@ fun SocialScreen() {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(data) { u ->
                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF232A35))) {
+                            Box(Modifier.size(40.dp).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
                                 if (u.avatar.startsWith("http")) {
                                     AsyncImage(model = u.avatar, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 }

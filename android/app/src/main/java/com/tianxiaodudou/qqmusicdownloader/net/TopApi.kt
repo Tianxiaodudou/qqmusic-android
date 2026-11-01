@@ -5,7 +5,7 @@ import org.json.JSONObject
 /** 排行榜：分类列表 + 榜单歌曲。 */
 object TopApi {
 
-    data class Chart(val id: Int, val name: String, val count: Int)
+    data class Chart(val id: Int, val name: String, val count: Int, val cover: String = "")
 
     fun charts(): List<Chart> {
         val data = QqClient.cgi("music.musicToplist.Toplist", "GetAll", JSONObject())
@@ -37,6 +37,8 @@ object TopApi {
                     id = id,
                     name = name,
                     count = o.optInt("totalNum", o.optInt("songNum", 0)),
+                    cover = o.optString("frontPicUrl").ifEmpty { o.optString("headPicUrl") }
+                        .ifEmpty { o.optString("picUrl") }.replaceFirst("http://", "https://"),
                 )
             )
         }

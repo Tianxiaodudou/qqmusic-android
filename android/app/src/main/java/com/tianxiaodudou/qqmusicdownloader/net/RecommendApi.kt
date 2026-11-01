@@ -15,11 +15,30 @@ object RecommendApi {
         val pic: String,
     )
 
-    fun guess(num: Int = 30): List<MusicApi.Song> {
+    fun guess(num: Int = 30): List<MusicApi.Song> = guessFrom(0, num)
+
+    /**
+     * 猜你喜欢：服务端单次就回 5 首（num 写多少都一样），要更多只能按 from 往后翻。
+     */
+    fun guessUpTo(n: Int): List<MusicApi.Song> {
+        val out = ArrayList<MusicApi.Song>()
+        var from = 0
+        while (out.size < n && from <= 100) {
+            val batch = runCatching { guessFrom(from, 5) }.getOrDefault(emptyList())
+            if (batch.isEmpty()) break
+            val before = out.size
+            out.addAll(batch)
+            if (out.size == before) break
+            from += batch.size
+        }
+        return out.distinctBy { it.id }.take(n.coerceAtLeast(1))
+    }
+
+    private fun guessFrom(from: Int, num: Int): List<MusicApi.Song> {
         val p = JSONObject()
         p.put("id", 99)
         p.put("num", num)
-        p.put("from", 0)
+        p.put("from", from)
         p.put("scene", 0)
         p.put("song_ids", org.json.JSONArray())
         val data = QqClient.cgi("music.radioProxy.MbTrackRadioSvr", "get_radio_track", p)

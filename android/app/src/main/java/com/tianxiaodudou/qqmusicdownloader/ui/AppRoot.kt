@@ -150,7 +150,16 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         showPlayer = true
     }
 
-    BackHandler(enabled = showDownloads && !showPlayer) { showDownloads = false }
+    // 统一返回链：下载管理 -> 播放页 -> 详情页栈 -> 回到首页标签；到了首页才交给系统退出。
+    val canBack = showDownloads || showPlayer || Nav.stack.isNotEmpty() || tab != Tab.Home
+    BackHandler(enabled = canBack) {
+        when {
+            showDownloads -> showDownloads = false
+            showPlayer -> showPlayer = false
+            Nav.stack.isNotEmpty() -> Nav.pop()
+            else -> tab = Tab.Home
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -219,19 +228,19 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             }
         }
 
+        if (Nav.stack.isNotEmpty()) {
+            RouteHost(
+                onPlay = { list, i -> playAt(list, i) },
+                onDownload = { Downloader.enqueue(context, it) },
+            )
+        }
+
         AnimatedVisibility(
             visible = showPlayer,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(160)),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(140)),
         ) {
             PlayerScreen(onExit = { showPlayer = false })
-        }
-
-        if (Nav.stack.isNotEmpty()) {
-            RouteHost(
-                onPlay = { list, i -> playAt(list, i) },
-                onDownload = { Downloader.enqueue(context, it) },
-            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -126,7 +127,9 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
                     }
                     .onFailure { feed = emptyList() }
             } else feed = emptyList()
-            if (on("albums")) runCatching { AlbumApi.newAlbumsUpTo(n("albums")) }.onSuccess { albums = it }.onFailure { albums = emptyList() }
+            if (on("albums")) runCatching { AlbumApi.newAlbumsUpTo(n("albums")) }
+                .onSuccess { albums = it; Covers.prefetch(context, it.map { a -> a.cover }) }
+                .onFailure { albums = emptyList() }
             if (on("singers")) runCatching { SingerApi.list().cap("singers") }.onSuccess { singers = it }.onFailure { singers = emptyList() }
             if (on("hot")) runCatching { MusicApi.hotKeys().cap("hot") }.onSuccess { hot = it }.onFailure { hot = emptyList() }
         }
@@ -164,7 +167,7 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
         val r = withContext(Dispatchers.IO) {
             runCatching {
                 when (v) {
-                    is HomeView.Guess -> RecommendApi.guess(num = n("guess")).cap("guess")
+                    is HomeView.Guess -> RecommendApi.guessUpTo(n("guess"))
                     is HomeView.Radar -> RecommendApi.radarUpTo(n("radar"))
                     is HomeView.Chart -> TopApi.songs(v.chart, num = n("charts")).cap("charts")
                     is HomeView.Songlist -> PlaylistApi.songs(
@@ -188,6 +191,11 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
             }
         }
         r.onSuccess { songs = it }.onFailure { error = it.message ?: "歌曲加载失败"; songs = emptyList() }
+    }
+
+    BackHandler(enabled = view !is HomeView.Feed) {
+        view = HomeView.Feed
+        songs = null
     }
 
     val entries = buildList {
@@ -356,9 +364,19 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
                                 .clickable { view = HomeView.Chart(c) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
+                            SquareCover(c.cover)
+                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 15.sp)
+                                if (c.count > 0) {
+                                    Text(
+                                        c.count.toString() + " 首", fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

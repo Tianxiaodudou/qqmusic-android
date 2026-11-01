@@ -1,5 +1,6 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,12 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
     var hot by remember { mutableStateOf<List<String>>(emptyList()) }
     var searched by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // 搜索页返回：先回热搜/历史，再交给上层（标签页 -> 首页 -> 退出）
+    BackHandler(enabled = searched) {
+        searched = false
+        suggestions = emptyList()
+    }
 
     LaunchedEffect(Unit) {
         hot = withContext(Dispatchers.IO) { runCatching { MusicApi.hotKeys() }.getOrDefault(emptyList()) }.take(10)

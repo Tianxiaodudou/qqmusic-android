@@ -1,5 +1,6 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -54,6 +55,12 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     var pendingDelete by remember { mutableStateOf<PlaylistApi.Item?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    // 歌单详情返回列表；列表页再交给上层（标签页 -> 首页 -> 退出）
+    BackHandler(enabled = opened != null) {
+        opened = null
+        songs = null
+    }
 
     LaunchedEffect(Unit) {
         val r = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() } }

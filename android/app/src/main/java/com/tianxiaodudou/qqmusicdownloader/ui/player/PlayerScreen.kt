@@ -177,7 +177,15 @@ fun PlayerScreen(onExit: () -> Unit) {
     var showAbout by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf("") }
 
-    BackHandler(enabled = sheet == null) { onExit() }
+    // 返回链：词典 -> 分享 -> 关于 -> 任意面板 -> 收起播放页
+    BackHandler(enabled = dictLine != null || shareLine != null || showAbout || sheet != null) {
+        when {
+            dictLine != null -> dictLine = null
+            shareLine != null -> shareLine = null
+            showAbout -> showAbout = false
+            else -> sheet = null
+        }
+    }
 
     LaunchedEffect(song?.mid, reloadToken) {
         val mid = song?.mid ?: return@LaunchedEffect

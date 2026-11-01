@@ -9,14 +9,21 @@ object SingerApi {
 
     /** area/sex/genre 传 -100 表示全部。 */
     fun list(area: Int = -100, sex: Int = -100, genre: Int = -100): List<Singer> {
+        // 这个接口在 Web comm 下常回空，Android comm 才给数据：先用 Android，空了再退回默认链。
+        val r = runCatching { query(area, sex, genre, QqClient.CommStyle.ANDROID) }.getOrDefault(emptyList())
+        return r.ifEmpty { runCatching { query(area, sex, genre, null) }.getOrDefault(emptyList()) }
+    }
+
+    private fun query(area: Int, sex: Int, genre: Int, style: QqClient.CommStyle?): List<Singer> {
         val p = JSONObject()
         p.put("hastag", 0)
         p.put("area", area)
         p.put("sex", sex)
         p.put("genre", genre)
-        val data = QqClient.cgi("music.musichallSinger.SingerList", "GetSingerList", p)
+        val data = QqClient.cgi("music.musichallSinger.SingerList", "GetSingerList", p, style = style)
         val arr = data.optJSONArray("singerlist")
             ?: data.optJSONArray("singer_list")
+            ?: data.optJSONArray("hotlist")
             ?: return emptyList()
         val out = ArrayList<Singer>()
         for (i in 0 until arr.length()) {

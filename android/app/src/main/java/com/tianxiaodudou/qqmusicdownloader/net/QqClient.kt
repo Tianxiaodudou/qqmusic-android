@@ -139,9 +139,19 @@ object QqClient {
                 return once(module, method, param, extraComm, style)
             } catch (e: QqError) {
                 lastError = e
-                if (!isAuthError(e.message.orEmpty())) throw e
-                if (style == CommStyle.WEB) webAuthBroken = true
-                android.util.Log.w("QqClient", "auth degraded (" + style + ") " + module + "." + method + ": " + e.message)
+                val msg = e.message.orEmpty()
+                if (isAuthError(msg)) {
+                    if (style == CommStyle.WEB) webAuthBroken = true
+                    android.util.Log.w("QqClient", "auth degraded (" + style + ") " + module + "." + method + ": " + msg)
+                    continue
+                }
+                // 非鉴权错误（104403 之类多来自 comm 版本不匹配）也换一种 comm 再试一次，
+                // 不然歌手列表 / 专辑曲目这类接口在 Web comm 下会整块空掉。
+                if (style != styles.last()) {
+                    android.util.Log.w("QqClient", "retry (" + style + " -> next) " + module + "." + method + ": " + msg)
+                    continue
+                }
+                throw e
             }
         }
         throw lastError ?: QqError("接口异常")

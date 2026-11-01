@@ -88,6 +88,13 @@ fun SongListView(
         selected = emptySet()
         selecting = false
         faved = false
+        // 列表封面预加载，滚动到下一屏时不用现等
+        withContext(Dispatchers.IO) {
+            Covers.prefetch(
+                context,
+                songs.take(40).map { com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(it.albumMid, 300) },
+            )
+        }
     }
 
     val policy = Settings.paidPolicy(context)
@@ -212,7 +219,9 @@ fun SongListView(
                             Modifier.size(42.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF232A35)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            val cover = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 200)
+                            val cover = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 300)
+                            // 没有封面/加载失败时也有个底，不至于空白
+                            Text("♪", fontSize = 16.sp, color = Color(0xFF5A6270))
                             if (cover.isNotEmpty()) {
                                 AsyncImage(
                                     model = cover,

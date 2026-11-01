@@ -103,6 +103,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.LyricApi
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
+import com.tianxiaodudou.qqmusicdownloader.ui.Covers
 import com.tianxiaodudou.qqmusicdownloader.ui.Nav
 import com.tianxiaodudou.qqmusicdownloader.ui.Route
 import com.tianxiaodudou.qqmusicdownloader.player.Favorites
@@ -196,6 +197,26 @@ fun PlayerScreen(onExit: () -> Unit) {
         loadingLyric = false
     }
 
+    // 预取前后各一首的歌词与封面，切歌时直接可用
+    LaunchedEffect(PlayerController.index, PlayerController.queue) {
+        val q = PlayerController.queue
+        val i = PlayerController.index
+        val neighbors = listOfNotNull(q.getOrNull(i - 1), q.getOrNull(i + 1))
+        val current = q.getOrNull(i)
+        if (current != null) {
+            Covers.prefetch(context, listOf(coverUrl(current.albumMid, 500)))
+        }
+        if (neighbors.isEmpty()) return@LaunchedEffect
+        Covers.prefetch(context, neighbors.map { coverUrl(it.albumMid, 500) })
+        withContext(Dispatchers.IO) {
+            for (n in neighbors) {
+                if (LyricsCache.get(n.mid) == null) {
+                    runCatching { LyricApi.load(n.mid) }.getOrNull()?.let { LyricsCache.put(n.mid, it) }
+                }
+            }
+        }
+    }
+
     LaunchedEffect(song?.mid) {
         Favorites.ensureLoaded()
         offsetMs = Settings.lyricOffset(context, song?.mid ?: "")
@@ -229,7 +250,7 @@ fun PlayerScreen(onExit: () -> Unit) {
         return
     }
 
-    val cover = coverUrl(song.albumMid)
+    val cover = coverUrl(song.albumMid, 500)
     val fav = Favorites.isFav(song.mid)
 
     fun jumpToLine(line: LyricApi.Line) {
@@ -960,7 +981,8 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
     }
 }
 
-internal fun coverUrl(albumMid: String, size: Int = 400): String =
+// QQ 的封面 CDN 只认特定尺寸（300/500/800），200/400 会 404
+internal fun coverUrl(albumMid: String, size: Int = 500): String =
     if (albumMid.isEmpty()) "" else "https://y.gtimg.cn/music/photo_new/T002R" + size + "x" + size + "M000" + albumMid + ".jpg"
 
 internal fun fmtMs(ms: Long): String {

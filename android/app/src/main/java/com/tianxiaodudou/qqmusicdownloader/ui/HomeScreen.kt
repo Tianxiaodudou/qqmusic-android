@@ -107,9 +107,23 @@ fun HomeScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicApi
     LaunchedEffect(cfgVersion) {
         withContext(Dispatchers.IO) {
             if (on("charts")) runCatching { TopApi.charts().take(n("charts")) }.onSuccess { charts = it }.onFailure { charts = emptyList() } else charts = emptyList()
-            if (on("songlists")) runCatching { RecommendApi.songlists(num = n("songlists")) }.onSuccess { songlists = it }.onFailure { songlists = emptyList() } else songlists = emptyList()
+            if (on("songlists")) {
+                runCatching { RecommendApi.songlists(num = n("songlists")) }
+                    .onSuccess { l ->
+                        songlists = l
+                        Covers.prefetch(context, l.map { it.pic })
+                    }
+                    .onFailure { songlists = emptyList() }
+            } else songlists = emptyList()
             if (on("newsongs")) runCatching { RecommendApi.newSongs().take(n("newsongs")) }.onSuccess { newSongs = it }.onFailure { newSongs = emptyList() } else newSongs = emptyList()
-            if (on("feed")) runCatching { RecommendApi.homeFeed(limit = n("feed")) }.onSuccess { feed = it }.onFailure { feed = emptyList() } else feed = emptyList()
+            if (on("feed")) {
+                runCatching { RecommendApi.homeFeed(limit = n("feed")) }
+                    .onSuccess { g ->
+                        feed = g
+                        Covers.prefetch(context, g.flatMap { it.cards.map { c -> c.cover } })
+                    }
+                    .onFailure { feed = emptyList() }
+            } else feed = emptyList()
             if (on("albums")) runCatching { AlbumApi.newAlbums(num = n("albums")) }.onSuccess { albums = it }.onFailure { albums = emptyList() }
             if (on("singers")) runCatching { SingerApi.list().take(n("singers")) }.onSuccess { singers = it }.onFailure { singers = emptyList() }
             if (on("hot")) runCatching { MusicApi.hotKeys().take(n("hot")) }.onSuccess { hot = it }.onFailure { hot = emptyList() }

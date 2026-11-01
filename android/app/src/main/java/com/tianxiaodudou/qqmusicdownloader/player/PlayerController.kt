@@ -79,13 +79,24 @@ object PlayerController {
     private var forcedQuality: Settings.Quality? = null
     private var loadedSong: MusicApi.Song? = null
 
+    private data class CachedUrl(val url: String, val label: String, val quality: String, val at: Long)
+
+    /** 下一首/上一首的直链预取缓存，10 分钟内有效。 */
+    private val urlCache = java.util.concurrent.ConcurrentHashMap<String, CachedUrl>()
+
     val current: MusicApi.Song? get() = queue.getOrNull(index)
 
     fun attach(context: Context) {
         if (exo != null) return
         val ctx = context.applicationContext
         appContext = ctx
-        val p = ExoPlayer.Builder(ctx).build()
+        val p = ExoPlayer.Builder(ctx)
+            .setLoadControl(
+                androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(20_000, 90_000, 1_500, 3_000)
+                    .build(),
+            )
+            .build()
         exo = p
         scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
         speed = Settings.speed(ctx)
@@ -383,10 +394,18 @@ object PlayerController {
             pl.prepare()
             if (autoPlay) pl.play()
             loading = false
+            prefetchAround()
         }
     }
 
     private fun resolve(ctx: Context, song: MusicApi.Song, alt: Boolean = false): Source {
+        // 命中预取：直接起播，不再等接口
+        urlCache[song.mid]?.let { c ->
+            if (System.currentTimeMillis() - c.at < 10 * 60_000L) {
+                return Source(Uri.parse(c.url), c.label, "", c.quality)
+            }
+            urlCache.remove(song.mid)
+        }
         val wanted = forcedQuality ?: Settings.quality(ctx)
         // 设置里选的是「上限」：只会从目标档位往下退，绝不升到更高档位
         val chain = Settings.Quality.entries
@@ -437,6 +456,37 @@ object PlayerController {
         code == "AI00" -> "母带"
         code == "D004" -> "杜比"
         else -> ""
+    }
+
+    /** 预取上一首/下一首的直链，切歌时直接命中缓存。 */
+    private fun prefetchAround() {
+        val ctx = appContext ?: return
+        val sc = scope ?: return
+        val targets = listOfNotNull(queue.getOrNull(index + 1), queue.getOrNull(index - 1))
+        if (targets.isEmpty()) return
+        sc.launch {
+            withContext(Dispatchers.IO) {
+                val wanted = Settings.quality(ctx)
+                val codes = Settings.Quality.entries
+                    .filter { it.ordinal <= wanted.ordinal }
+                    .sortedByDescending { it.ordinal }
+                    .map { it.code }
+                    .filter { it.isNotEmpty() }
+                    .distinct()
+                for (s in targets) {
+                    if (urlCache[s.mid] != null) continue
+                    val map = runCatching { MusicApi.streamBatch(s, codes) }.getOrDefault(emptyMap())
+                    val code = codes.firstOrNull { !map[it].isNullOrEmpty() } ?: continue
+                    val q = Settings.Quality.entries.firstOrNull { it.code == code } ?: continue
+                    urlCache[s.mid] = CachedUrl(
+                        map[code]!!,
+                        q.label + " · " + q.detail,
+                        qualityText(code),
+                        System.currentTimeMillis(),
+                    )
+                }
+            }
+        }
     }
 
     /** 用 CDN 调度返回的根地址替换域名，播放失败重试时用。 */

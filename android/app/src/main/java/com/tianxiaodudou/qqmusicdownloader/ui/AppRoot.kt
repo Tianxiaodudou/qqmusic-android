@@ -251,7 +251,7 @@ private fun MiniPlayer(onOpen: () -> Unit) {
             Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val cover = coverUrl(song.albumMid, 200)
+            val cover = coverUrl(song.albumMid, 300)
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF222833)),
                 contentAlignment = Alignment.Center,

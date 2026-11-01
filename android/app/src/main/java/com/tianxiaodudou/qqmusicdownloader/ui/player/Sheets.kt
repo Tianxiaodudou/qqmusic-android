@@ -522,7 +522,7 @@ fun SongInfoSheet(
         InfoRow("音源", if (source.isEmpty()) qualityLabel else source)
         InfoRow("格式", if (source.contains("FLAC")) "FLAC" else "MP3")
         InfoRow("文件", path.ifEmpty { "在线播放（未缓存）" })
-        InfoRow("封面", if (song.albumMid.isEmpty()) "无" else "腾讯 CDN · T002R400x400M000" + song.albumMid)
+        InfoRow("封面", if (song.albumMid.isEmpty()) "无" else "腾讯 CDN · T002R500x500M000" + song.albumMid)
         InfoRow("歌词", lyricSource.ifEmpty { "未加载" })
         extra?.let { e ->
             if (e.first.isNotEmpty()) InfoRow("标签", e.first.joinToString(" · "))

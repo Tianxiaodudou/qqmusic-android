@@ -1,5 +1,15 @@
 # 更新日志
 
+## v2.24.0 (2026-11-02)
+
+### 修复
+- **媒体按钮全失效 / 通知卡片按钮不全**：我们一次只往 ExoPlayer 里放一首歌（队列在 PlayerController 里），
+  所以系统看到的播放器没有「上一首/下一首」命令，通知栏就不显示这两个按钮，蓝牙和耳机按键也变成空操作。
+  现在给 MediaSession 套了一层 QueuePlayer（ForwardingPlayer）把这两个命令补上并转发到队列操作，
+  in-app、通知栏、锁屏、蓝牙按键都走同一条链路
+- **夜间模式下局部黑字黑底**：Material3 的 MaterialTheme 本身不提供 LocalContentColor，
+  没有 Surface 包裹时 Text 默认取黑色；深色皮肤下没写 color 的文字就成了黑底黑字。
+  现在在主题根节点显式提供 LocalContentColor = 当前皮肤正文色，日间/夜间都正确
 ## v2.23.0 (2026-11-02)
 
 ### 新增：日间模式

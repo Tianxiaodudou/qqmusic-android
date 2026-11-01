@@ -206,7 +206,14 @@ object PlayerController {
             )
             // 先把服务拉起来，再建会话：MediaSessionService.onGetSession 直接返回这个实例
             ctx.startService(android.content.Intent(ctx, PlaybackService::class.java))
-            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, p)
+            val sessionPlayer = QueuePlayer(
+                player = p,
+                onNext = { next() },
+                onPrevious = { prev() },
+                hasNext = { queue.size > 1 },
+                hasPrevious = { queue.size > 1 },
+            )
+            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, sessionPlayer)
                 .setSessionActivity(sessionActivity)
                 .setCallback(sessionCallback)
                 .build()

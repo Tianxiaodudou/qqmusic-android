@@ -113,6 +113,12 @@ fun QQMusicTheme(content: @Composable () -> Unit) {
     }
 
     AppThemeProvider(skin) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        // 关键：Material3 不会自己提供 LocalContentColor，没有 Surface 包裹时默认是黑色，
+        // 深色皮肤下就会「黑字黑底」。这里显式给一份主题正文色。
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides skin.colors.textPrimary,
+        ) {
+            MaterialTheme(colorScheme = scheme, content = content)
+        }
     }
 }

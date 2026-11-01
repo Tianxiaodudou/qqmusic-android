@@ -186,7 +186,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                                         Icon(
                                             Icons.Rounded.Refresh,
                                             contentDescription = "刷新首页",
-                                            modifier = Modifier.size(22.dp),
+                                            modifier = Modifier.size(AppTheme.dimens.iconLg),
                                         )
                                     },
                                     label = { Text("刷新", fontSize = AppTheme.typography.badge.fontSize) },
@@ -210,7 +210,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                                             Tab.Mine -> Icons.Rounded.Person
                                         },
                                         contentDescription = item.label,
-                                        modifier = Modifier.size(22.dp),
+                                        modifier = Modifier.size(AppTheme.dimens.iconLg),
                                     )
                                 },
                                 label = { Text(item.label, fontSize = AppTheme.typography.badge.fontSize) },
@@ -253,7 +253,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
                     Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { showDownloads = false }, modifier = Modifier.size(44.dp)) {
+                        IconButton(onClick = { showDownloads = false }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "返回")
                         }
                         Text("下载管理", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
@@ -297,7 +297,7 @@ private fun MiniPlayer(onOpen: () -> Unit) {
         ) {
             val cover = coverUrl(song.albumMid, 300)
             Box(
-                Modifier.size(40.dp).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder),
+                Modifier.size(AppTheme.dimens.coverSm).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder),
                 contentAlignment = Alignment.Center,
             ) {
                 if (cover.isNotEmpty()) {
@@ -306,7 +306,7 @@ private fun MiniPlayer(onOpen: () -> Unit) {
                     Text("♪", color = AppTheme.colors.textSecondary, style = AppTheme.typography.title)
                 }
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(AppTheme.dimens.spacing10))
             Column(Modifier.weight(1f)) {
                 Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textPrimary)
                 Text(
@@ -317,14 +317,14 @@ private fun MiniPlayer(onOpen: () -> Unit) {
                     color = AppTheme.colors.textSecondary,
                 )
             }
-            IconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(44.dp)) {
+            IconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(
                     if (PlayerController.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "播放/暂停",
                     tint = AppTheme.colors.textPrimary,
                 )
             }
-            IconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(44.dp)) {
+            IconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = AppTheme.colors.textPrimary)
             }
         }
@@ -423,11 +423,11 @@ private fun MinePage(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(AppTheme.dimens.spacing20),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding)
-                .clip(RoundedCornerShape(18.dp)).background(CardBg).padding(AppTheme.dimens.pagePadding),
+                .clip(AppTheme.shapes.dialog).background(CardBg).padding(AppTheme.dimens.pagePadding),
         ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
@@ -444,7 +444,7 @@ private fun MinePage(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(AppTheme.dimens.spacing3))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         vipLabel,
@@ -453,7 +453,7 @@ private fun MinePage(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
                             .background(if (isVip) AppTheme.colors.warningSoft else AppTheme.colors.chipBg)
-                            .padding(horizontal = AppTheme.dimens.spacingSm, vertical = 3.dp),
+                            .padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing3),
                     )
                     Spacer(Modifier.width(AppTheme.dimens.spacingSm))
                     Text(
@@ -559,7 +559,7 @@ private fun MinePage(
         }
 
         if (toast.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(AppTheme.dimens.spacing10))
             Text(
                 toast,
                 fontSize = AppTheme.typography.bodySmall.fontSize,
@@ -568,14 +568,14 @@ private fun MinePage(
             )
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing18))
         Text(
             "QQ音乐播放器 " + BuildConfig.VERSION_NAME,
             fontSize = AppTheme.typography.caption.fontSize,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding),
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing10))
         OutlinedButton(
             onClick = {
                 scope.launch { withContext(Dispatchers.IO) { runCatching { Extras.logout() } } }
@@ -654,7 +654,7 @@ private fun MinePage(
                         Text("更新日志", fontSize = AppTheme.typography.bodySmall.fontSize, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(AppTheme.dimens.spacingXs))
                         Box(
-                            Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
+                            Modifier.heightIn(max = AppTheme.dimens.detailCover).verticalScroll(rememberScrollState()),
                         ) {
                             Text(
                                 plainNotes(rel.notes).ifEmpty { "这次发布没有取到更新日志，点「浏览器下载」可以看完整说明" },
@@ -741,5 +741,5 @@ private fun MineRow(title: String, subtitle: String, divider: Boolean = true, on
         }
         Text("›", style = AppTheme.typography.title, color = AppTheme.colors.textDisabled)
     }
-    if (divider) HorizontalDivider(color = AppTheme.colors.line, thickness = 0.6.dp)
+    if (divider) HorizontalDivider(color = AppTheme.colors.line, thickness = AppTheme.dimens.hairline)
 }

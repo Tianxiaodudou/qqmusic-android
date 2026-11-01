@@ -153,11 +153,11 @@ fun LyricsPane(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Box(
-                    Modifier.size(84.dp).clip(CircleShape)
+                    Modifier.size(AppTheme.dimens.coverHero).clip(CircleShape)
                         .background(Brush.verticalGradient(listOf(AppTheme.colors.surface3, AppTheme.colors.surface1))),
                     contentAlignment = Alignment.Center,
                 ) { Text("♪", style = AppTheme.typography.pageTitle, color = AppTheme.colors.textSecondary) }
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(AppTheme.dimens.spacing18))
                 Text("暂无歌词", style = AppTheme.typography.title, color = AppTheme.colors.textPrimary)
                 Spacer(Modifier.height(AppTheme.dimens.spacing6))
                 TextButton(onClick = onLoadLyric) { Text("手动加载歌词", fontSize = AppTheme.typography.bodySmall.fontSize) }
@@ -277,7 +277,7 @@ fun LyricsPane(
                                 fontSize = (12.5f * style.scale).sp,
                                 color = AppTheme.colors.textSecondary,
                                 textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
-                                modifier = Modifier.alpha(alpha * 0.9f).fillMaxWidth().padding(top = 2.dp),
+                                modifier = Modifier.alpha(alpha * 0.9f).fillMaxWidth().padding(top = AppTheme.dimens.spacing2),
                             )
                         }
                         if (style.showRoma && line.roma.isNotEmpty() && distance <= 2) {
@@ -286,7 +286,7 @@ fun LyricsPane(
                                 fontSize = (12f * style.scale).sp,
                                 color = AppTheme.colors.textTertiary,
                                 textAlign = if (style.center) TextAlign.Center else TextAlign.Start,
-                                modifier = Modifier.alpha(alpha * 0.85f).fillMaxWidth().padding(top = 1.dp),
+                                modifier = Modifier.alpha(alpha * 0.85f).fillMaxWidth().padding(top = AppTheme.dimens.spacing1),
                             )
                         }
                     }
@@ -306,7 +306,7 @@ fun LyricsPane(
                             follow = true
                             scope.launch { runCatching { listState.animateScrollToItem(currentIndex.coerceAtLeast(0)) } }
                         }, onLongClick = {})
-                        .padding(horizontal = AppTheme.dimens.spacing14, vertical = 7.dp),
+                        .padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacing7),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("回到当前", style = AppTheme.typography.bodySmall, color = AppTheme.colors.success)

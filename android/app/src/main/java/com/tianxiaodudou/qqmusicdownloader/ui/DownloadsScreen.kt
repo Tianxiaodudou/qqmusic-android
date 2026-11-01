@@ -42,7 +42,7 @@ fun DownloadsScreen() {
         }
         LazyColumn(Modifier.fillMaxSize()) {
             items(Downloader.tasks) { task ->
-                Column(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp)) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10)) {
                     Row {
                         Column(Modifier.weight(1f)) {
                             Text(task.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)

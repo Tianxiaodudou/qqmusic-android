@@ -68,8 +68,8 @@ fun SocialScreen() {
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(data) { u ->
-                        Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(40.dp).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(AppTheme.dimens.coverSm).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
                                 if (u.avatar.startsWith("http")) {
                                     AsyncImage(model = u.avatar, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 }

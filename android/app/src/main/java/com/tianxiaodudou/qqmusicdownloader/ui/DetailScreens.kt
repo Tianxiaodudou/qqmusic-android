@@ -62,7 +62,7 @@ internal fun DetailScaffold(title: String, onBack: () -> Unit, content: @Composa
     BackHandler { onBack() }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+            IconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
             }
             Text(title, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -89,7 +89,7 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
         val d = detail
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(92.dp).clip(RoundedCornerShape(10.dp)).background(AppTheme.colors.coverPlaceholder)) {
+                Box(Modifier.size(AppTheme.dimens.coverHero).clip(AppTheme.shapes.cardSmall).background(AppTheme.colors.coverPlaceholder)) {
                     val cover = d?.cover?.takeIf { it.startsWith("http") } ?: coverUrl(mid)
                     AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
@@ -121,7 +121,7 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
                     modifier = Modifier.padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingXs),
                 )
             }
-            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm), horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacing10)) {
                 Button(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }, modifier = Modifier.weight(1f)) {
                     Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
@@ -225,10 +225,10 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
                     items(albums) { a ->
                         Row(
                             Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
-                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.coverPlaceholder)) {
+                            Box(Modifier.size(AppTheme.dimens.coverLg).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder)) {
                                 AsyncImage(
                                     model = a.cover.takeIf { it.startsWith("http") } ?: coverUrl(a.mid),
                                     contentDescription = null,
@@ -318,10 +318,10 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
                 items(data) { a ->
                     Row(
                         Modifier.fillMaxWidth().clickable { Nav.push(Route.Album(a.mid, a.name)) }
-                            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+                            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.coverPlaceholder)) {
+                        Box(Modifier.size(AppTheme.dimens.coverLg).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder)) {
                             AsyncImage(
                                 model = a.cover.takeIf { it.startsWith("http") } ?: coverUrl(a.mid),
                                 contentDescription = null,

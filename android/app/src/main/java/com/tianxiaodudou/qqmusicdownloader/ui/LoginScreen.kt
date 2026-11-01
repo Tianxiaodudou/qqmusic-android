@@ -60,12 +60,12 @@ fun LoginScreen(onLoggedIn: (Session) -> Unit) {
         Spacer(Modifier.height(AppTheme.dimens.spacingXs))
         Text("登录 QQ 音乐账号", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(AppTheme.dimens.pagePadding))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacingSm)) {
             LoginMode.entries.forEach { m ->
                 FilterChip(selected = mode == m, onClick = { mode = m }, label = { Text(m.label) })
             }
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing18))
         when (mode) {
             LoginMode.QQ -> QrBlock(onLoggedIn, wechat = false)
             LoginMode.WX -> QrBlock(onLoggedIn, wechat = true)
@@ -133,7 +133,7 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            modifier = Modifier.size(210.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
+            modifier = Modifier.size(210.dp).clip(AppTheme.shapes.cardMedium).background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
             val bmp = image
@@ -163,7 +163,7 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
             label = { Text("手机号") },
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing10))
         OutlinedButton(
             enabled = !busy && phone.length >= 11,
             onClick = {
@@ -174,7 +174,7 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
                 }
             },
         ) { Text("发送验证码") }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing10))
         OutlinedTextField(
             value = code,
             onValueChange = { code = it.filter { c -> c.isDigit() }.take(6) },
@@ -196,7 +196,7 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
             },
         ) { Text("登录") }
         if (status.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(AppTheme.dimens.spacing10))
             Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = AppTheme.typography.bodySmall.fontSize)
         }
     }

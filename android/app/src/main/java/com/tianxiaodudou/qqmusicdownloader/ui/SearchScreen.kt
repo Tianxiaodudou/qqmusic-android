@@ -174,7 +174,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
 
         // 联想词 / 热搜
         if (suggestions.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacing6), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacing6), horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacing6)) {
                 suggestions.take(4).forEach { s ->
                     Text(
                         s,
@@ -185,12 +185,12 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                             .clip(RoundedCornerShape(50))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { doSearch(s) }
-                            .padding(horizontal = 10.dp, vertical = AppTheme.dimens.spacing5),
+                            .padding(horizontal = AppTheme.dimens.spacing10, vertical = AppTheme.dimens.spacing5),
                     )
                 }
             }
         } else if (!searched && keyword.isBlank() && hot.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacing6), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacing6), horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacing6)) {
                 hot.take(4).forEach { s ->
                     Text(
                         s,
@@ -201,7 +201,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
                             .clip(RoundedCornerShape(50))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { doSearch(s) }
-                            .padding(horizontal = 10.dp, vertical = AppTheme.dimens.spacing5),
+                            .padding(horizontal = AppTheme.dimens.spacing10, vertical = AppTheme.dimens.spacing5),
                     )
                 }
             }
@@ -209,7 +209,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
 
         Row(
             Modifier.fillMaxWidth().padding(top = AppTheme.dimens.spacingSm),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacingSm),
         ) {
             SEARCH_TYPES.forEachIndexed { i, pair ->
                 Box(
@@ -232,7 +232,7 @@ fun SearchScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (MusicA
         }
 
         if (loading) {
-            Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxWidth().padding(AppTheme.dimens.spacing20), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         }
         if (error.isNotEmpty()) {
             Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(AppTheme.dimens.spacingSm))

@@ -82,7 +82,7 @@ private fun RowAction(
     onClick: () -> Unit,
 ) {
     Box(
-        Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
+        Modifier.size(30.dp).clip(AppTheme.shapes.cover)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -90,7 +90,7 @@ private fun RowAction(
             icon,
             contentDescription = label,
             tint = if (enabled) (tint ?: AppTheme.colors.textSecondary) else AppTheme.colors.textDisabled,
-            modifier = Modifier.size(17.dp),
+            modifier = Modifier.size(AppTheme.dimens.iconSm),
         )
     }
 }
@@ -164,7 +164,7 @@ fun SongListView(
 
         // 工具条：未选择时给「多选」和「收藏歌单」，选择中给全选/反选/取消
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingMd, vertical = 2.dp),
+            Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingMd, vertical = AppTheme.dimens.spacing2),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (selecting) {
@@ -245,7 +245,7 @@ fun SongListView(
                     Row(
                         Modifier.fillMaxWidth()
                             .alpha(if (locked) 0.4f else 1f)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(AppTheme.shapes.cardSmall)
                             .combinedClickable(
                                 onClick = {
                                     when {
@@ -261,7 +261,7 @@ fun SongListView(
                                     }
                                 },
                             )
-                            .padding(start = if (selecting) 6.dp else 16.dp, end = AppTheme.dimens.pagePadding, top = 10.dp, bottom = 10.dp),
+                            .padding(start = if (selecting) 6.dp else 16.dp, end = AppTheme.dimens.pagePadding, top = AppTheme.dimens.spacing10, bottom = AppTheme.dimens.spacing10),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (selecting) {
@@ -312,9 +312,9 @@ fun SongListView(
                                 fontSize = AppTheme.typography.badge.fontSize,
                                 color = AppTheme.colors.warning,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
+                                    .clip(AppTheme.shapes.tag)
                                     .background(AppTheme.colors.warningSoft)
-                                    .padding(horizontal = AppTheme.dimens.spacing5, vertical = 2.dp),
+                                    .padding(horizontal = AppTheme.dimens.spacing5, vertical = AppTheme.dimens.spacing2),
                             )
                         }
                         if (!selecting) {
@@ -381,8 +381,8 @@ fun SongListView(
                         Box(Modifier.fillMaxWidth().padding(AppTheme.dimens.spacing14), contentAlignment = Alignment.Center) {
                             if (loadingMore) {
                                 androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(AppTheme.dimens.iconMd),
+                                    strokeWidth = AppTheme.dimens.stroke2,
                                 )
                             } else {
                                 Text("上滑继续加载", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -397,7 +397,7 @@ fun SongListView(
             Row(
                 Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacing6),
             ) {
                 Button(
                     onClick = {
@@ -534,7 +534,7 @@ private fun PlaylistPickerSheet(
         lists = withContext(Dispatchers.IO) { runCatching { PlaylistApi.mine() }.getOrNull() ?: emptyList() }
     }
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = AppTheme.dimens.spacingMd)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = AppTheme.dimens.spacingSm), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing20, vertical = AppTheme.dimens.spacingSm), verticalAlignment = Alignment.CenterVertically) {
             Text("收藏到歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             TextButton(onClick = onNew) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
         }
@@ -546,7 +546,7 @@ private fun PlaylistPickerSheet(
                 items(data) { item ->
                     Row(
                         Modifier.fillMaxWidth().clickable { onPick(item) }
-                            .padding(horizontal = 20.dp, vertical = AppTheme.dimens.spacingMd),
+                            .padding(horizontal = AppTheme.dimens.spacing20, vertical = AppTheme.dimens.spacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(item.name, fontSize = AppTheme.typography.body.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

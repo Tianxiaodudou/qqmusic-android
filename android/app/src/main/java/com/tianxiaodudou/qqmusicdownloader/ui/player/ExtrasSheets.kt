@@ -58,8 +58,8 @@ fun SimilarSongsSheet(songId: Int, onPlay: (List<MusicApi.Song>, Int) -> Unit, o
     LaunchedEffect(songId) {
         list = withContext(Dispatchers.IO) { runCatching { Extras.similarSongs(songId) }.getOrDefault(emptyList()) }
     }
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.7f).padding(bottom = 10.dp)) {
-        Text("相似歌曲", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.7f).padding(bottom = AppTheme.dimens.spacing10)) {
+        Text("相似歌曲", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing10))
         val data = list
         if (data == null) SheetLoading()
         else if (data.isEmpty()) SheetEmpty("没有找到相似歌曲")
@@ -70,7 +70,7 @@ fun SimilarSongsSheet(songId: Int, onPlay: (List<MusicApi.Song>, Int) -> Unit, o
                     Modifier.fillMaxWidth().clickable {
                         onClose()
                         onPlay(data, i)
-                    }.padding(horizontal = 22.dp, vertical = 11.dp),
+                    }.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing11),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -90,8 +90,8 @@ fun RelatedPlaylistsSheet(songId: Int, onClose: () -> Unit) {
     LaunchedEffect(songId) {
         list = withContext(Dispatchers.IO) { runCatching { Extras.relatedPlaylists(songId) }.getOrDefault(emptyList()) }
     }
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.65f).padding(bottom = 10.dp)) {
-        Text("相关歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.65f).padding(bottom = AppTheme.dimens.spacing10)) {
+        Text("相关歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing10))
         val data = list
         if (data == null) SheetLoading()
         else if (data.isEmpty()) SheetEmpty("没有相关歌单")
@@ -101,7 +101,7 @@ fun RelatedPlaylistsSheet(songId: Int, onClose: () -> Unit) {
                     Modifier.fillMaxWidth().clickable {
                         onClose()
                         Nav.push(Route.Playlist(p.id, p.name))
-                    }.padding(horizontal = 22.dp, vertical = AppTheme.dimens.spacingMd),
+                    }.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacingMd),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(p.name, fontSize = AppTheme.typography.body.fontSize, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -118,8 +118,8 @@ fun OtherVersionsSheet(song: MusicApi.Song, onPlay: (List<MusicApi.Song>, Int) -
     LaunchedEffect(song.mid) {
         list = withContext(Dispatchers.IO) { runCatching { Extras.otherVersions(song) }.getOrDefault(emptyList()) }
     }
-    Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = 10.dp)) {
-        Text("其他版本", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+    Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = AppTheme.dimens.spacing10)) {
+        Text("其他版本", fontSize = AppTheme.typography.sectionTitle.fontSize, color = SheetText, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing10))
         val data = list
         if (data == null) SheetLoading()
         else if (data.isEmpty()) SheetEmpty("没有其他版本")
@@ -130,7 +130,7 @@ fun OtherVersionsSheet(song: MusicApi.Song, onPlay: (List<MusicApi.Song>, Int) -
                     Modifier.fillMaxWidth().clickable {
                         onClose()
                         onPlay(listOf(s), 0)
-                    }.padding(horizontal = 22.dp, vertical = 11.dp),
+                    }.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing11),
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(s.name, fontSize = AppTheme.typography.body.fontSize, color = SheetText, maxLines = 1, overflow = TextOverflow.Ellipsis)

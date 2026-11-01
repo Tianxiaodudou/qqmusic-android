@@ -334,12 +334,12 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = onOpenSearch, modifier = Modifier.size(40.dp)) {
+                    IconButton(onClick = onOpenSearch, modifier = Modifier.size(AppTheme.dimens.coverSm)) {
                         Icon(
                             Icons.Rounded.Search,
                             contentDescription = "搜索",
                             tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(21.dp),
+                            modifier = Modifier.size(AppTheme.dimens.iconLg),
                         )
                     }
                 }
@@ -352,7 +352,7 @@ fun HomeScreen(
                         entries.chunked(4).forEach { row ->
                             Row(
                                 Modifier.fillMaxWidth().padding(vertical = AppTheme.dimens.spacingXs),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacingSm),
                             ) {
                                 row.forEach { e ->
                                     EntryTile(
@@ -389,13 +389,13 @@ fun HomeScreen(
                         item { SubTitle(g.title) }
                         items(g.cards) { c ->
                             Row(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                                Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
                                     .clickable { open(HomeView.Card(c)) }
-                                    .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+                                    .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Cover(c.cover, 44.dp)
-                                Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                                Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                     Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                     Text(
                                         c.sub, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -434,13 +434,13 @@ fun HomeScreen(
                 LazyColumn(state = alState, modifier = Modifier.fillMaxSize()) {
                     items(al) { a ->
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
                                 .clickable { open(HomeView.AlbumSongs(a)) }
-                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Cover(a.cover, 48.dp)
-                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                            Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                 Text(a.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 Text(
                                     a.singer, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -478,13 +478,13 @@ fun HomeScreen(
                 LazyColumn(state = slState, modifier = Modifier.fillMaxSize()) {
                     items(sl) { s ->
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
                                 .clickable { open(HomeView.Songlist(s)) }
-                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Cover(s.pic, 48.dp)
-                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                            Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                 Text(s.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 Text(
                                     s.songNum.toString() + " 首 · " + fmtPlay(s.listenNum) +
@@ -518,13 +518,13 @@ fun HomeScreen(
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(cs) { c ->
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
                                 .clickable { open(HomeView.Chart(c)) }
-                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+                                .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             SquareCover(c.cover)
-                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                            Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                 Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 if (c.count > 0) {
                                     Text(
@@ -558,7 +558,7 @@ fun HomeScreen(
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(sl) { s ->
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
                                 .clickable { open(HomeView.SingerSongs(s)) }
                                 .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingMd),
                             verticalAlignment = Alignment.CenterVertically,
@@ -589,7 +589,7 @@ fun HomeScreen(
                 LazyColumn(Modifier.fillMaxSize()) {
                     itemsIndexed(hk) { i, kw ->
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                            Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
                                 .clickable { onSearch(kw) }
                                 .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingMd),
                             verticalAlignment = Alignment.CenterVertically,
@@ -658,7 +658,7 @@ fun HomeScreen(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Row(Modifier.fillMaxWidth().padding(start = AppTheme.dimens.pagePadding, end = AppTheme.dimens.pagePadding, top = 18.dp, bottom = AppTheme.dimens.spacing6)) {
+    Row(Modifier.fillMaxWidth().padding(start = AppTheme.dimens.pagePadding, end = AppTheme.dimens.pagePadding, top = AppTheme.dimens.spacing18, bottom = AppTheme.dimens.spacing6)) {
         Text(text, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -687,13 +687,13 @@ private fun HintRow(text: String) {
 @Composable
 private fun SongRow(song: MusicApi.Song, onClick: () -> Unit, onDl: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+        Modifier.fillMaxWidth().clip(AppTheme.shapes.cardSmall)
             .clickable(onClick = onClick)
-            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = 10.dp),
+            .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing10),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Cover(albumCover(song.albumMid), 44.dp)
-        Column(Modifier.weight(1f).padding(start = 10.dp)) {
+        Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
             Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
             Text(
                 song.singers, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -710,7 +710,7 @@ private fun Cover(url: String, dim: Dp) {
     AsyncImage(
         model = url,
         contentDescription = null,
-        modifier = Modifier.size(dim).clip(RoundedCornerShape(6.dp)),
+        modifier = Modifier.size(dim).clip(AppTheme.shapes.cover),
         contentScale = ContentScale.Crop,
     )
 }

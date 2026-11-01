@@ -1,5 +1,15 @@
 # 更新日志
 
+## v2.18.0 (2026-11-02)
+
+### 主题系统（第四步：圆角与控件尺寸收敛）
+- 圆角：所有 RoundedCornerShape(x.dp) 改为 AppTheme.shapes 语义 token（tag 4 / cover 8 / iconBlock 9 /
+  cardSmall 10 / button 12 / cardMedium 14 / cardLarge 16 / dialog 18 / sheet 20 / pill）
+- 图标尺寸：Modifier.size 改为 iconXs 10 / iconSm 16 / iconMd 20 / iconLg 22 / iconXl 24 / touchTarget 44
+- 封面尺寸：coverXs 34 / coverSm 40 / coverLg 48 / coverXl 64 / coverHero 84–92；按钮高度、热区、
+  线宽（hairline 0.6 / divider 1 / trackThin 1.5 / stroke2 2 / trackHeight 3.5）、弹层最大高度也都有 token
+- 间距补档：1/3/7/9/10/11/13/18/20/22 进 AppDimens，页面里不再出现零散 dp 间距
+- 尺寸类 dp 字面值从 179 处降到 36 处，剩余为个别一次性偏移（52/56/46/32 等），下一步继续收口
 ## v2.17.0 (2026-11-02)
 
 ### 主题系统（第三步：字号与间距收敛）

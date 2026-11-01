@@ -338,7 +338,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                         "歌词加载中…",
                         fontSize = AppTheme.typography.caption.fontSize,
                         color = TextLo,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = AppTheme.dimens.pagePadding),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = AppTheme.dimens.spacing10, end = AppTheme.dimens.pagePadding),
                     )
                 }
                 if (sheet == PSheet.Sync) {
@@ -409,7 +409,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                                 Icons.Rounded.Close,
                                 contentDescription = "关闭",
                                 tint = AppTheme.colors.textSecondary,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(AppTheme.dimens.iconMd),
                             )
                         }
                     }
@@ -622,7 +622,7 @@ fun PlayerScreen(onExit: () -> Unit) {
             onDismissRequest = { dictLine = null },
             title = { Text("歌词词典") },
             text = {
-                Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                Column(Modifier.heightIn(max = AppTheme.dimens.bannerHeight).verticalScroll(rememberScrollState())) {
                     if (dictLoading) {
                         Text("查询中…", fontSize = AppTheme.typography.bodySmall.fontSize, color = TextLo)
                     } else if (dictEntries.isEmpty()) {
@@ -671,7 +671,7 @@ private fun PlayerTopBar(
     onMore: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 2.dp),
+        Modifier.fillMaxWidth().height(56.dp).padding(horizontal = AppTheme.dimens.spacing2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack, modifier = Modifier.size(46.dp)) {
@@ -701,23 +701,23 @@ private fun PlayerTopBar(
                         fontSize = AppTheme.typography.badge.fontSize,
                         color = AppTheme.colors.success,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(AppTheme.shapes.tag)
                             .background(AppTheme.colors.brandBorder)
-                            .padding(horizontal = AppTheme.dimens.spacing5, vertical = 1.dp),
+                            .padding(horizontal = AppTheme.dimens.spacing5, vertical = AppTheme.dimens.spacing1),
                     )
                 }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (sleepRemainingMs > 0 || sleepAfterCurrent) {
-                Icon(Icons.Rounded.Bedtime, contentDescription = null, tint = AppTheme.colors.warning, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(3.dp))
+                Icon(Icons.Rounded.Bedtime, contentDescription = null, tint = AppTheme.colors.warning, modifier = Modifier.size(AppTheme.dimens.iconSm))
+                Spacer(Modifier.width(AppTheme.dimens.spacing3))
                 Text(
                     if (sleepAfterCurrent) "当前曲后" else fmtShort(sleepRemainingMs),
                     fontSize = AppTheme.typography.badge.fontSize,
                     color = AppTheme.colors.warning,
                 )
-                Spacer(Modifier.width(2.dp))
+                Spacer(Modifier.width(AppTheme.dimens.spacing2))
             }
             IconButton(onClick = onMore, modifier = Modifier.size(46.dp)) {
                 Icon(Icons.Rounded.MoreVert, contentDescription = "更多", tint = TextHi)
@@ -742,7 +742,7 @@ private fun PlayerToolbar(
         animationSpec = spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessMediumLow),
         label = "favScale",
     )
-    Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing6, vertical = 2.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing6, vertical = AppTheme.dimens.spacing2)) {
         ToolItem(
             icon = { tint, size ->
                 Icon(
@@ -813,7 +813,7 @@ private fun ToolItem(
         verticalArrangement = Arrangement.Center,
     ) {
         icon(tint, 21.dp)
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(AppTheme.dimens.spacing3))
         Text(label, fontSize = AppTheme.typography.badge.fontSize, color = tint.copy(alpha = 0.82f), maxLines = 1)
     }
 }
@@ -827,7 +827,7 @@ private fun SeekRow(
     onPreview: (Long?) -> Unit,
     onSeek: (Long) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing18)) {
         SeekBar(
             positionMs = positionMs,
             bufferedMs = bufferedMs,
@@ -837,7 +837,7 @@ private fun SeekRow(
             onSeek = onSeek,
             modifier = Modifier.fillMaxWidth(),
         )
-        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing2)) {
             Text(fmtMs(positionMs), fontSize = AppTheme.typography.badge.fontSize, color = TextLo)
             Spacer(Modifier.weight(1f))
             Text(fmtMs(durationMs), fontSize = AppTheme.typography.badge.fontSize, color = TextLo)
@@ -947,25 +947,25 @@ private fun PlayerControls(
         Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacingXs).navigationBarsPadding(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onMode, modifier = Modifier.size(44.dp)) {
+        IconButton(onClick = onMode, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
             val icon = when (mode) {
                 PlayerController.Mode.LIST -> Icons.Rounded.Repeat
                 PlayerController.Mode.SINGLE -> Icons.Rounded.RepeatOne
                 PlayerController.Mode.SHUFFLE -> Icons.Rounded.Shuffle
             }
-            Icon(icon, contentDescription = "播放模式", tint = TextHi, modifier = Modifier.size(21.dp))
+            Icon(icon, contentDescription = "播放模式", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.iconLg))
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onPrev, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onPrev, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(32.dp))
         }
         PlayPauseButton(playing, loading, onToggle)
-        IconButton(onClick = onNext, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(32.dp))
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onQueue, modifier = Modifier.size(44.dp)) {
-            Icon(Icons.Rounded.QueueMusic, contentDescription = "播放列表", tint = TextHi, modifier = Modifier.size(22.dp))
+        IconButton(onClick = onQueue, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            Icon(Icons.Rounded.QueueMusic, contentDescription = "播放列表", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.iconLg))
         }
     }
 }
@@ -977,7 +977,7 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
     val scale by animateFloatAsState(if (pressed) 0.9f else 1f, tween(120), label = "playScale")
     Box(
         Modifier
-            .padding(horizontal = 10.dp)
+            .padding(horizontal = AppTheme.dimens.spacing10)
             .size(62.dp)
             .scale(scale)
             .clip(CircleShape)
@@ -992,7 +992,7 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
                 if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (playing) "暂停" else "播放",
                 tint = AppTheme.colors.textOnBrand,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(AppTheme.dimens.coverXs),
             )
         }
     }

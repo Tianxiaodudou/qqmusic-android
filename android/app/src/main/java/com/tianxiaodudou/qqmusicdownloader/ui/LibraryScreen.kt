@@ -179,7 +179,7 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                                 SquareCover(item.cover)
                                 Text(
                                     item.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f).padding(start = 10.dp),
+                                    modifier = Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10),
                                 )
                                 Text(item.count.toString() + " 首", fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -200,13 +200,13 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                     items(list) { item ->
                         Row(
                             Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(AppTheme.shapes.cardSmall)
                                 .combinedClickable(onClick = { opened = item }, onLongClick = { pendingDelete = item })
                                 .padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacing14),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             SquareCover(item.cover)
-                            Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                            Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
                                 Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = AppTheme.typography.title.fontSize)
                                 Text(
                                     item.count.toString() + " 首",

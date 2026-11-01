@@ -62,7 +62,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
     }
 
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.75f).padding(bottom = AppTheme.dimens.spacingSm)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing18, vertical = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
             Text("评论 · " + song.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             TextButton(onClick = { tab = 0 }) {
                 Text("热门", fontSize = AppTheme.typography.bodySmall.fontSize, color = if (tab == 0) AppTheme.colors.brand else AppTheme.colors.textSecondary)
@@ -72,7 +72,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
             }
         }
         if (toast.isNotEmpty()) {
-            Text(toast, style = AppTheme.typography.caption, color = AppTheme.colors.textSecondary, modifier = Modifier.padding(horizontal = 18.dp))
+            Text(toast, style = AppTheme.typography.caption, color = AppTheme.colors.textSecondary, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacing18))
         }
         val data = list
         if (data == null) {
@@ -84,8 +84,8 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
         } else {
             LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
                 items(data) { c ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = AppTheme.dimens.spacingSm)) {
-                        Box(Modifier.size(34.dp).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing18, vertical = AppTheme.dimens.spacingSm)) {
+                        Box(Modifier.size(AppTheme.dimens.coverXs).clip(CircleShape).background(AppTheme.colors.coverPlaceholder)) {
                             if (c.avatar.startsWith("http")) {
                                 AsyncImage(
                                     model = c.avatar,
@@ -95,7 +95,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
                                 )
                             }
                         }
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(AppTheme.dimens.spacing10))
                         Column(Modifier.weight(1f)) {
                             Text(c.nick, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textSecondary)
                             Text(c.content, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textPrimary)

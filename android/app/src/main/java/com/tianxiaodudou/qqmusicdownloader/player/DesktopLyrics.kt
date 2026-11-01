@@ -58,7 +58,8 @@ object DesktopLyrics {
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             android.graphics.PixelFormat.TRANSLUCENT,
         )
-        lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        lp.gravity = Gravity.TOP or Gravity.START
+        lp.x = prefs.getInt(K_X, 0)
         lp.y = prefs.getInt(K_Y, 240)
         v.attach(w, lp, prefs)
         runCatching { w.addView(v, lp) }.onFailure { return }
@@ -158,7 +159,11 @@ object DesktopLyrics {
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
-                    prefs?.edit()?.putInt("y", lp?.y ?: 0)?.apply()
+                    // 横向 + 纵向位置都记住，下次按同一位置出现
+                    prefs?.edit()
+                        ?.putInt("x", lp?.x ?: 0)
+                        ?.putInt("y", lp?.y ?: 0)
+                        ?.apply()
                     return true
                 }
             }

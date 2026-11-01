@@ -1,5 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppSpinner
+
 import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 
 import androidx.activity.compose.BackHandler
@@ -334,7 +336,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = onOpenSearch, modifier = Modifier.size(AppTheme.dimens.coverSm)) {
+                    AppIconButton(onClick = onOpenSearch, modifier = Modifier.size(AppTheme.dimens.coverSm)) {
                         Icon(
                             Icons.Rounded.Search,
                             contentDescription = "搜索",
@@ -377,12 +379,12 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back() }) { Text("返回") }
+                AppTextButton(onClick = { back() }) { Text("返回") }
                 Text("为你推荐", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
             }
             val fd = feed
             if (fd == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     for (g in fd) {
@@ -414,12 +416,12 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back(); albums = null }) { Text("返回") }
+                AppTextButton(onClick = { back(); albums = null }) { Text("返回") }
                 Text("新碟上架", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
             }
             val al = albums
             if (al == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (al.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无新碟", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -458,12 +460,12 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back() }) { Text("返回") }
+                AppTextButton(onClick = { back() }) { Text("返回") }
                 Text("推荐歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
             }
             val sl = songlists
             if (sl == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (sl.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无推荐歌单", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -504,12 +506,12 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back() }) { Text("返回") }
+                AppTextButton(onClick = { back() }) { Text("返回") }
                 Text("排行榜", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
             }
             val cs = charts
             if (cs == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (cs.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无榜单", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -544,12 +546,12 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back(); singers = null }) { Text("返回") }
+                AppTextButton(onClick = { back(); singers = null }) { Text("返回") }
                 Text("热门歌手", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
             }
             val sl = singers
             if (sl == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (sl.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无歌手", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -575,12 +577,12 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back(); hot = null }) { Text("返回") }
+                AppTextButton(onClick = { back(); hot = null }) { Text("返回") }
                 Text("热搜榜", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
             }
             val hk = hot
             if (hk == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (hk.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无热搜", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -622,7 +624,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = { back(); songs = null }) { Text("返回") }
+                AppTextButton(onClick = { back(); songs = null }) { Text("返回") }
                 Text(
                     title, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -630,7 +632,7 @@ fun HomeScreen(
             }
             val list = songs
             if (list == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(error.ifEmpty { "暂无歌曲" }, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -673,7 +675,7 @@ private fun SubTitle(text: String) {
 @Composable
 private fun LoadingRow() {
     Box(Modifier.fillMaxWidth().padding(AppTheme.dimens.pagePadding), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.padding(AppTheme.dimens.spacingXs))
+        AppSpinner(Modifier.padding(AppTheme.dimens.spacingXs))
     }
 }
 
@@ -700,7 +702,7 @@ private fun SongRow(song: MusicApi.Song, onClick: () -> Unit, onDl: () -> Unit) 
                 fontSize = AppTheme.typography.caption.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onDl) { Text("下载", fontSize = AppTheme.typography.bodySmall.fontSize) }
+        AppTextButton(onClick = onDl) { Text("下载", fontSize = AppTheme.typography.bodySmall.fontSize) }
     }
 }
 

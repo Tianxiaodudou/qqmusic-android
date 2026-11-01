@@ -1,5 +1,11 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppInput
+
+import com.tianxiaodudou.qqmusicdownloader.ui.AppSpinner
+
+import com.tianxiaodudou.qqmusicdownloader.ui.AppTextButton
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -164,7 +170,7 @@ fun SyncSheet(offsetMs: Int, onChange: (Int) -> Unit, onReset: () -> Unit) {
         }
         Spacer(Modifier.height(AppTheme.dimens.spacingMd))
         Text("仅对当前歌曲生效", fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
-        TextButton(onClick = { value = 0f; onReset() }) { Text("重置为 0", fontSize = AppTheme.typography.bodySmall.fontSize, color = Accent) }
+        AppTextButton(onClick = { value = 0f; onReset() }) { Text("重置为 0", fontSize = AppTheme.typography.bodySmall.fontSize, color = Accent) }
     }
 }
 
@@ -200,7 +206,7 @@ fun QueueSheet(
     var pendingDelete by remember { mutableStateOf<Int?>(null) }
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.62f).padding(bottom = AppTheme.dimens.spacingSm)) {
         SheetHeader("播放队列 · " + queue.size + " 首", trailing = {
-            TextButton(onClick = onClear) { Text("清空", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub) }
+            AppTextButton(onClick = onClear) { Text("清空", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub) }
         })
         if (queue.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
@@ -262,12 +268,12 @@ fun QueueSheet(
             title = { Text("从队列移除") },
             text = { Text(queue.getOrNull(i)?.name ?: "") },
             confirmButton = {
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     onRemove(i)
                     pendingDelete = null
                 }) { Text("移除") }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("取消") } },
+            dismissButton = { AppTextButton(onClick = { pendingDelete = null }) { Text("取消") } },
         )
     }
 }
@@ -416,7 +422,7 @@ fun SleepSheet(
             if (afterCurrent) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(AppTheme.dimens.iconMd))
         }
         if (sleepEndAt > 0 || afterCurrent) {
-            TextButton(onClick = onCancel, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacingMd)) {
+            AppTextButton(onClick = onCancel, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacingMd)) {
                 Text("关闭定时", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
             }
         }
@@ -443,7 +449,7 @@ fun StyleSheet(style: Settings.LyricStyle, onChange: (Settings.LyricStyle) -> Un
         }
         ToggleRow("显示翻译", style.showTrans) { onChange(style.copy(showTrans = it)) }
         ToggleRow("显示音译", style.showRoma) { onChange(style.copy(showRoma = it)) }
-        TextButton(onClick = onReset, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacingMd)) {
+        AppTextButton(onClick = onReset, modifier = Modifier.padding(horizontal = AppTheme.dimens.spacingMd)) {
             Text("重置为默认", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
         }
     }
@@ -536,7 +542,7 @@ fun SongInfoSheet(
             if (e.third.isNotEmpty()) InfoRow("收藏", e.third)
         }
         hasSheet?.let { InfoRow("曲谱", if (it) "有" else "无") }
-        TextButton(onClick = onClose) { Text("关闭", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub) }
+        AppTextButton(onClick = onClose) { Text("关闭", fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub) }
     }
 }
 
@@ -587,7 +593,7 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
                 Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing6),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                androidx.compose.material3.CircularProgressIndicator(
+                AppSpinner(
                     modifier = Modifier.size(AppTheme.dimens.iconSm),
                     strokeWidth = AppTheme.dimens.stroke2,
                     color = Accent,
@@ -600,7 +606,7 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
         if (data == null) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    androidx.compose.material3.CircularProgressIndicator(
+                    AppSpinner(
                         modifier = Modifier.size(AppTheme.dimens.iconLg),
                         strokeWidth = AppTheme.dimens.stroke2,
                         color = Accent,
@@ -638,17 +644,17 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
             onDismissRequest = { if (!busy) creating = false },
             title = { Text("新建歌单") },
             text = {
-                androidx.compose.material3.OutlinedTextField(
+                AppInput(
                     value = newName,
                     onValueChange = { newName = it },
                     singleLine = true,
-                    placeholder = { Text("歌单名称") },
+                    placeholder = "歌单名称",
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     val n = newName.trim()
-                    if (n.isEmpty() || busy) return@TextButton
+                    if (n.isEmpty() || busy) return@AppTextButton
                     busy = true
                     scope.launch {
                         val item = withContext(Dispatchers.IO) { runCatching { PlaylistApi.create(n) }.getOrNull() }
@@ -663,7 +669,7 @@ fun AddToSheet(song: MusicApi.Song, onDone: (String) -> Unit) {
                     }
                 }) { Text(if (busy) "处理中…" else "创建并加入") }
             },
-            dismissButton = { TextButton(onClick = { creating = false }) { Text("取消") } },
+            dismissButton = { AppTextButton(onClick = { creating = false }) { Text("取消") } },
         )
     }
 }

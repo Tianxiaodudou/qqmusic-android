@@ -1,5 +1,11 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppInput
+
+import com.tianxiaodudou.qqmusicdownloader.ui.AppSpinner
+
+import com.tianxiaodudou.qqmusicdownloader.ui.AppTextButton
+
 import androidx.compose.foundation.background
 import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -64,10 +70,10 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.75f).padding(bottom = AppTheme.dimens.spacingSm)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing18, vertical = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
             Text("评论 · " + song.name, fontSize = AppTheme.typography.title.fontSize, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            TextButton(onClick = { tab = 0 }) {
+            AppTextButton(onClick = { tab = 0 }) {
                 Text("热门", fontSize = AppTheme.typography.bodySmall.fontSize, color = if (tab == 0) AppTheme.colors.brand else AppTheme.colors.textSecondary)
             }
-            TextButton(onClick = { tab = 1 }) {
+            AppTextButton(onClick = { tab = 1 }) {
                 Text("最新", fontSize = AppTheme.typography.bodySmall.fontSize, color = if (tab == 1) AppTheme.colors.brand else AppTheme.colors.textSecondary)
             }
         }
@@ -76,7 +82,7 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
         }
         val data = list
         if (data == null) {
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { AppSpinner() }
         } else if (data.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Text("还没有评论", style = AppTheme.typography.bodySmall, color = AppTheme.colors.textSecondary)
@@ -115,17 +121,17 @@ fun CommentsSheet(song: MusicApi.Song, onClose: () -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacingXs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedTextField(
+            AppInput(
                 value = text,
                 onValueChange = { text = it },
                 singleLine = true,
-                placeholder = { Text("说点什么…", fontSize = AppTheme.typography.bodySmall.fontSize) },
+                placeholder = "说点什么…",
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(AppTheme.dimens.spacingSm))
-            TextButton(onClick = {
+            AppTextButton(onClick = {
                 val content = text.trim()
-                if (content.isEmpty() || sending) return@TextButton
+                if (content.isEmpty() || sending) return@AppTextButton
                 sending = true
                 scope.launch {
                     val ok = withContext(Dispatchers.IO) { runCatching { Extras.addComment(song.id, content) }.getOrDefault(false) }

@@ -62,7 +62,7 @@ internal fun DetailScaffold(title: String, onBack: () -> Unit, content: @Composa
     BackHandler { onBack() }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(AppTheme.dimens.topBarHeight), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
             }
             Text(title, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -122,12 +122,12 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
                 )
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm), horizontalArrangement = Arrangement.spacedBy(AppTheme.dimens.spacing10)) {
-                Button(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }, modifier = Modifier.weight(1f)) {
+                AppPrimaryButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }, modifier = Modifier.weight(1f)) {
                     Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
-                OutlinedButton(onClick = {
+                AppSecondaryButton(onClick = {
                     val id = d?.id ?: 0L
-                    if (id <= 0L) return@OutlinedButton
+                    if (id <= 0L) return@AppSecondaryButton
                     scope.launch {
                         faved = withContext(Dispatchers.IO) { Extras.favAlbum(id, !faved) }
                     }
@@ -137,7 +137,7 @@ fun AlbumScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) ->
             }
             val list = songs
             if (list == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else {
                 SongListView(
                     songs = list,
@@ -204,7 +204,7 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingMd, vertical = AppTheme.dimens.spacing6)) {
                 listOf("热门歌曲", "专辑", "相似歌手").forEachIndexed { i, t ->
-                    TextButton(onClick = { tab = i }) {
+                    AppTextButton(onClick = { tab = i }) {
                         Text(
                             t,
                             fontSize = AppTheme.typography.bodySmall.fontSize,
@@ -213,12 +213,12 @@ fun SingerScreen(mid: String, name: String, onPlay: (List<MusicApi.Song>, Int) -
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                if (tab == 0) TextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                if (tab == 0) AppTextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
             when (tab) {
                 0 -> {
                     val list = songs
-                    if (list == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    if (list == null) LoadingBox(Modifier.fillMaxSize())
                     else SongListView(list, Modifier.weight(1f), fixId = mid, onPlay = onPlay, onDownload = onDownload)
                 }
                 1 -> LazyColumn(Modifier.fillMaxSize()) {
@@ -277,8 +277,8 @@ fun PlaylistScreen(id: String, name: String, onPlay: (List<MusicApi.Song>, Int) 
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm), verticalAlignment = Alignment.CenterVertically) {
                 Text("共 " + (songs?.size ?: 0) + " 首", fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = {
-                    if (faved) return@TextButton
+                AppTextButton(onClick = {
+                    if (faved) return@AppTextButton
                     scope.launch {
                         val ok = withContext(Dispatchers.IO) {
                             runCatching { PlaylistApi.favPlaylist(id.toLongOrNull() ?: 0L) }.getOrDefault(false)
@@ -286,11 +286,11 @@ fun PlaylistScreen(id: String, name: String, onPlay: (List<MusicApi.Song>, Int) 
                         faved = ok
                     }
                 }) { Text(if (faved) "已收藏" else "收藏歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                TextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                AppTextButton(onClick = { songs?.let { if (it.isNotEmpty()) onPlay(it, 0) } }) { Text("播放全部", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
             val list = songs
             if (list == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else {
                 SongListView(list, Modifier.weight(1f), fixId = id, onPlay = onPlay, onDownload = onDownload)
             }
@@ -312,7 +312,7 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
     DetailScaffold(if (albums) "收藏的专辑" else "收藏的歌单", onBack = { Nav.pop() }) {
         if (albums) {
             val data = list
-            if (data == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            if (data == null) LoadingBox(Modifier.fillMaxSize())
             else if (data.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("暂无收藏", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             else LazyColumn(Modifier.fillMaxSize()) {
                 items(data) { a ->
@@ -339,7 +339,7 @@ fun FavLibraryScreen(albums: Boolean, onPlay: (List<MusicApi.Song>, Int) -> Unit
             }
         } else {
             val data = playlists
-            if (data == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            if (data == null) LoadingBox(Modifier.fillMaxSize())
             else if (data.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("暂无收藏", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             else LazyColumn(Modifier.fillMaxSize()) {
                 items(data) { p ->

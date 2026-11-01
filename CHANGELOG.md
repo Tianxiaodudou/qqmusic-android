@@ -1,5 +1,17 @@
 # 更新日志
 
+## v2.21.0 (2026-11-02)
+
+### 主题系统（第七步：原生控件全部收口到组件层）
+- 页面里的 Material 原生 Button / TextButton / OutlinedButton / IconButton / Switch / OutlinedTextField /
+  HorizontalDivider / CircularProgressIndicator 全部替换为 App* 组件（`grep` 统计：ui/Components.kt 之外均为 0）
+- 组件签名与 Material 保持一致（onClick/modifier/enabled/content），页面只换函数名，不改调用结构
+- 新增 AppSpinner（内联小转圈）与 AppInput 的 label/placeholder 支持；AppDivider 支持自定义颜色与粗细
+- 歌单选择弹层改用 AppSheet 统一容器
+
+### 其它收尾
+- 桌面歌词记住横向 + 纵向位置（之前只存纵向）
+- MediaSession 显式实现 Callback（接受外部控制器连接、放行播放器命令）
 ## v2.20.0 (2026-11-02)
 
 ### 主题系统（第六步：组件层补齐）

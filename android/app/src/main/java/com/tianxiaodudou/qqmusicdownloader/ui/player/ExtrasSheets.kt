@@ -1,5 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppSpinner
+
 import androidx.compose.foundation.clickable
 import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
 import androidx.compose.foundation.layout.Box
@@ -42,7 +44,7 @@ private val SheetDim: Color
 
 @Composable
 private fun SheetLoading() {
-    Box(Modifier.fillMaxWidth().fillMaxHeight(0.5f), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    Box(Modifier.fillMaxWidth().fillMaxHeight(0.5f), contentAlignment = Alignment.Center) { AppSpinner() }
 }
 
 @Composable

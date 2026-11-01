@@ -96,7 +96,7 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
             title = { Text("删除歌单") },
             text = { Text("删除「" + item.name + "」？歌单里的歌不会从曲库删除。") },
             confirmButton = {
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     pendingDelete = null
                     scope.launch {
                         val ok = withContext(Dispatchers.IO) {
@@ -110,7 +110,7 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                     }
                 }) { Text("删除") }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("取消") } },
+            dismissButton = { AppTextButton(onClick = { pendingDelete = null }) { Text("取消") } },
         )
     }
 
@@ -119,17 +119,17 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                 onDismissRequest = { if (!busy) creating = false },
                 title = { Text("新建歌单") },
                 text = {
-                    androidx.compose.material3.OutlinedTextField(
+                    AppInput(
                         value = newName,
                         onValueChange = { newName = it },
                         singleLine = true,
-                        placeholder = { Text("歌单名称") },
+                        placeholder = "歌单名称",
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = {
+                    AppTextButton(onClick = {
                         val n = newName.trim()
-                        if (n.isEmpty() || busy) return@TextButton
+                        if (n.isEmpty() || busy) return@AppTextButton
                         busy = true
                         scope.launch {
                             val item = withContext(Dispatchers.IO) { runCatching { PlaylistApi.create(n) }.getOrNull() }
@@ -144,7 +144,7 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                         }
                     }) { Text(if (busy) "处理中…" else "创建") }
                 },
-                dismissButton = { TextButton(onClick = { creating = false }) { Text("取消") } },
+                dismissButton = { AppTextButton(onClick = { creating = false }) { Text("取消") } },
             )
         }
 
@@ -157,8 +157,8 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { showFav = !showFav }) { Text(if (showFav) "我的歌单" else "收藏的歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                if (!showFav) TextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                AppTextButton(onClick = { showFav = !showFav }) { Text(if (showFav) "我的歌单" else "收藏的歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                if (!showFav) AppTextButton(onClick = { newName = ""; creating = true }) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
             if (showFav) {
                 val favList = favs
@@ -218,12 +218,12 @@ fun LibraryScreen(onPlay: (List<MusicApi.Song>, Int) -> Unit, onDownload: (Music
     } else {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing6), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { opened = null }) { Text("返回") }
+                AppTextButton(onClick = { opened = null }) { Text("返回") }
                 Text(current.name, fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val list = songs
             if (list == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else {
                 SongListView(
                     songs = list,

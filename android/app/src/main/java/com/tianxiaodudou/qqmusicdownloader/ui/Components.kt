@@ -1,5 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppSpinner
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -220,8 +222,12 @@ fun AppChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modi
 
 /** 分割线。 */
 @Composable
-fun AppDivider(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(AppTheme.dimens.divider).background(AppTheme.colors.line))
+fun AppDivider(
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color? = null,
+    thickness: androidx.compose.ui.unit.Dp = AppTheme.dimens.divider,
+) {
+    Box(modifier.fillMaxWidth().height(thickness).background(color ?: AppTheme.colors.line))
 }
 
 /** 统一的加载态：转圈 + 可选说明文字。 */
@@ -257,13 +263,13 @@ fun EmptyState(text: String, modifier: Modifier = Modifier, action: (@Composable
 }
 
 
-/** 主按钮：品牌色底 + 深色文字。 */
+/** 主按钮（与 Material Button 同签名，页面只换函数名）。 */
 @Composable
 fun AppPrimaryButton(
-    text: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    onClick: () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
 ) {
     androidx.compose.material3.Button(
         onClick = onClick,
@@ -276,16 +282,17 @@ fun AppPrimaryButton(
             disabledContainerColor = AppTheme.colors.surface3,
             disabledContentColor = AppTheme.colors.textDisabled,
         ),
-    ) { Text(text, style = AppTheme.typography.button) }
+        content = content,
+    )
 }
 
-/** 次按钮：描边。 */
+/** 次按钮（描边）。 */
 @Composable
 fun AppSecondaryButton(
-    text: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    onClick: () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
 ) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick,
@@ -295,58 +302,61 @@ fun AppSecondaryButton(
         border = AppTheme.strokes.normal,
         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
             contentColor = AppTheme.colors.textPrimary,
+            disabledContentColor = AppTheme.colors.textDisabled,
         ),
-    ) { Text(text, style = AppTheme.typography.button) }
+        content = content,
+    )
 }
 
 /** 文字按钮。 */
 @Composable
 fun AppTextButton(
-    text: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    onClick: () -> Unit,
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(
+        horizontal = AppTheme.dimens.spacing10,
+        vertical = AppTheme.dimens.spacingXs,
+    ),
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
 ) {
     androidx.compose.material3.TextButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            horizontal = AppTheme.dimens.spacing10,
-            vertical = AppTheme.dimens.spacingXs,
-        ),
-    ) {
-        Text(
-            text,
-            style = AppTheme.typography.button,
-            color = if (enabled) AppTheme.colors.textPrimary else AppTheme.colors.textDisabled,
-        )
-    }
+        contentPadding = contentPadding,
+        content = content,
+    )
 }
 
-/** 图标按钮（固定热区）。 */
+/** 图标按钮：固定 44dp 热区。 */
 @Composable
 fun AppIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    modifier: Modifier = Modifier,
-    tint: androidx.compose.ui.graphics.Color? = null,
-    enabled: Boolean = true,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
 ) {
     androidx.compose.material3.IconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.size(AppTheme.dimens.touchTarget),
-    ) {
-        androidx.compose.material3.Icon(
-            icon,
-            contentDescription = contentDescription,
-            tint = tint ?: AppTheme.colors.textPrimary,
-            modifier = Modifier.size(AppTheme.dimens.iconLg),
-        )
-    }
+        content = content,
+    )
 }
+
+/** 显式带文字的快捷重载（内容只是纯文本时更省事）。 */
+@Composable
+fun AppPrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) =
+    AppPrimaryButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+        Text(text, style = AppTheme.typography.button)
+    }
+
+@Composable
+fun AppTextButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) =
+    AppTextButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+        Text(text, style = AppTheme.typography.button)
+    }
 
 /** 开关。 */
 @Composable
@@ -380,6 +390,7 @@ fun AppInput(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholder: String = "",
+    label: String = "",
     singleLine: Boolean = true,
 ) {
     androidx.compose.material3.OutlinedTextField(
@@ -389,11 +400,26 @@ fun AppInput(
         singleLine = singleLine,
         shape = AppTheme.shapes.input,
         textStyle = AppTheme.typography.body,
-        placeholder = {
-            if (placeholder.isNotEmpty()) {
-                Text(placeholder, style = AppTheme.typography.body, color = AppTheme.colors.textSecondary)
-            }
+        label = if (label.isEmpty()) null else {
+            { Text(label, style = AppTheme.typography.caption, color = AppTheme.colors.textSecondary) }
         },
+        placeholder = if (placeholder.isEmpty()) null else {
+            { Text(placeholder, style = AppTheme.typography.body, color = AppTheme.colors.textSecondary) }
+        },
+    )
+}
+
+/** 圆形加载指示器（小尺寸内联用）。 */
+@Composable
+fun AppSpinner(
+    modifier: Modifier = Modifier,
+    strokeWidth: androidx.compose.ui.unit.Dp = AppTheme.dimens.stroke2,
+    color: androidx.compose.ui.graphics.Color? = null,
+) {
+    androidx.compose.material3.CircularProgressIndicator(
+        modifier = modifier,
+        strokeWidth = strokeWidth,
+        color = color ?: AppTheme.colors.brand,
     )
 }
 

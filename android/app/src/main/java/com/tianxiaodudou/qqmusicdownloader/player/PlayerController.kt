@@ -208,6 +208,7 @@ object PlayerController {
             ctx.startService(android.content.Intent(ctx, PlaybackService::class.java))
             mediaSession = androidx.media3.session.MediaSession.Builder(ctx, p)
                 .setSessionActivity(sessionActivity)
+                .setCallback(sessionCallback)
                 .build()
         }
 
@@ -500,6 +501,24 @@ object PlayerController {
      * 带元数据的 MediaItem：通知栏、锁屏、蓝牙车机都从这里取标题/歌手/封面/时长。
      * 开启「蓝牙歌词」时 Title 换成当前歌词行（非标准协议，车机兼容性不保证）。
      */
+    /**
+     * 系统媒体控制回调：播放/暂停/上下首/seek 由播放器原生转发；
+     * 这里显式接受外部控制器（车机/手表/耳机）连接，并原样放行允许的命令。
+     */
+    private val sessionCallback = object : androidx.media3.session.MediaSession.Callback {
+        override fun onConnect(
+            session: androidx.media3.session.MediaSession,
+            controller: androidx.media3.session.MediaSession.ControllerInfo,
+        ): androidx.media3.session.MediaSession.ConnectionResult =
+            androidx.media3.session.MediaSession.ConnectionResult.AcceptedResultBuilder(session).build()
+
+        override fun onPlayerCommandRequest(
+            session: androidx.media3.session.MediaSession,
+            controller: androidx.media3.session.MediaSession.ControllerInfo,
+            @androidx.media3.common.Player.Command command: Int,
+        ): Int = command
+    }
+
     private fun mediaItemOf(song: MusicApi.Song, uri: Uri): MediaItem {
         val artwork = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 500)
         val btOn = appContext?.let { Settings.btLyrics(it) } == true

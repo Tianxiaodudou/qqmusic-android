@@ -49,7 +49,7 @@ fun SocialScreen() {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacingSm)) {
                 listOf("关注歌手", "关注用户", "粉丝", "好友").forEachIndexed { i, t ->
-                    TextButton(onClick = { tab = i }) {
+                    AppTextButton(onClick = { tab = i }) {
                         Text(
                             t,
                             fontSize = AppTheme.typography.bodySmall.fontSize,
@@ -60,7 +60,7 @@ fun SocialScreen() {
             }
             val data = list
             if (data == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                LoadingBox(Modifier.fillMaxSize())
             } else if (data.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("这里还没有人", color = MaterialTheme.colorScheme.onSurfaceVariant)

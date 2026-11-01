@@ -1,5 +1,8 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppTextButton
+import com.tianxiaodudou.qqmusicdownloader.ui.AppIconButton
+
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -401,7 +404,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                             color = AppTheme.colors.textDisabled,
                             modifier = Modifier.align(Alignment.Center),
                         )
-                        IconButton(
+                        AppIconButton(
                             onClick = { sheet = null },
                             modifier = Modifier.align(Alignment.CenterEnd).padding(end = AppTheme.dimens.spacing6).size(AppTheme.dimens.coverSm),
                         ) {
@@ -594,18 +597,18 @@ fun PlayerScreen(onExit: () -> Unit) {
                     Text(line.text)
                     Spacer(Modifier.height(AppTheme.dimens.spacingSm))
                     Row {
-                        TextButton(onClick = {
+                        AppTextButton(onClick = {
                             clipboard.setText(AnnotatedString(line.text))
                             shareLine = null
                             toast = "已复制这句"
                         }) { Text("复制", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                        TextButton(onClick = {
+                        AppTextButton(onClick = {
                             val text = line.text + "\n—— " + song.name + " · " + song.singers
                             val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
                             context.startActivity(Intent.createChooser(i, "分享歌词"))
                             shareLine = null
                         }) { Text("分享", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                        TextButton(onClick = {
+                        AppTextButton(onClick = {
                             val target = line
                             shareLine = null
                             dictLine = target
@@ -613,7 +616,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { shareLine = null }) { Text("关闭") } },
+            confirmButton = { AppTextButton(onClick = { shareLine = null }) { Text("关闭") } },
         )
     }
 
@@ -636,7 +639,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { dictLine = null }) { Text("好") } },
+            confirmButton = { AppTextButton(onClick = { dictLine = null }) { Text("好") } },
         )
     }
 
@@ -655,7 +658,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = { showAbout = false }) { Text("好") } },
+            confirmButton = { AppTextButton(onClick = { showAbout = false }) { Text("好") } },
         )
     }
 }
@@ -674,7 +677,7 @@ private fun PlayerTopBar(
         Modifier.fillMaxWidth().height(AppTheme.dimens.spacing56).padding(horizontal = AppTheme.dimens.spacing2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.iconButton)) {
+        AppIconButton(onClick = onBack, modifier = Modifier.size(AppTheme.dimens.iconButton)) {
             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "收起", tint = TextHi)
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -719,7 +722,7 @@ private fun PlayerTopBar(
                 )
                 Spacer(Modifier.width(AppTheme.dimens.spacing2))
             }
-            IconButton(onClick = onMore, modifier = Modifier.size(AppTheme.dimens.iconButton)) {
+            AppIconButton(onClick = onMore, modifier = Modifier.size(AppTheme.dimens.iconButton)) {
                 Icon(Icons.Rounded.MoreVert, contentDescription = "更多", tint = TextHi)
             }
         }
@@ -949,7 +952,7 @@ private fun PlayerControls(
         Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing14, vertical = AppTheme.dimens.spacingXs).navigationBarsPadding(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onMode, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+        AppIconButton(onClick = onMode, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
             val icon = when (mode) {
                 PlayerController.Mode.LIST -> Icons.Rounded.Repeat
                 PlayerController.Mode.SINGLE -> Icons.Rounded.RepeatOne
@@ -958,15 +961,15 @@ private fun PlayerControls(
             Icon(icon, contentDescription = "播放模式", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.iconLg))
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onPrev, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
+        AppIconButton(onClick = onPrev, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         PlayPauseButton(playing, loading, onToggle)
-        IconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
+        AppIconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onQueue, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+        AppIconButton(onClick = onQueue, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
             Icon(Icons.Rounded.QueueMusic, contentDescription = "播放列表", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.iconLg))
         }
     }

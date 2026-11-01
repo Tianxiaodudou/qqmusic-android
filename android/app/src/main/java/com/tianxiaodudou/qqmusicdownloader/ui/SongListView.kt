@@ -1,5 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppSpinner
+
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -170,15 +172,15 @@ fun SongListView(
             if (selecting) {
                 Text("已选 " + selected.size + " 首", fontSize = AppTheme.typography.bodySmall.fontSize, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
-                TextButton(
+                AppTextButton(
                     onClick = { selected = selectable.map { it.mid }.toSet() },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6),
                 ) { Text("全选", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                TextButton(
+                AppTextButton(
                     onClick = { selected = selectable.map { it.mid }.toSet() - selected },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6),
                 ) { Text("反选", fontSize = AppTheme.typography.bodySmall.fontSize) }
-                TextButton(
+                AppTextButton(
                     onClick = { finishSelection() },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6),
                 ) { Text("取消", fontSize = AppTheme.typography.bodySmall.fontSize) }
@@ -190,8 +192,8 @@ fun SongListView(
                 )
                 Spacer(Modifier.weight(1f))
                 if (playlistId != null) {
-                    TextButton(onClick = {
-                        if (faved) return@TextButton
+                    AppTextButton(onClick = {
+                        if (faved) return@AppTextButton
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) { runCatching { PlaylistApi.favPlaylist(playlistId) }.getOrDefault(false) }
                             faved = ok
@@ -201,7 +203,7 @@ fun SongListView(
                         Text(if (faved) "已收藏" else "收藏歌单", fontSize = AppTheme.typography.bodySmall.fontSize)
                     }
                 }
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     if (selectable.isEmpty()) {
                         toast("没有可加入的歌曲")
                     } else {
@@ -211,7 +213,7 @@ fun SongListView(
                 }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6)) {
                     Text("全部入队", fontSize = AppTheme.typography.bodySmall.fontSize)
                 }
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     selecting = true
                     selected = emptySet()
                 }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppTheme.dimens.spacing6)) {
@@ -380,7 +382,7 @@ fun SongListView(
                     item {
                         Box(Modifier.fillMaxWidth().padding(AppTheme.dimens.spacing14), contentAlignment = Alignment.Center) {
                             if (loadingMore) {
-                                androidx.compose.material3.CircularProgressIndicator(
+                                AppSpinner(
                                     modifier = Modifier.size(AppTheme.dimens.iconMd),
                                     strokeWidth = AppTheme.dimens.stroke2,
                                 )
@@ -430,13 +432,7 @@ fun SongListView(
     }
 
     if (picker) {
-        val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { picker = false },
-            sheetState = state,
-            containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = { BottomSheetDefaults.DragHandle() },
-        ) {
+        AppSheet(onDismiss = { picker = false }) {
             PlaylistPickerSheet(
                 onDismiss = { picker = false },
                 onNew = {
@@ -470,17 +466,17 @@ fun SongListView(
             onDismissRequest = { if (!busy) createDialog = false },
             title = { Text("新建歌单") },
             text = {
-                OutlinedTextField(
+                AppInput(
                     value = name,
                     onValueChange = { name = it },
                     singleLine = true,
-                    placeholder = { Text("歌单名称") },
+                    placeholder = "歌单名称",
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     val n = name.trim()
-                    if (n.isEmpty() || busy) return@TextButton
+                    if (n.isEmpty() || busy) return@AppTextButton
                     busy = true
                     scope.launch {
                         val item = withContext(Dispatchers.IO) { runCatching { PlaylistApi.create(n) }.getOrNull() }
@@ -501,7 +497,7 @@ fun SongListView(
                     }
                 }) { Text(if (busy) "处理中…" else "创建并加入") }
             },
-            dismissButton = { TextButton(onClick = { createDialog = false }) { Text("取消") } },
+            dismissButton = { AppTextButton(onClick = { createDialog = false }) { Text("取消") } },
         )
     }
 }
@@ -520,11 +516,11 @@ private fun PlaylistPickerSheet(
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.6f).padding(bottom = AppTheme.dimens.spacingMd)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing20, vertical = AppTheme.dimens.spacingSm), verticalAlignment = Alignment.CenterVertically) {
             Text("收藏到歌单", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            TextButton(onClick = onNew) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
+            AppTextButton(onClick = onNew) { Text("新建歌单", fontSize = AppTheme.typography.bodySmall.fontSize) }
         }
         val data = lists
         if (data == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            LoadingBox(Modifier.fillMaxSize())
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(data) { item ->

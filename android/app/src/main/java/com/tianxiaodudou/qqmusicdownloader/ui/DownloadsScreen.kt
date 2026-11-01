@@ -75,7 +75,7 @@ fun DownloadsScreen() {
                     Row(Modifier.fillMaxWidth().padding(AppTheme.dimens.pagePadding), verticalAlignment = Alignment.CenterVertically) {
                         Text("下载历史", fontSize = AppTheme.typography.bodySmall.fontSize, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { History.clear(context); refresh.intValue += 1 }) { Text("清空") }
+                        AppTextButton(onClick = { History.clear(context); refresh.intValue += 1 }) { Text("清空") }
                     }
                 }
                 items(history) { h ->

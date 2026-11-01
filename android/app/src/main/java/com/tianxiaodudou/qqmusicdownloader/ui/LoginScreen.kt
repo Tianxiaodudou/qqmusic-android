@@ -143,7 +143,7 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
         Spacer(Modifier.height(AppTheme.dimens.spacingMd))
         Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(AppTheme.dimens.spacingMd))
-        OutlinedButton(onClick = { reload += 1 }) { Text("重新获取二维码") }
+        AppSecondaryButton(onClick = { reload += 1 }) { Text("重新获取二维码") }
     }
 }
 
@@ -156,15 +156,15 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
     val scope = rememberCoroutineScope()
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
+        AppInput(
             value = phone,
             onValueChange = { phone = it.filter { c -> c.isDigit() }.take(11) },
             singleLine = true,
-            label = { Text("手机号") },
+            label = "手机号",
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(AppTheme.dimens.spacing10))
-        OutlinedButton(
+        AppSecondaryButton(
             enabled = !busy && phone.length >= 11,
             onClick = {
                 busy = true
@@ -175,15 +175,15 @@ private fun SmsBlock(onLoggedIn: (Session) -> Unit) {
             },
         ) { Text("发送验证码") }
         Spacer(Modifier.height(AppTheme.dimens.spacing10))
-        OutlinedTextField(
+        AppInput(
             value = code,
             onValueChange = { code = it.filter { c -> c.isDigit() }.take(6) },
             singleLine = true,
-            label = { Text("验证码") },
+            label = "验证码",
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(AppTheme.dimens.spacing14))
-        Button(
+        AppPrimaryButton(
             enabled = !busy && phone.length >= 11 && code.length >= 4,
             onClick = {
                 busy = true

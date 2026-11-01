@@ -1,5 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.ui.player
 
+import com.tianxiaodudou.qqmusicdownloader.ui.AppTextButton
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -160,7 +162,7 @@ fun LyricsPane(
                 Spacer(Modifier.height(AppTheme.dimens.spacing18))
                 Text("暂无歌词", style = AppTheme.typography.title, color = AppTheme.colors.textPrimary)
                 Spacer(Modifier.height(AppTheme.dimens.spacing6))
-                TextButton(onClick = onLoadLyric) { Text("手动加载歌词", fontSize = AppTheme.typography.bodySmall.fontSize) }
+                AppTextButton(onClick = onLoadLyric) { Text("手动加载歌词", fontSize = AppTheme.typography.bodySmall.fontSize) }
             }
         } else {
             LazyColumn(

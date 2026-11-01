@@ -253,7 +253,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
                     Row(Modifier.fillMaxWidth().height(AppTheme.dimens.topBarHeight).padding(horizontal = AppTheme.dimens.spacingXs), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { showDownloads = false }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+                        AppIconButton(onClick = { showDownloads = false }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "返回")
                         }
                         Text("下载管理", fontSize = AppTheme.typography.sectionTitle.fontSize, fontWeight = FontWeight.SemiBold)
@@ -317,14 +317,14 @@ private fun MiniPlayer(onOpen: () -> Unit) {
                     color = AppTheme.colors.textSecondary,
                 )
             }
-            IconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(
                     if (PlayerController.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "播放/暂停",
                     tint = AppTheme.colors.textPrimary,
                 )
             }
-            IconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = AppTheme.colors.textPrimary)
             }
         }
@@ -576,7 +576,7 @@ private fun MinePage(
             modifier = Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding),
         )
         Spacer(Modifier.height(AppTheme.dimens.spacing10))
-        OutlinedButton(
+        AppSecondaryButton(
             onClick = {
                 scope.launch { withContext(Dispatchers.IO) { runCatching { Extras.logout() } } }
                 onLogout()
@@ -617,7 +617,7 @@ private fun MinePage(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showPaid = false }) { Text("关闭") } },
+            confirmButton = { AppTextButton(onClick = { showPaid = false }) { Text("关闭") } },
         )
     }
 
@@ -636,7 +636,7 @@ private fun MinePage(
                     )
                 }
             },
-            confirmButton = { TextButton(onClick = { showAbout = false }) { Text("好") } },
+            confirmButton = { AppTextButton(onClick = { showAbout = false }) { Text("好") } },
         )
     }
 
@@ -667,14 +667,14 @@ private fun MinePage(
             },
             confirmButton = {
                 if (downloading) {
-                    TextButton(onClick = {}, enabled = false) { Text("下载中…") }
+                    AppTextButton(onClick = {}, enabled = false) { Text("下载中…") }
                 } else {
-                    TextButton(onClick = { startDownload(rel) }) { Text("立即更新") }
+                    AppTextButton(onClick = { startDownload(rel) }) { Text("立即更新") }
                 }
             },
             dismissButton = {
                 if (!downloading) {
-                    TextButton(onClick = {
+                    AppTextButton(onClick = {
                         update = null
                         com.tianxiaodudou.qqmusicdownloader.ui.player.openUrl(
                             context,
@@ -697,7 +697,7 @@ private fun MinePage(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                AppTextButton(onClick = {
                     com.tianxiaodudou.qqmusicdownloader.ui.player.openUrl(
                         context,
                         "https://github.com/Tianxiaodudou/qqmusic-android/releases/latest",
@@ -705,7 +705,7 @@ private fun MinePage(
                     updateError = ""
                 }) { Text("打开浏览器") }
             },
-            dismissButton = { TextButton(onClick = { updateError = "" }) { Text("关闭") } },
+            dismissButton = { AppTextButton(onClick = { updateError = "" }) { Text("关闭") } },
         )
     }
 }
@@ -741,5 +741,5 @@ private fun MineRow(title: String, subtitle: String, divider: Boolean = true, on
         }
         Text("›", style = AppTheme.typography.title, color = AppTheme.colors.textDisabled)
     }
-    if (divider) HorizontalDivider(color = AppTheme.colors.line, thickness = AppTheme.dimens.hairline)
+    if (divider) AppDivider(color = AppTheme.colors.line, thickness = AppTheme.dimens.hairline)
 }

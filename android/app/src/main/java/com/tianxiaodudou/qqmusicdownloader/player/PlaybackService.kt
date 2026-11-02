@@ -15,6 +15,8 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // 规范做法：会话在服务里创建、由服务持有，onGetSession 直接返回它
+        PlayerController.ensureSession()
         // 服务活着（播放中）就按设置维持桌面歌词悬浮窗
         runCatching {
             if (com.tianxiaodudou.qqmusicdownloader.net.Settings.desktopLyrics(this)) {

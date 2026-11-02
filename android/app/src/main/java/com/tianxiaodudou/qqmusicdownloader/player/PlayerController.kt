@@ -203,44 +203,10 @@ object PlayerController {
         // 歌词运行时（蓝牙歌词 / 桌面歌词都要用）
         runCatching { LyricsRuntime.start() }
 
-        // 系统接管：通知栏 / 锁屏 / 蓝牙 / 耳机按键
-        runCatching {
-            val sessionActivity = android.app.PendingIntent.getActivity(
-                ctx,
-                0,
-                android.content.Intent(ctx, com.tianxiaodudou.qqmusicdownloader.MainActivity::class.java)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
-            )
-            // 先把服务拉起来，再建会话：MediaSessionService.onGetSession 直接返回这个实例
-            ctx.startService(android.content.Intent(ctx, PlaybackService::class.java))
-            val sessionPlayer = QueuePlayer(
-                player = p,
-                onNext = { next() },
-                onPrevious = { prev() },
-                hasNext = { queue.size > 1 },
-                hasPrevious = { queue.size > 1 },
-            )
-            val nextCmd = androidx.media3.session.SessionCommand("qqmusic.ACTION_NEXT", android.os.Bundle.EMPTY)
-            val prevCmd = androidx.media3.session.SessionCommand("qqmusic.ACTION_PREV", android.os.Bundle.EMPTY)
-            val customButtons = listOf(
-                androidx.media3.session.CommandButton.Builder()
-                    .setSessionCommand(prevCmd)
-                    .setDisplayName("上一首")
-                    .setIconResId(android.R.drawable.ic_media_previous)
-                    .build(),
-                androidx.media3.session.CommandButton.Builder()
-                    .setSessionCommand(nextCmd)
-                    .setDisplayName("下一首")
-                    .setIconResId(android.R.drawable.ic_media_next)
-                    .build(),
-            )
-            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, sessionPlayer)
-                .setSessionActivity(sessionActivity)
-                .setCallback(sessionCallback)
-                .setCustomLayout(customButtons)
-                .build()
-        }
+        // 系统接管：播放器留在应用内（队列在这里），会话由 PlaybackService 创建并持有，
+        // 符合 Media3 的 MediaSessionService 生命周期（服务 onCreate 建会话，onGetSession 返回它）
+        runCatching { ctx.startService(android.content.Intent(ctx, PlaybackService::class.java)) }
+        ensureSession()
 
         LyricsRuntime.onLineChanged = { line ->
             val ctx2 = appContext
@@ -303,8 +269,10 @@ object PlayerController {
 
     fun play(list: List<MusicApi.Song>, at: Int) {
         if (at !in list.indices) return
+        val grew = queue.size != list.size
         queue = list
         index = at
+        if (grew) runCatching { refreshSession() }
         load(list[at])
     }
 
@@ -322,6 +290,7 @@ object PlayerController {
         if (add.isEmpty()) return
         val startEmpty = queue.isEmpty()
         queue = queue + add
+        runCatching { refreshSession() }
         if (startEmpty) {
             index = 0
             load(queue[0])
@@ -421,6 +390,43 @@ object PlayerController {
     }
 
     /** 换音质：保留当前进度与播放状态重新解析。 */
+    /** 由 PlaybackService 在 onCreate 里调用：用服务上下文建 MediaSession 并交给系统。 */
+    fun ensureSession() {
+        val ctx = appContext ?: return
+        val player = exo ?: return
+        if (mediaSession != null) return
+        runCatching {
+            val sessionActivity = android.app.PendingIntent.getActivity(
+                ctx,
+                0,
+                android.content.Intent(ctx, com.tianxiaodudou.qqmusicdownloader.MainActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+            val sessionPlayer = QueuePlayer(
+                player = player,
+                onNext = { next() },
+                onPrevious = { prev() },
+                hasNext = { queue.size > 1 },
+                hasPrevious = { queue.size > 1 },
+            )
+            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, sessionPlayer)
+                .setSessionActivity(sessionActivity)
+                .build()
+        }
+    }
+
+    /**
+     * 队列长度变化会改变「上一首/下一首」命令是否可用；MediaSession 缓存的是构建时的命令，
+     * 所以队列变化后重建一次会话，通知栏/锁屏/蓝牙的按钮才会跟着出现。
+     */
+    fun refreshSession() {
+        val svc = PlaybackService.instance
+        runCatching { mediaSession?.release() }
+        mediaSession = null
+        ensureSession()
+    }
+
     /** 元数据类设置（蓝牙歌词开关）变更后，立刻刷新当前 MediaItem 的标题。 */
     fun refreshMetadata() {
         val pl = exo ?: return
@@ -531,38 +537,7 @@ object PlayerController {
      * 带元数据的 MediaItem：通知栏、锁屏、蓝牙车机都从这里取标题/歌手/封面/时长。
      * 开启「蓝牙歌词」时 Title 换成当前歌词行（非标准协议，车机兼容性不保证）。
      */
-    /**
-     * 系统媒体控制回调：播放/暂停/上下首/seek 由播放器原生转发；
-     * 这里显式接受外部控制器（车机/手表/耳机）连接，并原样放行允许的命令。
-     */
-    private val sessionCallback = object : androidx.media3.session.MediaSession.Callback {
-        override fun onConnect(
-            session: androidx.media3.session.MediaSession,
-            controller: androidx.media3.session.MediaSession.ControllerInfo,
-        ): androidx.media3.session.MediaSession.ConnectionResult =
-            androidx.media3.session.MediaSession.ConnectionResult.AcceptedResultBuilder(session).build()
 
-        override fun onPlayerCommandRequest(
-            session: androidx.media3.session.MediaSession,
-            controller: androidx.media3.session.MediaSession.ControllerInfo,
-            @androidx.media3.common.Player.Command command: Int,
-        ): Int = command
-
-        override fun onCustomCommand(
-            session: androidx.media3.session.MediaSession,
-            controller: androidx.media3.session.MediaSession.ControllerInfo,
-            customCommand: androidx.media3.session.SessionCommand,
-            args: android.os.Bundle,
-        ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-            when (customCommand.customAction) {
-                "qqmusic.ACTION_NEXT" -> next()
-                "qqmusic.ACTION_PREV" -> prev()
-            }
-            return com.google.common.util.concurrent.Futures.immediateFuture(
-                androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS),
-            )
-        }
-    }
 
     private fun mediaItemOf(song: MusicApi.Song, uri: Uri): MediaItem {
         val artwork = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 500)

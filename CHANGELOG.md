@@ -1,5 +1,18 @@
 # 更新日志
 
+## v2.26.0 (2026-11-02)
+
+### 修复：通知栏/锁屏按钮缺失且无响应
+- **会话改由服务创建**：MediaSessionService 在 onCreate 里创建并持有 MediaSession（之前是在应用侧建好再交给服务），
+  onGetSession 直接返回它，符合 Media3 的生命周期约定
+- **去掉自定义 Callback**：默认回调即可接受一切控制器与命令，避免我们自己的 onConnect/onPlayerCommandRequest 把命令挡掉
+- **队列变化后重建会话**：MediaSession 缓存的是构建时的可用命令，队列从 1 首变成 20 首后不会自动多出「上一首/下一首」。
+  现在 play()/enqueue() 改变队列长度时重建一次会话，命令与按钮跟着刷新
+
+### 说明（关于「按不按谷歌规范」）
+- 目前是 Media3 官方组件：MediaSessionService + MediaSession + MediaController
+- 仍有一处结构性偏差：ExoPlayer 实例由应用内单例持有（因为播放队列、音质解析、缓存都在那一层），服务只承载会话。
+  官方范例是服务自己 new ExoPlayer；彻底对齐需要把播放器、队列、音质解析整体迁进服务，代价较大，我打算下一版单独做
 ## v2.25.0 (2026-11-02)
 
 ### 修复：应用内控制全失效

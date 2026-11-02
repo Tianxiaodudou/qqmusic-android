@@ -15,8 +15,8 @@ import android.view.View
 import android.view.WindowManager
 
 /**
- * 桌面歌词悬浮窗：两行（当前句 + 下一句），逐字染色，宽度按屏幕收敛、超长自动滚动。
- * 关闭时直接 removeView，不常驻。
+ * 桌面歌词悬浮窗：两行（当前句 + 下一句），同一字号，逐字染色，超长横向滚动。
+ * 窗口贴合文字，不允许拖出屏幕。
  */
 object DesktopLyrics {
 
@@ -28,14 +28,11 @@ object DesktopLyrics {
     private var params: WindowManager.LayoutParams? = null
     private var wm: WindowManager? = null
     private val handler = Handler(Looper.getMainLooper())
+
     private val ticker = object : Runnable {
         override fun run() {
-            view?.update(
-                LyricsRuntime.currentLine,
-                LyricsRuntime.nextLine,
-                LyricsRuntime.progress,
-            )
-            handler.postDelayed(this, 50)
+            view?.refreshFromPlayer()
+            handler.postDelayed(this, 40)
         }
     }
 
@@ -46,7 +43,6 @@ object DesktopLyrics {
 
     fun isShowing(): Boolean = view != null
 
-    /** 主题切换后重建悬浮窗，颜色立即跟随。 */
     fun refresh(ctx: Context) {
         if (view == null) return
         hide()
@@ -75,6 +71,8 @@ object DesktopLyrics {
         runCatching { w.addView(v, lp) }.onFailure { return }
         view = v
         params = lp
+        v.clampInto(lp)
+        runCatching { w.updateViewLayout(v, lp) }
         LyricsRuntime.start()
         handler.post(ticker)
     }
@@ -87,39 +85,40 @@ object DesktopLyrics {
         params = null
     }
 
-    /** 悬浮歌词绘制：一行当前句（逐字染色）+ 一行下一句（暗色）。 */
+    /** 两行歌词绘制。 */
     private class LyricView(ctx: Context) : View(ctx) {
 
         private val colors = com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeStore.colors
         private val density = resources.displayMetrics.density
-        private val screenWidth = resources.displayMetrics.widthPixels
+        private val screenW = resources.displayMetrics.widthPixels
+        private val screenH = resources.displayMetrics.heightPixels
 
-        private val padding = 18f * density
-        private val lineGap = 6f * density
-        private val textSize = 20f * density
-        private val subTextSize = 15f * density
+        private val pad = 10f * density
+        private val gap = 3f * density
+        private val textSize = 18f * density
 
         private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.argb(
-                214,
+                210,
                 (colors.surface2.red * 255).toInt(),
                 (colors.surface2.green * 255).toInt(),
                 (colors.surface2.blue * 255).toInt(),
             )
         }
-        private val mainDim = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = colors.lyricInactive.toArgb()
             textSize = this@LyricView.textSize
             typeface = Typeface.DEFAULT_BOLD
         }
-        private val mainSung = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val sungPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = colors.lyricSung.toArgb()
             textSize = this@LyricView.textSize
             typeface = Typeface.DEFAULT_BOLD
         }
-        private val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val nextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = colors.textSecondary.toArgb()
-            textSize = subTextSize
+            textSize = this@LyricView.textSize
+            typeface = Typeface.DEFAULT_BOLD
         }
         private val round = RectF()
 
@@ -141,20 +140,62 @@ object DesktopLyrics {
             prefs = p
         }
 
-        private val maxTextWidth: Float
-            get() = (screenWidth - padding * 2 - 24f * density).coerceAtLeast(120f * density)
+        private val maxTextWidth: Float get() = (screenW - pad * 2 - 16f * density)
 
-        fun update(current: String, next: String, p: Float) {
-            val textChanged = current != line || next != nextLine
-            val progressChanged = kotlin.math.abs(p - progress) > 0.003f
-            if (!textChanged && !progressChanged) return
-            if (textChanged) {
+        /** 直接按播放进度算当前句/下一句，避免两层 ticker 叠加造成换行延迟。 */
+        fun refreshFromPlayer() {
+            val cur = LyricsRuntime.lines
+            if (cur.isEmpty()) {
+                applyText("", "", 0f)
+                return
+            }
+            val t = PlayerController.positionNow()
+            var i = -1
+            for (k in cur.indices) {
+                // 用「行首第一个字的时间」判定换行，比行时间戳更贴近实际开口
+                val startAt = cur[k].words.firstOrNull()?.startMs?.toLong() ?: cur[k].timeMs.toLong()
+                if (startAt <= t) i = k else break
+            }
+            if (i < 0) {
+                applyText("", cur[0].text, 0f)
+                return
+            }
+            val lineObj = cur[i]
+            val nextStart = cur.getOrNull(i + 1)?.words?.firstOrNull()?.startMs?.toLong()
+                ?: cur.getOrNull(i + 1)?.timeMs?.toLong()
+                ?: (lineObj.timeMs + 5000L)
+            applyText(lineObj.text, cur.getOrNull(i + 1)?.text.orEmpty(), progressOf(lineObj, t, nextStart))
+        }
+
+        private fun progressOf(lineObj: com.tianxiaodudou.qqmusicdownloader.net.LyricApi.Line, t: Long, nextStart: Long): Float {
+            val total = lineObj.words.sumOf { it.text.length }
+            if (total == 0) {
+                val s = lineObj.timeMs.toLong()
+                val e = maxOf(nextStart, s + 2000L)
+                return ((t - s).toFloat() / (e - s)).coerceIn(0f, 1f)
+            }
+            var sung = 0f
+            for (w in lineObj.words) {
+                val s = w.startMs.toLong()
+                val e = s + w.durMs
+                if (t >= e) sung += w.text.length
+                else if (t > s) {
+                    sung += w.text.length * ((t - s).toFloat() / w.durMs.coerceAtLeast(1))
+                    break
+                } else break
+            }
+            return (sung / total).coerceIn(0f, 1f)
+        }
+
+        private fun applyText(current: String, next: String, p: Float) {
+            val changed = current != line || next != nextLine
+            if (!changed && kotlin.math.abs(p - progress) < 0.003f) return
+            if (changed) {
                 line = current
                 nextLine = next
                 scroll = 0f
-                lineWidth = mainDim.measureText(line)
-                nextWidth = subPaint.measureText(nextLine)
-                // 文本变了必须重新测量，否则窗口宽度还停在上一句（之前只能显示四个半字就是这个原因）
+                lineWidth = dimPaint.measureText(line)
+                nextWidth = nextPaint.measureText(nextLine)
                 requestLayout()
             }
             progress = p
@@ -162,14 +203,17 @@ object DesktopLyrics {
         }
 
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            val contentW = maxOf(
-                minOf(lineWidth, maxTextWidth),
-                minOf(nextWidth, maxTextWidth),
-                mainDim.measureText("桌面歌词") * 0.6f,
-            )
-            val w = (contentW + padding * 2).toInt().coerceAtMost(screenWidth - (12 * density).toInt())
-            val h = (textSize + lineGap + subTextSize + padding * 2).toInt()
+            val w = (maxOf(minOf(lineWidth, maxTextWidth), minOf(nextWidth, maxTextWidth)) + pad * 2)
+                .toInt().coerceAtLeast((24 * density).toInt())
+            val h = (textSize * 2 + gap + pad * 2).toInt()
             setMeasuredDimension(w, h)
+        }
+
+        fun clampInto(p: WindowManager.LayoutParams) {
+            val w = measuredWidth.takeIf { it > 0 } ?: (maxTextWidth + pad * 2).toInt()
+            val h = measuredHeight.takeIf { it > 0 } ?: (textSize * 2 + gap + pad * 2).toInt()
+            p.x = p.x.coerceIn(0, (screenW - w).coerceAtLeast(0))
+            p.y = p.y.coerceIn(0, (screenH - h).coerceAtLeast(0))
         }
 
         private fun stepScroll() {
@@ -177,17 +221,17 @@ object DesktopLyrics {
             val now = System.currentTimeMillis()
             if (now - lastStep < 33) return
             lastStep = now
-            scroll += 1.6f * density
+            scroll += 1.4f * density
             val overflow = lineWidth - maxTextWidth
-            if (scroll > overflow + 24f * density) scroll = 0f
+            if (scroll > overflow + 20f * density) scroll = 0f
         }
 
         override fun onDraw(canvas: Canvas) {
             round.set(0f, 0f, width.toFloat(), height.toFloat())
-            canvas.drawRoundRect(round, 18f * density, 18f * density, back)
+            canvas.drawRoundRect(round, 12f * density, 12f * density, back)
 
-            val baseline1 = padding + textSize * 0.92f
-            val baseline2 = baseline1 + lineGap + subTextSize * 0.95f
+            val baseline1 = pad + textSize * 0.92f
+            val baseline2 = baseline1 + gap + textSize * 0.95f
 
             val shown = line.ifEmpty { "桌面歌词 · 等待播放" }
             val overflow = lineWidth > maxTextWidth
@@ -195,20 +239,19 @@ object DesktopLyrics {
             val offset = if (overflow) scroll else 0f
 
             canvas.save()
-            canvas.clipRect(padding, 0f, width - padding, height.toFloat())
-            canvas.drawText(shown, padding - offset, baseline1, mainDim)
+            canvas.clipRect(pad, 0f, width - pad, height.toFloat())
+            canvas.drawText(shown, pad - offset, baseline1, dimPaint)
             if (line.isNotEmpty() && progress > 0f) {
-                // 已唱部分：按文字宽度比例裁切（与播放页的逐字进度一致）
                 canvas.save()
-                canvas.clipRect(padding, 0f, padding + lineWidth * progress - offset, height.toFloat())
-                canvas.drawText(shown, padding - offset, baseline1, mainSung)
+                canvas.clipRect(pad, 0f, pad + lineWidth * progress - offset, height.toFloat())
+                canvas.drawText(shown, pad - offset, baseline1, sungPaint)
                 canvas.restore()
             }
             if (nextLine.isNotEmpty()) {
-                canvas.drawText(nextLine, padding, baseline2, subPaint)
+                canvas.drawText(nextLine, pad, baseline2, nextPaint)
             }
             canvas.restore()
-            if (overflow && line.isNotEmpty()) postInvalidateOnAnimation()
+            if (overflow) postInvalidateOnAnimation()
         }
 
         override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -224,10 +267,12 @@ object DesktopLyrics {
                     p.y += (event.rawY - downY).toInt()
                     downX = event.rawX
                     downY = event.rawY
+                    clampInto(p)
                     runCatching { win?.updateViewLayout(this, p) }
                     return true
                 }
                 MotionEvent.ACTION_UP -> {
+                    clampInto(lp ?: return true)
                     prefs?.edit()?.putInt("x", lp?.x ?: 0)?.putInt("y", lp?.y ?: 0)?.apply()
                     return true
                 }

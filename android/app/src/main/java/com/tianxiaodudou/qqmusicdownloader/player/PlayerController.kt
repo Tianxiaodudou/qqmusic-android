@@ -314,14 +314,22 @@ object PlayerController {
         appContext?.let { Settings.setSpeed(it, v) }
     }
 
+    /** 换音质：立即对当前曲生效（替换当前 MediaItem 让数据源重新解析），不需要切歌。 */
     fun setQuality(q: Settings.Quality) {
         val ctx = appContext ?: return
         Settings.setQuality(ctx, q)
         TrackResolver.clear()
-        val pos = positionMs
         val c = controller ?: return
-        buildAt(c, index)
-        runCatching { c.seekTo(pos) }
+        val song = current ?: return
+        val pos = positionMs
+        val wasPlaying = playing
+        actualQuality = ""
+        runCatching {
+            c.replaceMediaItem(c.currentMediaItemIndex, mediaItemFor(song))
+            c.prepare()
+            c.seekTo(pos)
+            if (wasPlaying) c.play() else c.pause()
+        }
     }
 
     fun refreshMetadata() {

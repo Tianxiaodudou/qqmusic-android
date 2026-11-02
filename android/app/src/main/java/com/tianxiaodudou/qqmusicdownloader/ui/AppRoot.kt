@@ -474,6 +474,22 @@ private fun MinePage(
                         fontSize = AppTheme.typography.caption.fontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Spacer(Modifier.width(AppTheme.dimens.spacingSm))
+                    Text(
+                        // loginType：2=QQ 扫码、1=微信、0=手机号
+                        when (session.loginType) {
+                            2 -> "QQ 登录"
+                            1 -> "微信登录"
+                            0 -> "手机号登录"
+                            else -> "QQ 登录"
+                        },
+                        fontSize = AppTheme.typography.caption.fontSize,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(AppTheme.colors.chipBg)
+                            .padding(horizontal = AppTheme.dimens.spacingSm, vertical = AppTheme.dimens.spacing3),
+                    )
                 }
             }
         }

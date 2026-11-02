@@ -389,8 +389,13 @@ object PlayerController {
         appContext?.let { Settings.setSpeed(it, speed) }
     }
 
-    /** 换音质：保留当前进度与播放状态重新解析。 */
-    /** 由 PlaybackService 在 onCreate 里调用：用服务上下文建 MediaSession 并交给系统。 */
+    /**
+     * 建 MediaSession（只建一次，绝不重建——重建会让通知卡片消失）。
+     *
+     * 关键点：MediaSession 只在构建时读一次播放器的可用命令，而队列是后来才有的，
+     * 所以 QueuePlayer 对「上一首/下一首」始终报告可用；真没队列时点了只是空操作。
+     * 另外挂两个自定义按钮（上一首/下一首），由 onCustomCommand 转发，保证通知卡片三键齐全。
+     */
     fun ensureSession() {
         val ctx = appContext ?: return
         val player = exo ?: return
@@ -407,25 +412,49 @@ object PlayerController {
                 player = player,
                 onNext = { next() },
                 onPrevious = { prev() },
-                hasNext = { queue.size > 1 },
-                hasPrevious = { queue.size > 1 },
+                hasNext = { true },
+                hasPrevious = { true },
             )
+            val nextCmd = androidx.media3.session.SessionCommand("qqmusic.NEXT", android.os.Bundle.EMPTY)
+            val prevCmd = androidx.media3.session.SessionCommand("qqmusic.PREV", android.os.Bundle.EMPTY)
+            val buttons = listOf(
+                androidx.media3.session.CommandButton.Builder()
+                    .setSessionCommand(prevCmd)
+                    .setDisplayName("上一首")
+                    .setIconResId(android.R.drawable.ic_media_previous)
+                    .build(),
+                androidx.media3.session.CommandButton.Builder()
+                    .setSessionCommand(nextCmd)
+                    .setDisplayName("下一首")
+                    .setIconResId(android.R.drawable.ic_media_next)
+                    .build(),
+            )
+            val callback = object : androidx.media3.session.MediaSession.Callback {
+                override fun onCustomCommand(
+                    session: androidx.media3.session.MediaSession,
+                    controller: androidx.media3.session.MediaSession.ControllerInfo,
+                    customCommand: androidx.media3.session.SessionCommand,
+                    args: android.os.Bundle,
+                ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+                    when (customCommand.customAction) {
+                        "qqmusic.NEXT" -> next()
+                        "qqmusic.PREV" -> prev()
+                    }
+                    return com.google.common.util.concurrent.Futures.immediateFuture(
+                        androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS),
+                    )
+                }
+            }
             mediaSession = androidx.media3.session.MediaSession.Builder(ctx, sessionPlayer)
                 .setSessionActivity(sessionActivity)
+                .setCustomLayout(buttons)
+                .setCallback(callback)
                 .build()
         }
     }
 
-    /**
-     * 队列长度变化会改变「上一首/下一首」命令是否可用；MediaSession 缓存的是构建时的命令，
-     * 所以队列变化后重建一次会话，通知栏/锁屏/蓝牙的按钮才会跟着出现。
-     */
-    fun refreshSession() {
-        val svc = PlaybackService.instance
-        runCatching { mediaSession?.release() }
-        mediaSession = null
-        ensureSession()
-    }
+    /** 兼容旧调用：不再重建会话，避免通知卡片消失。 */
+    fun refreshSession() = ensureSession()
 
     /** 元数据类设置（蓝牙歌词开关）变更后，立刻刷新当前 MediaItem 的标题。 */
     fun refreshMetadata() {

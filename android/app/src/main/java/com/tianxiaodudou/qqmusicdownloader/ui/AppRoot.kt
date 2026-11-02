@@ -408,13 +408,16 @@ private fun MinePage(
         downloading = true
         progress = 0
         scope.launch {
-            val f = Updater.download(context, rel) { pr -> main.post { progress = pr } }
+            // 任何异常都在这里收口：下载失败只提示，不让整个应用崩掉
+            val f = runCatching {
+                Updater.download(context, rel) { pr -> main.post { progress = pr } }
+            }.getOrNull()
             downloading = false
             if (f == null) {
                 toast = "下载失败，请检查网络后重试"
                 update = null
             } else {
-                val ok = Updater.install(context, f)
+                val ok = runCatching { Updater.install(context, f) }.getOrDefault(false)
                 update = null
                 if (!ok) toast = "已下载完成，请在系统设置里允许安装后重试"
             }

@@ -175,6 +175,15 @@ object Updater {
     /** 下载到 cache/update，返回文件；失败返回 null。进度回调在 IO 线程。 */
     suspend fun download(context: Context, release: Release, onProgress: (Int) -> Unit): File? =
         withContext(Dispatchers.IO) {
+            // 网络抖动/超时/磁盘写失败都不应该让调用方的协程炸掉（那会直接导致应用崩溃）
+            runCatching { downloadInner(context, release, onProgress) }
+                .getOrElse { t ->
+                    android.util.Log.w("Updater", "download failed: " + t.message)
+                    null
+                }
+        }
+
+    private fun downloadInner(context: Context, release: Release, onProgress: (Int) -> Unit): File? {
             val dir = File(context.cacheDir, "update").apply { mkdirs() }
             val out = File(dir, "qqmusic-player-" + release.version + ".apk")
             if (out.exists()) out.delete()
@@ -184,8 +193,8 @@ object Updater {
                 .build()
             var ok = false
             QqClient.http.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) return@withContext null
-                val body = resp.body ?: return@withContext null
+                if (!resp.isSuccessful) return null
+                val body = resp.body ?: return null
                 val total = body.contentLength()
                 var read = 0L
                 var last = -1
@@ -209,8 +218,11 @@ object Updater {
                 }
                 ok = true
             }
-            if (!ok || out.length() < 1024) null else out
-        }
+            return if (!ok || out.length() < 1024) {
+                runCatching { out.delete() }
+                null
+            } else out
+    }
 
     /** 唤起系统安装器；没有「安装未知应用」权限时先带用户去授权页。 */
     fun install(context: Context, file: File): Boolean {

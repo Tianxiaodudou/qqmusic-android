@@ -15,10 +15,18 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 object PlayerFactory {
 
     fun build(ctx: Context): Pair<ExoPlayer, androidx.media3.datasource.cache.SimpleCache?> {
-        val cache: androidx.media3.datasource.cache.SimpleCache? = null
+        val cache = runCatching {
+            androidx.media3.datasource.cache.SimpleCache(
+                java.io.File(ctx.cacheDir, "media_cache"),
+                androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(1500L * 1024 * 1024),
+            )
+        }.getOrNull()
 
-        // 叶子数据源：多连接分段下载（母带这种大文件单连接跑不满带宽），小文件自动退回单连接
-        val upstream = MultiConnDataSource.Factory(ctx)
+        val upstream = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setUserAgent(com.tianxiaodudou.qqmusicdownloader.net.QqClient.userAgent())
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(20_000)
+            .setAllowCrossProtocolRedirects(true)
 
         // 懒解析：MediaItem 存 qqmusic://track/<mid>，播放到那首才换直链
         val resolving = androidx.media3.datasource.ResolvingDataSource.Factory(upstream) { spec ->
@@ -27,7 +35,16 @@ object PlayerFactory {
             spec.withUri(Uri.parse(url))
         }
 
-        val cacheFactory = resolving
+        val cacheFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
+            .setUpstreamDataSourceFactory(resolving)
+        if (cache != null) {
+            cacheFactory.setCache(cache)
+            cacheFactory.setCacheWriteDataSinkFactory(
+                androidx.media3.datasource.cache.CacheDataSink.Factory()
+                    .setCache(cache)
+                    .setFragmentSize(4L * 1024 * 1024),
+            )
+        }
 
         val player = ExoPlayer.Builder(ctx)
             .setAudioAttributes(

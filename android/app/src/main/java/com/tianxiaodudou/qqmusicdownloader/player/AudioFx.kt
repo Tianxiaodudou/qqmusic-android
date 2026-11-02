@@ -17,13 +17,17 @@ object AudioFx {
     private var eq: Equalizer? = null
     private var bass: BassBoost? = null
     private var session = 0
+    private var lastSessionId = 0
     private var preset = 0
+    private var context: Context? = null
 
     @Volatile
     private var lastAttachAt = 0L
 
     fun attach(context: Context, sessionId: Int, index: Int) {
         preset = index
+        this.context = context.applicationContext
+        if (sessionId != 0) lastSessionId = sessionId
         // 关闭状态：完全脱离播放器实例，不创建任何效果器
         if (index <= 0) {
             runCatching { release() }
@@ -53,6 +57,12 @@ object AudioFx {
             runCatching { release() }
             session = 0
             return
+        }
+        // 关闭状态下是「完全脱离」的，所以重新开启时要按记住的会话重新挂上
+        if (eq == null && lastSessionId != 0) {
+            session = lastSessionId
+            runCatching { eq = Equalizer(0, lastSessionId) }
+            runCatching { bass = BassBoost(0, lastSessionId) }
         }
         val e = eq ?: return
         val on = true

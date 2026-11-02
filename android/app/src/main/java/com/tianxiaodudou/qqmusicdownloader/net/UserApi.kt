@@ -31,6 +31,12 @@ object UserApi {
         val superVipEnd: Long = 0L,
     )
 
+    /** 供 UI 快速判断「这首歌有这个音质但账号没权限」用的缓存态。 */
+    object Account {
+        @Volatile var isVip: Boolean = false
+        @Volatile var isSuper: Boolean = false
+    }
+
     fun fetch(context: android.content.Context): Profile? {
         val s = QqClient.session ?: return null
         val now = System.currentTimeMillis()
@@ -110,6 +116,8 @@ object UserApi {
         )
         cache = result
         cachedAt = now
+        Account.isVip = result.isVip
+        Account.isSuper = result.superVipEnd > System.currentTimeMillis() || result.vipLabel.contains("超级")
         return result
     }
 

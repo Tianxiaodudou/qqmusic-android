@@ -110,8 +110,8 @@ private fun SheetHeader(title: String, subtitle: String = "", trailing: @Composa
 
 @Composable
 fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick: (Settings.Quality) -> Unit) {
-    // 每首歌实际提供的档位不同：没有的档位置灰，不可点
-    fun available(q: Settings.Quality): Boolean {
+    // 两种不可用要区分开：这首歌没有该档位（灰）/ 有档位但账号没权限（红）
+    fun hasSource(q: Settings.Quality): Boolean {
         val s = song ?: return true
         return when (q) {
             Settings.Quality.STANDARD -> s.size128 > 0 || s.size320 > 0
@@ -123,13 +123,24 @@ fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick:
         }
     }
 
+    fun hasPermission(q: Settings.Quality): Boolean {
+        val acc = com.tianxiaodudou.qqmusicdownloader.net.UserApi.Account
+        return when (q) {
+            Settings.Quality.STANDARD, Settings.Quality.HIGH -> true
+            Settings.Quality.LOSSLESS, Settings.Quality.HIRES -> acc.isVip
+            Settings.Quality.MASTER, Settings.Quality.DOLBY -> acc.isSuper
+        }
+    }
+
     Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.spacingMd)) {
-        SheetHeader("音质上限", "灰色档位表示这首歌没有该音质；账号无权限时还会自动降级")
+        SheetHeader("音质上限", "灰色=这首歌没有该档位；红色=账号无权限（自动降级）")
         Settings.Quality.entries.forEach { q ->
-            val ok = available(q)
+            val source = hasSource(q)
+            val allowed = hasPermission(q)
+            val usable = source && allowed
             Row(
                 Modifier.fillMaxWidth()
-                    .clickable(enabled = ok) { onPick(q) }
+                    .clickable(enabled = usable) { onPick(q) }
                     .padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing13),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -137,19 +148,31 @@ fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick:
                     Text(
                         q.label,
                         fontSize = AppTheme.typography.title.fontSize,
-                        color = if (ok) SheetTitle else AppTheme.colors.textDisabled,
+                        color = when {
+                            !source -> AppTheme.colors.textDisabled
+                            !allowed -> AppTheme.colors.error
+                            else -> SheetTitle
+                        },
                     )
                     Text(
-                        if (ok) q.detail else "这首歌没有该音质",
+                        when {
+                            !source -> "这首歌没有该音质"
+                            !allowed -> "账号无权限，需要会员"
+                            else -> q.detail
+                        },
                         fontSize = AppTheme.typography.caption.fontSize,
-                        color = if (ok) SheetSub else AppTheme.colors.textDisabled,
+                        color = when {
+                            !source -> AppTheme.colors.textDisabled
+                            !allowed -> AppTheme.colors.error
+                            else -> SheetSub
+                        },
                     )
                 }
                 if (q == current) {
                     Icon(
                         Icons.Rounded.Check,
                         null,
-                        tint = if (ok) Accent else AppTheme.colors.textDisabled,
+                        tint = if (usable) Accent else AppTheme.colors.textDisabled,
                         modifier = Modifier.size(AppTheme.dimens.iconMd),
                     )
                 }
@@ -157,6 +180,7 @@ fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick:
         }
     }
 }
+
 @Composable
 fun SyncSheet(offsetMs: Int, onChange: (Int) -> Unit, onReset: () -> Unit) {
     var value by remember { mutableStateOf(offsetMs / 1000f) }

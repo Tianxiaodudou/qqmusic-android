@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
@@ -168,9 +169,8 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Column {
-                    if (PlayerController.current != null) {
-                        MiniPlayer(onOpen = { showPlayer = true })
-                    }
+                    // 全局播放器常驻，不再随是否有歌曲而隐藏
+                    MiniPlayer(onOpen = { showPlayer = true }, onQueue = { showPlayer = true })
                     NavigationBar(containerColor = AppTheme.colors.bgElevated, tonalElevation = AppTheme.dimens.none) {
                         Tab.entries.forEach { item ->
                             if (item == Tab.Search) {
@@ -281,8 +281,8 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
 }
 
 @Composable
-private fun MiniPlayer(onOpen: () -> Unit) {
-    val song = PlayerController.current ?: return
+private fun MiniPlayer(onOpen: () -> Unit, onQueue: () -> Unit) {
+    val song = PlayerController.current
     val dur = PlayerController.durationMs
     val pos = PlayerController.positionMs
     Column(Modifier.fillMaxWidth().background(AppTheme.colors.surface1)) {
@@ -295,7 +295,7 @@ private fun MiniPlayer(onOpen: () -> Unit) {
             Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = AppTheme.dimens.spacingMd, vertical = AppTheme.dimens.spacingSm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val cover = coverUrl(song.albumMid, 300)
+            val cover = if (song == null) "" else coverUrl(song.albumMid, 300)
             Box(
                 Modifier.size(AppTheme.dimens.coverSm).clip(AppTheme.shapes.cover).background(AppTheme.colors.coverPlaceholder),
                 contentAlignment = Alignment.Center,
@@ -308,9 +308,17 @@ private fun MiniPlayer(onOpen: () -> Unit) {
             }
             Spacer(Modifier.width(AppTheme.dimens.spacing10))
             Column(Modifier.weight(1f)) {
-                Text(song.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = AppTheme.typography.bodySmall, color = AppTheme.colors.textPrimary)
                 Text(
-                    if (PlayerController.loading) "正在准备音源…" else song.singers,
+                    song?.name ?: "未在播放",
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = AppTheme.typography.bodySmall, color = AppTheme.colors.textPrimary,
+                )
+                Text(
+                    when {
+                        song == null -> "点这里打开播放器"
+                        PlayerController.loading -> "正在准备音源…"
+                        else -> song.singers
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = AppTheme.typography.badge.fontSize,
@@ -326,6 +334,9 @@ private fun MiniPlayer(onOpen: () -> Unit) {
             }
             AppIconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = AppTheme.colors.textPrimary)
+            }
+            AppIconButton(onClick = onQueue, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+                Icon(Icons.Rounded.QueueMusic, contentDescription = "播放列表", tint = AppTheme.colors.textPrimary)
             }
         }
     }

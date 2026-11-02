@@ -31,8 +31,17 @@ object DesktopLyrics {
 
     private val ticker = object : Runnable {
         override fun run() {
-            view?.refreshFromPlayer()
-            handler.postDelayed(this, 40)
+            val v = view
+            if (v != null) {
+                // 没在播放就自动隐藏，避免停在桌面时一直挂着一块歌词
+                if (PlayerController.playing) {
+                    v.visibility = View.VISIBLE
+                    v.refreshFromPlayer()
+                } else {
+                    v.visibility = View.GONE
+                }
+            }
+            handler.postDelayed(this, 80)
         }
     }
 

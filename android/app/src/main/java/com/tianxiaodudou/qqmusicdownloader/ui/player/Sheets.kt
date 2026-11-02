@@ -123,6 +123,25 @@ fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick:
         }
     }
 
+    /** 这首歌在该档位下的文件大小（字节），拿不到返回 0。 */
+    fun bytesOf(q: Settings.Quality): Long {
+        val s = song ?: return 0L
+        return when (q) {
+            Settings.Quality.STANDARD -> s.size128.toLong()
+            Settings.Quality.HIGH -> s.size320.toLong()
+            Settings.Quality.LOSSLESS -> s.sizeFlac.toLong()
+            Settings.Quality.HIRES -> s.sizeNew.firstOrNull { it > 0 }?.toLong() ?: 0L
+            Settings.Quality.MASTER -> s.sizeNew.lastOrNull { it > 0 }?.toLong() ?: 0L
+            Settings.Quality.DOLBY -> s.sizeDolby.toLong()
+        }
+    }
+
+    fun fmtSize(bytes: Long): String {
+        if (bytes <= 0) return ""
+        val mb = bytes / 1024.0 / 1024.0
+        return if (mb >= 10) String.format("%.0f MB", mb) else String.format("%.1f MB", mb)
+    }
+
     fun hasPermission(q: Settings.Quality): Boolean {
         val acc = com.tianxiaodudou.qqmusicdownloader.net.UserApi.Account
         return when (q) {
@@ -158,7 +177,10 @@ fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick:
                         when {
                             !source -> "这首歌没有该音质"
                             !allowed -> "账号无权限，需要会员"
-                            else -> q.detail
+                            else -> {
+                                val size = fmtSize(bytesOf(q))
+                                if (size.isEmpty()) q.detail else q.detail + " · " + size
+                            }
                         },
                         fontSize = AppTheme.typography.caption.fontSize,
                         color = when {

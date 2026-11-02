@@ -24,6 +24,12 @@ object AudioFx {
 
     fun attach(context: Context, sessionId: Int, index: Int) {
         preset = index
+        // 关闭状态：完全脱离播放器实例，不创建任何效果器
+        if (index <= 0) {
+            runCatching { release() }
+            session = 0
+            return
+        }
         // 音频会话没变就不重建效果器：重复 new Equalizer/BassBoost 会在输出链上产生咔哒声
         if (sessionId == session && eq != null) {
             runCatching { apply(index) }
@@ -43,8 +49,13 @@ object AudioFx {
 
     fun apply(index: Int) {
         preset = index
+        if (index <= 0) {
+            runCatching { release() }
+            session = 0
+            return
+        }
         val e = eq ?: return
-        val on = index != 0
+        val on = true
         runCatching {
             e.enabled = on
             if (on) {

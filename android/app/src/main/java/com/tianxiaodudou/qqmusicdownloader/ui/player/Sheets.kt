@@ -311,6 +311,7 @@ fun QueueSheet(
 @Composable
 fun MoreSheet(
     qualityLabel: String,
+    eqPreset: Int,
     speed: Float,
     sleepActive: Boolean,
     offsetCount: Int,
@@ -341,7 +342,12 @@ fun MoreSheet(
         MenuRow(Icons.Rounded.QueueMusic, "相关歌单", onClick = onRelated)
         MenuRow(Icons.Rounded.RestartAlt, "其他版本", onClick = onVersions)
         MenuDivider()
-        MenuRow(Icons.Rounded.GraphicEq, "均衡器", value = qualityLabel, onClick = onEq)
+        MenuRow(
+            Icons.Rounded.GraphicEq,
+            "均衡器",
+            value = AudioFx.PRESETS.getOrElse(eqPreset) { "关闭" },
+            onClick = onEq,
+        )
         MenuRow(Icons.Rounded.Speed, "播放速度", value = String.format("%.1fx", speed), onClick = onSpeed)
         MenuRow(Icons.Rounded.Bedtime, "睡眠定时", value = if (sleepActive) "已开启" else "", onClick = onSleep)
         MenuRow(Icons.Rounded.TextFields, "歌词样式", onClick = onStyle)

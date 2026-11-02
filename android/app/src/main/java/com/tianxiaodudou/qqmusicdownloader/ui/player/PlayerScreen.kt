@@ -464,6 +464,7 @@ fun PlayerScreen(onExit: () -> Unit) {
 
                     PSheet.More -> MoreSheet(
                         qualityLabel = quality.label,
+                        eqPreset = Settings.eqPreset(context),
                         speed = PlayerController.speed,
                         sleepActive = PlayerController.sleepEndAt > 0 || PlayerController.sleepAfterCurrent,
                         offsetCount = Settings.offsetCount(context),

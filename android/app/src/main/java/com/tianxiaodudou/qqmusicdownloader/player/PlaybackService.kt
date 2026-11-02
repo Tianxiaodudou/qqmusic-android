@@ -5,19 +5,32 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
 /**
- * 媒体会话服务：把 PlayerController 里那个 ExoPlayer 的 MediaSession 交给系统，
- * 这样通知栏、锁屏、蓝牙车机、耳机按键都能控制播放，退到后台也不会被立刻回收。
- *
- * 播放器实例仍然由 PlayerController 持有（UI 直接读它的状态），这里只负责会话与前台服务。
+ * 媒体会话服务：按谷歌范例在 onCreate 里创建 ExoPlayer + MediaSession 并持有它们。
+ * UI 侧只通过 PlayerController 这层门面读写状态与命令，不再直接 new 播放器。
  */
 class PlaybackService : MediaSessionService() {
+
+    private var player: androidx.media3.exoplayer.ExoPlayer? = null
+    private var session: MediaSession? = null
 
     override fun onCreate() {
         super.onCreate()
         instance = this
-        // 规范做法：会话在服务里创建、由服务持有，onGetSession 直接返回它
-        PlayerController.ensureSession()
-        // 服务活着（播放中）就按设置维持桌面歌词悬浮窗
+        runCatching {
+            val (p, _) = PlayerFactory.build(this)
+            player = p
+            val sessionActivity = android.app.PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, com.tianxiaodudou.qqmusicdownloader.MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+            session = MediaSession.Builder(this, p)
+                .setSessionActivity(sessionActivity)
+                .build()
+            PlayerController.onPlayerReady(p)
+        }
         runCatching {
             if (com.tianxiaodudou.qqmusicdownloader.net.Settings.desktopLyrics(this)) {
                 DesktopLyrics.setEnabled(this, true)
@@ -25,10 +38,11 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
-        PlayerController.mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
-    /** 用户从最近任务里划掉应用：没在播就停掉服务，在播就让它继续（后台播放）。 */
+    /** 供 PlayerController 接管（例如 Activity 重建时）。 */
+    fun currentPlayer(): androidx.media3.exoplayer.ExoPlayer? = player
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         if (!PlayerController.playing) stopSelf()
     }
@@ -36,6 +50,11 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         DesktopLyrics.setEnabled(this, false)
         LyricsRuntime.stop()
+        runCatching { session?.release() }
+        runCatching { player?.release() }
+        session = null
+        player = null
+        PlayerController.onPlayerReleased()
         instance = null
         super.onDestroy()
     }

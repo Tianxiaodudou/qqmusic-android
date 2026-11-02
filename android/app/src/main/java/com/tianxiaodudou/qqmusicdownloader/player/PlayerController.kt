@@ -107,68 +107,42 @@ object PlayerController {
     val current: MusicApi.Song? get() = queue.getOrNull(index)
 
     fun attach(context: Context) {
-        if (exo != null) return
         val ctx = context.applicationContext
         appContext = ctx
         TrackResolver.attach(ctx)
         TrackResolver.onResolved = { mid, quality ->
             if (current?.mid == mid) actualQuality = quality
         }
-        // 播放缓存：缓冲过的字节落盘（LRU 1.5GB），重听同一首/回拖不再重新下载，
-        // 高音质下卡顿主要靠「缓存 + 更大的缓冲窗口」缓解（ExoPlayer 本身是单连接拉流）。
-        val cache = runCatching {
-            androidx.media3.datasource.cache.SimpleCache(
-                java.io.File(ctx.cacheDir, "media_cache"),
-                androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(1500L * 1024 * 1024),
-            )
-        }.getOrNull()
-        mediaCache = cache
-        val upstream = androidx.media3.datasource.DefaultHttpDataSource.Factory()
-            .setUserAgent(com.tianxiaodudou.qqmusicdownloader.net.QqClient.userAgent())
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(20_000)
-            .setAllowCrossProtocolRedirects(true)
-        // 懒解析上游：MediaItem 里存的是 qqmusic://track/<mid>，播放到哪一首才去换直链，
-        // 这样整个队列能一次性交给 ExoPlayer，系统侧才有原生的上一首/下一首
-        val resolving = androidx.media3.datasource.ResolvingDataSource.Factory(upstream) { spec ->
-            val mid = TrackResolver.midOf(spec.uri)
-            val url = TrackResolver.resolve(mid)
-                ?: throw java.io.IOException("拿不到播放地址：" + mid)
-            spec.withUri(Uri.parse(url))
+        // 谷歌范例：播放器由 PlaybackService 创建并持有，这里只负责把服务拉起来。
+        // 服务 onCreate 完成后通过 onPlayerReady 把播放器交回来。
+        runCatching {
+            ctx.startService(android.content.Intent(ctx, PlaybackService::class.java))
         }
-        val cacheFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
-            .setUpstreamDataSourceFactory(resolving)
-        if (cache != null) {
-            cacheFactory.setCache(cache)
-            cacheFactory.setCacheWriteDataSinkFactory(
-                androidx.media3.datasource.cache.CacheDataSink.Factory()
-                    .setCache(cache)
-                    .setFragmentSize(4L * 1024 * 1024),
-            )
-        }
-        val p = ExoPlayer.Builder(ctx)
-            .setAudioAttributes(
-                androidx.media3.common.AudioAttributes.Builder()
-                    .setUsage(androidx.media3.common.C.USAGE_MEDIA)
-                    .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                true,
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(
-                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(cacheFactory),
-            )
-            .setLoadControl(
-                androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                    // 维持播放至少 60s、最多囤 240s；起播 3s、卡顿后补 12s 再继续。
-                    // 用几秒起播延迟换稳定性，配合下面的整首多连接预下，效果更明显。
-                    .setBufferDurationsMs(60_000, 240_000, 3_000, 12_000)
-                    .setBackBuffer(30_000, true)
-                    .setPrioritizeTimeOverSizeThresholds(true)
-                    .build(),
-            )
-            .build()
+        // 服务已经在跑（比如从后台恢复）：直接接管它的播放器
+        PlaybackService.instance?.currentPlayer()?.let { runCatching { onPlayerReady(it) } }
+    }
+
+    /** 服务销毁时调用：播放器已被释放，清掉引用避免野指针。 */
+    fun onPlayerReleased() {
+        exo = null
+        mediaSession = null
+        playing = false
+        loading = false
+        actualQuality = ""
+    }
+
+    /** 由 PlaybackService 调用：服务里的播放器就绪，把监听与状态机接上。 */
+    fun onPlayerReady(p: androidx.media3.exoplayer.ExoPlayer) {
+        if (exo === p) return
         exo = p
+        val ctx = appContext ?: return
+        scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+        speed = Settings.speed(ctx)
+        runCatching { p.setPlaybackSpeed(speed) }
+        mode = runCatching {
+            Mode.valueOf(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(K_MODE, "LIST") ?: "LIST")
+        }.getOrDefault(Mode.LIST)
+        ensureSession()
         scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
         speed = Settings.speed(ctx)
         p.setPlaybackSpeed(speed)

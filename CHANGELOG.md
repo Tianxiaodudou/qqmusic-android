@@ -1,5 +1,21 @@
 # 更新日志
 
+## v2.32.0 (2026-11-02)
+
+### 播放器归属改成谷歌范例
+- 新增 PlayerFactory：ExoPlayer 的构建（缓存、懒解析 DataSource、缓冲、音频属性）集中到一处
+- **PlaybackService.onCreate 里创建 ExoPlayer 与 MediaSession 并持有**（之前是应用侧建好再交给服务），
+  服务销毁时一并释放；PlayerController 通过 onPlayerReady 接管这个实例
+- PlayerController 不再自己 new 播放器，只保留队列、音质、进度记忆等业务状态
+
+### 均衡器
+- **关闭状态完全脱离播放器**：preset=0 时直接 release，不创建 Equalizer/BassBoost，也不挂在音频会话上
+- 播放页「更多」里的均衡器入口现在显示**均衡器的当前预设**（关闭 / 流行 / 摇滚 …），不再显示音质
+
+### 说明
+- 这一步把「播放器归服务」做到位了，但 UI 仍在同进程读 PlayerController 的门面状态，没有改走 MediaController；
+  要完全对齐谷歌范例（UI 只通过 MediaController 拿状态和发命令）需要把队列/音质/进度这些状态整体搬到服务侧，
+  是下一步，单独验证更稳
 ## v2.31.0 (2026-11-02)
 
 ### 修复

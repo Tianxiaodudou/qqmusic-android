@@ -319,14 +319,14 @@ private fun MiniPlayer(onOpen: () -> Unit) {
                     color = AppTheme.colors.textSecondary,
                 )
             }
-            AppIconButton(onClick = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(
                     if (PlayerController.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = "播放/暂停",
                     tint = AppTheme.colors.textPrimary,
                 )
             }
-            AppIconButton(onClick = { com.tianxiaodudou.qqmusicdownloader.player.SessionBridge.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+            AppIconButton(onClick = { PlayerController.next() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = AppTheme.colors.textPrimary)
             }
         }

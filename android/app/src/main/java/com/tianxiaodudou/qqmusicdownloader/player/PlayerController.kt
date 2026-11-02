@@ -135,6 +135,14 @@ object PlayerController {
             )
         }
         val p = ExoPlayer.Builder(ctx)
+            .setAudioAttributes(
+                androidx.media3.common.AudioAttributes.Builder()
+                    .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                    .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build(),
+                true,
+            )
+            .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(cacheFactory),
             )
@@ -213,9 +221,24 @@ object PlayerController {
                 hasNext = { queue.size > 1 },
                 hasPrevious = { queue.size > 1 },
             )
+            val nextCmd = androidx.media3.session.SessionCommand("qqmusic.ACTION_NEXT", android.os.Bundle.EMPTY)
+            val prevCmd = androidx.media3.session.SessionCommand("qqmusic.ACTION_PREV", android.os.Bundle.EMPTY)
+            val customButtons = listOf(
+                androidx.media3.session.CommandButton.Builder()
+                    .setSessionCommand(prevCmd)
+                    .setDisplayName("上一首")
+                    .setIconResId(android.R.drawable.ic_media_previous)
+                    .build(),
+                androidx.media3.session.CommandButton.Builder()
+                    .setSessionCommand(nextCmd)
+                    .setDisplayName("下一首")
+                    .setIconResId(android.R.drawable.ic_media_next)
+                    .build(),
+            )
             mediaSession = androidx.media3.session.MediaSession.Builder(ctx, sessionPlayer)
                 .setSessionActivity(sessionActivity)
                 .setCallback(sessionCallback)
+                .setCustomLayout(customButtons)
                 .build()
         }
 
@@ -524,6 +547,21 @@ object PlayerController {
             controller: androidx.media3.session.MediaSession.ControllerInfo,
             @androidx.media3.common.Player.Command command: Int,
         ): Int = command
+
+        override fun onCustomCommand(
+            session: androidx.media3.session.MediaSession,
+            controller: androidx.media3.session.MediaSession.ControllerInfo,
+            customCommand: androidx.media3.session.SessionCommand,
+            args: android.os.Bundle,
+        ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+            when (customCommand.customAction) {
+                "qqmusic.ACTION_NEXT" -> next()
+                "qqmusic.ACTION_PREV" -> prev()
+            }
+            return com.google.common.util.concurrent.Futures.immediateFuture(
+                androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS),
+            )
+        }
     }
 
     private fun mediaItemOf(song: MusicApi.Song, uri: Uri): MediaItem {

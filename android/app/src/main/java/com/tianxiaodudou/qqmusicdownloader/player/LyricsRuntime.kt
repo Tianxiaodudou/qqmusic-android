@@ -31,6 +31,9 @@ object LyricsRuntime {
 
     val currentLine: String get() = lines.getOrNull(index)?.text.orEmpty()
 
+    /** 下一句歌词，用于桌面歌词第二行。 */
+    val nextLine: String get() = lines.getOrNull(index + 1)?.text.orEmpty()
+
     /** 行变化回调：蓝牙歌词用它把当前行推给系统元数据。 */
     var onLineChanged: ((String) -> Unit)? = null
     private var lastPushed = ""

@@ -93,9 +93,17 @@ object DesktopLyrics {
         private val screenW = resources.displayMetrics.widthPixels
         private val screenH = resources.displayMetrics.heightPixels
 
-        private val pad = 10f * density
-        private val gap = 3f * density
+        // 紧贴文字：水平 6dp、垂直 4dp、行距 2dp，另留 4dp 给描边光晕不被裁掉
+        private val padH = 6f * density
+        private val padV = 4f * density
+        private val glow = 4f * density
+        private val gap = 2f * density
         private val textSize = 18f * density
+
+        private val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = colors.brand.toArgb()
+        }
 
         private val back = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = android.graphics.Color.argb(
@@ -140,7 +148,7 @@ object DesktopLyrics {
             prefs = p
         }
 
-        private val maxTextWidth: Float get() = (screenW - pad * 2 - 16f * density)
+        private val maxTextWidth: Float get() = (screenW - (padH + glow) * 2 - 16f * density)
 
         /** 直接按播放进度算当前句/下一句，避免两层 ticker 叠加造成换行延迟。 */
         fun refreshFromPlayer() {
@@ -203,15 +211,15 @@ object DesktopLyrics {
         }
 
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            val w = (maxOf(minOf(lineWidth, maxTextWidth), minOf(nextWidth, maxTextWidth)) + pad * 2)
+            val w = (maxOf(minOf(lineWidth, maxTextWidth), minOf(nextWidth, maxTextWidth)) + (padH + glow) * 2)
                 .toInt().coerceAtLeast((24 * density).toInt())
-            val h = (textSize * 2 + gap + pad * 2).toInt()
+            val h = (textSize * 2 + gap + (padV + glow) * 2).toInt()
             setMeasuredDimension(w, h)
         }
 
         fun clampInto(p: WindowManager.LayoutParams) {
-            val w = measuredWidth.takeIf { it > 0 } ?: (maxTextWidth + pad * 2).toInt()
-            val h = measuredHeight.takeIf { it > 0 } ?: (textSize * 2 + gap + pad * 2).toInt()
+            val w = measuredWidth.takeIf { it > 0 } ?: (maxTextWidth + (padH + glow) * 2).toInt()
+            val h = measuredHeight.takeIf { it > 0 } ?: (textSize * 2 + gap + (padV + glow) * 2).toInt()
             p.x = p.x.coerceIn(0, (screenW - w).coerceAtLeast(0))
             p.y = p.y.coerceIn(0, (screenH - h).coerceAtLeast(0))
         }
@@ -227,10 +235,24 @@ object DesktopLyrics {
         }
 
         override fun onDraw(canvas: Canvas) {
-            round.set(0f, 0f, width.toFloat(), height.toFloat())
-            canvas.drawRoundRect(round, 12f * density, 12f * density, back)
+            val inset = glow * 0.6f
+            round.set(inset, inset, width - inset, height - inset)
+            val radius = 9f * density
+            canvas.drawRoundRect(round, radius, radius, back)
 
-            val baseline1 = pad + textSize * 0.92f
+            // 荧光描边：由外到内叠 3 层低透明度粗边 + 1 层亮边，模拟发光
+            val glowLayers = arrayOf(3.2f to 40, 2.2f to 80, 1.3f to 140)
+            for ((w, a) in glowLayers) {
+                framePaint.strokeWidth = w * density
+                framePaint.alpha = a
+                canvas.drawRoundRect(round, radius, radius, framePaint)
+            }
+            framePaint.strokeWidth = 1.1f * density
+            framePaint.alpha = 235
+            canvas.drawRoundRect(round, radius, radius, framePaint)
+
+            val left = padH + glow
+            val baseline1 = glow + padV + textSize * 0.92f
             val baseline2 = baseline1 + gap + textSize * 0.95f
 
             val shown = line.ifEmpty { "桌面歌词 · 等待播放" }
@@ -239,16 +261,16 @@ object DesktopLyrics {
             val offset = if (overflow) scroll else 0f
 
             canvas.save()
-            canvas.clipRect(pad, 0f, width - pad, height.toFloat())
-            canvas.drawText(shown, pad - offset, baseline1, dimPaint)
+            canvas.clipRect(left, 0f, width - left, height.toFloat())
+            canvas.drawText(shown, left - offset, baseline1, dimPaint)
             if (line.isNotEmpty() && progress > 0f) {
                 canvas.save()
-                canvas.clipRect(pad, 0f, pad + lineWidth * progress - offset, height.toFloat())
-                canvas.drawText(shown, pad - offset, baseline1, sungPaint)
+                canvas.clipRect(left, 0f, left + lineWidth * progress - offset, height.toFloat())
+                canvas.drawText(shown, left - offset, baseline1, sungPaint)
                 canvas.restore()
             }
             if (nextLine.isNotEmpty()) {
-                canvas.drawText(nextLine, pad, baseline2, nextPaint)
+                canvas.drawText(nextLine, left, baseline2, nextPaint)
             }
             canvas.restore()
             if (overflow) postInvalidateOnAnimation()

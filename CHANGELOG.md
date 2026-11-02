@@ -1,5 +1,17 @@
 # 更新日志
 
+## v2.33.0 (2026-11-02)
+
+### 播放器与 UI 完全解耦（按谷歌范例）
+- **UI 不再持有 ExoPlayer**：`PlayerController` 重写为 `MediaController` 门面，
+  `grep` 校验其内部已无任何 `exo` 引用
+- 播放器与 `MediaSession` 完全由 `PlaybackService.onCreate` 创建并持有（`PlayerFactory` 统一构建）
+- 所有命令（播放/暂停/上一首/下一首/seek/倍速/播放列表）都通过 `MediaController` 发给服务；
+  状态（播放中、进度、缓冲、时长、当前曲目、音质）由控制器回调镜像成 Compose 可观察状态
+- 歌曲元数据通过 `TrackCatalog`（mid → Song）共享，服务和 UI 不再互相持有对象；直链解析也在服务侧完成
+- 删除不再需要的 `QueuePlayer`、`SessionBridge`（这两处正是之前媒体按键失效的根源），会话直接用原生 Player
+- 均衡器挂在服务持有的播放器上；`preset=0` 时完全不创建效果器
+- 进度做外推（`positionNow()`），逐字歌词仍然跟手
 ## v2.32.0 (2026-11-02)
 
 ### 播放器归属改成谷歌范例

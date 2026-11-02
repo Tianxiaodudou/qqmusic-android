@@ -29,7 +29,18 @@ class PlaybackService : MediaSessionService() {
             session = MediaSession.Builder(this, p)
                 .setSessionActivity(sessionActivity)
                 .build()
-            PlayerController.onPlayerReady(p)
+            // 均衡器挂在服务持有的播放器上；关闭（preset=0）时 AudioFx 内部直接脱离
+            p.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    AudioFx.attach(
+                        this@PlaybackService,
+                        audioSessionId,
+                        com.tianxiaodudou.qqmusicdownloader.net.Settings.eqPreset(this@PlaybackService),
+                    )
+                }
+            })
+            AudioFx.attach(this, p.audioSessionId, com.tianxiaodudou.qqmusicdownloader.net.Settings.eqPreset(this))
+            // 播放器完全由服务持有；UI 通过 MediaController 观察这个会话
         }
         runCatching {
             if (com.tianxiaodudou.qqmusicdownloader.net.Settings.desktopLyrics(this)) {
@@ -54,7 +65,7 @@ class PlaybackService : MediaSessionService() {
         runCatching { player?.release() }
         session = null
         player = null
-        PlayerController.onPlayerReleased()
+
         instance = null
         super.onDestroy()
     }

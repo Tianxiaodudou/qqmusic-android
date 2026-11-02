@@ -35,7 +35,7 @@ object TrackResolver {
     fun resolve(mid: String): String? {
         val ctx = appContext ?: return null
         cache[mid]?.let { if (System.currentTimeMillis() - it.second < TTL) return it.first }
-        val song = PlayerController.queue.firstOrNull { it.mid == mid } ?: return null
+        val song = TrackCatalog.get(mid) ?: return null
         val wanted = Settings.quality(ctx)
         val chain = Settings.Quality.entries
             .filter { it.ordinal <= wanted.ordinal }

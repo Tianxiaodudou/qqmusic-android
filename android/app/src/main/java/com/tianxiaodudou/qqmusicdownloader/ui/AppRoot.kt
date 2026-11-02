@@ -88,6 +88,7 @@ import com.tianxiaodudou.qqmusicdownloader.net.Updater
 import com.tianxiaodudou.qqmusicdownloader.net.UserApi
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import com.tianxiaodudou.qqmusicdownloader.ui.player.PlayerScreen
+import com.tianxiaodudou.qqmusicdownloader.ui.player.QueueSheet
 import com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl
 import com.tianxiaodudou.qqmusicdownloader.ui.player.fmtMs
 import com.tianxiaodudou.qqmusicdownloader.ui.theme.AppTheme
@@ -129,7 +130,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     var showPlayer by remember { mutableStateOf(false) }
     // 从迷你播放器点「播放列表」时，打开播放器后直接弹队列面板
-    var openQueueOnShow by remember { mutableStateOf(false) }
+    var showQueueSheet by remember { mutableStateOf(false) }
     var showDownloads by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -174,10 +175,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
                     // 全局播放器常驻，不再随是否有歌曲而隐藏
                     MiniPlayer(
                         onOpen = { showPlayer = true },
-                        onQueue = {
-                            openQueueOnShow = true
-                            showPlayer = true
-                        },
+                        onQueue = { showQueueSheet = true },
                     )
                     NavigationBar(containerColor = AppTheme.colors.bgElevated, tonalElevation = AppTheme.dimens.none) {
                         Tab.entries.forEach { item ->
@@ -257,6 +255,29 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             }
         }
 
+        if (showQueueSheet) {
+            AppSheet(onDismiss = { showQueueSheet = false }) {
+                QueueSheet(
+                    queue = PlayerController.queue,
+                    index = PlayerController.index,
+                    playing = PlayerController.playing,
+                    onPick = { i ->
+                        PlayerController.playAt(i)
+                        showQueueSheet = false
+                    },
+                    onRemove = { i -> PlayerController.removeAt(i) },
+                    onClear = {
+                        PlayerController.clearQueue()
+                        showQueueSheet = false
+                    },
+                    onShuffleAll = {
+                        PlayerController.changeMode(PlayerController.Mode.SHUFFLE)
+                        if (PlayerController.queue.isNotEmpty()) PlayerController.playAt(0)
+                    },
+                )
+            }
+        }
+
         if (showDownloads && !showPlayer) {
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -283,11 +304,7 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(160)),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(140)),
         ) {
-            PlayerScreen(
-                onExit = { showPlayer = false },
-                openQueue = openQueueOnShow,
-                onQueueOpened = { openQueueOnShow = false },
-            )
+            PlayerScreen(onExit = { showPlayer = false })
         }
     }
 }

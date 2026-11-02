@@ -197,12 +197,15 @@ fun PlayerScreen(
     var toast by remember { mutableStateOf("") }
 
     // 返回链：词典 -> 分享 -> 关于 -> 任意面板 -> 收起播放页
-    BackHandler(enabled = dictLine != null || shareLine != null || showAbout || sheet != null) {
+    // 播放页自己消化返回：先关面板/词典/分享/关于，没有面板就退出播放页。
+    // 之前只在「有面板」时才拦截，导致退出还要多按一次。
+    BackHandler(enabled = true) {
         when {
             dictLine != null -> dictLine = null
             shareLine != null -> shareLine = null
             showAbout -> showAbout = false
-            else -> sheet = null
+            sheet != null -> sheet = null
+            else -> onExit()
         }
     }
 

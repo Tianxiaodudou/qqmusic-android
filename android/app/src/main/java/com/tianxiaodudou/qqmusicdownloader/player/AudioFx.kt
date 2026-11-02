@@ -2,7 +2,9 @@ package com.tianxiaodudou.qqmusicdownloader.player
 
 import android.content.Context
 import android.media.audiofx.BassBoost
+import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.Equalizer
+import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -16,6 +18,7 @@ object AudioFx {
 
     private var eq: Equalizer? = null
     private var bass: BassBoost? = null
+    private var gain: LoudnessEnhancer? = null
     private var session = 0
     private var lastSessionId = 0
     private var preset = 0
@@ -48,7 +51,19 @@ object AudioFx {
         if (sessionId == 0) return
         runCatching { eq = Equalizer(0, sessionId) }
         runCatching { bass = BassBoost(0, sessionId) }
+        runCatching { gain = LoudnessEnhancer(sessionId) }
         runCatching { apply(index) }
+        runCatching { setGain(Settings.volumeGain(context)) }
+    }
+
+    /** 全局音量增益：level 0..9 -> 0..+9dB（LoudnessEnhancer 的目标增益单位是 mB）。 */
+    fun setGain(level: Int) {
+        val l = level.coerceIn(0, 9)
+        val e = gain ?: return
+        runCatching {
+            e.enabled = l > 0
+            if (l > 0) e.setTargetGain(l * 100)
+        }
     }
 
     fun apply(index: Int) {
@@ -102,6 +117,8 @@ object AudioFx {
     }
 
     fun release() {
+        runCatching { gain?.release() }
+        gain = null
         runCatching { eq?.release() }
         runCatching { bass?.release() }
         eq = null

@@ -397,6 +397,8 @@ private fun MinePage(
     // 「我的」页分组折叠：默认全收起，同一时间只允许展开一个
     var openSection by remember { mutableStateOf("") }
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
+    var gainLevel by remember { mutableStateOf(Settings.volumeGain(context)) }
+    var showGain by remember { mutableStateOf(false) }
     var desktopLyrics by remember { mutableStateOf(Settings.desktopLyrics(context)) }
     var btLyrics by remember { mutableStateOf(Settings.btLyrics(context)) }
     var themeMode by remember { mutableStateOf(Settings.themeMode(context)) }
@@ -567,6 +569,7 @@ private fun MinePage(
                 autoDowngrade = !autoDowngrade
                 Settings.setAutoDowngrade(context, autoDowngrade)
             }
+            MineRow("音量增益", if (gainLevel == 0) "关闭（0 dB）" else "+" + gainLevel + " dB") { showGain = true }
             MineRow(
                 "桌面歌词",
                 if (desktopLyrics) "已开启 · 悬浮窗可拖动" else "已关闭 · 需要悬浮窗权限",
@@ -680,6 +683,40 @@ private fun MinePage(
                 }
             },
             confirmButton = { AppTextButton(onClick = { showPaid = false }) { Text("关闭") } },
+        )
+    }
+
+    if (showGain) {
+        AlertDialog(
+            onDismissRequest = { showGain = false },
+            title = { Text("音量增益") },
+            text = {
+                Column(Modifier.heightIn(max = AppTheme.dimens.detailCover).verticalScroll(rememberScrollState())) {
+                    (0..9).forEach { level ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    gainLevel = level
+                                    Settings.setVolumeGain(context, level)
+                                    com.tianxiaodudou.qqmusicdownloader.player.AudioFx.setGain(level)
+                                    showGain = false
+                                }
+                                .padding(vertical = AppTheme.dimens.spacingMd),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                if (gainLevel == level) "● " else "○ ",
+                                color = if (gainLevel == level) AppTheme.colors.brand else AppTheme.colors.textSecondary,
+                            )
+                            Text(
+                                if (level == 0) "关闭（原始音量）" else "+" + level + " dB",
+                                style = AppTheme.typography.body,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = { AppTextButton("关闭") { showGain = false } },
         )
     }
 

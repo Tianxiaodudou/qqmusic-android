@@ -304,8 +304,17 @@ object MusicApi {
      * 一次请求拿多档直链：把候选码率打包进一次 GetVkey，避免逐档串行请求，
      * 起播少等一两秒。返回 码率代码 -> 播放地址。
      */
-    fun streamBatch(song: Song, codes: List<String>): Map<String, String> {
-        if (codes.isEmpty()) return emptyMap()
+    /** 一次 vkey 请求的完整结果：直链、原始 purl（用于换 CDN 节点）、以及服务端给的 CDN 列表。 */
+    data class StreamRef(
+        val urls: Map<String, String>,
+        val raws: Map<String, String>,
+        val sips: List<String>,
+    )
+
+    fun streamBatch(song: Song, codes: List<String>): Map<String, String> = streamBatchEx(song, codes).urls
+
+    fun streamBatchEx(song: Song, codes: List<String>): StreamRef {
+        if (codes.isEmpty()) return StreamRef(emptyMap(), emptyMap(), emptyList())
         val p = JSONObject()
         p.put("uin", QqClient.session?.uin ?: "0")
         val names = JSONArray()
@@ -321,18 +330,26 @@ object MusicApi {
         p.put("songmid", mids)
         p.put("songtype", types)
         p.put("ctx", 0)
-        val data = runCatching { QqClient.cgi("music.vkey.GetVkey", "UrlGetVkey", p) }.getOrNull() ?: return emptyMap()
-        val arr = data.optJSONArray("midurlinfo") ?: return emptyMap()
+        val data = runCatching { QqClient.cgi("music.vkey.GetVkey", "UrlGetVkey", p) }.getOrNull()
+            ?: return StreamRef(emptyMap(), emptyMap(), emptyList())
+        val arr = data.optJSONArray("midurlinfo") ?: return StreamRef(emptyMap(), emptyMap(), emptyList())
+        // 官方客户端就是从这里拿节点列表择优的
+        val sips = ArrayList<String>()
+        data.optJSONArray("sip")?.let { a ->
+            for (i in 0 until a.length()) a.optString(i).takeIf { it.isNotEmpty() }?.let { sips.add(it) }
+        }
         val out = HashMap<String, String>()
+        val raws = HashMap<String, String>()
         for (i in 0 until arr.length()) {
             val info = arr.optJSONObject(i) ?: continue
             val purl = info.optString("purl")
             if (purl.isEmpty()) continue
             val fn = info.optString("filename")
             val code = codes.firstOrNull { fn.startsWith(it) } ?: codes.getOrNull(i) ?: continue
+            raws[code] = purl
             out[code] = if (purl.startsWith("http")) purl else "https://dl.stream.qqmusic.qq.com/" + purl
         }
-        return out
+        return StreamRef(out, raws, sips)
     }
 
     private fun extOf(code: String): String = when {

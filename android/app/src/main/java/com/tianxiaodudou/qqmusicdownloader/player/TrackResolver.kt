@@ -41,18 +41,24 @@ object TrackResolver {
             .filter { it.ordinal <= wanted.ordinal }
             .sortedByDescending { it.ordinal }
         val codes = chain.map { it.code }.filter { it.isNotEmpty() }.distinct()
-        val batch = runCatching { MusicApi.streamBatch(song, codes) }.getOrDefault(emptyMap())
+        val ref = runCatching { MusicApi.streamBatchEx(song, codes) }
+            .getOrDefault(MusicApi.StreamRef(emptyMap(), emptyMap(), emptyList()))
+        val batch = ref.urls
         for (q in chain) {
             val url = batch[q.code]
             if (!url.isNullOrEmpty()) {
-                cache[mid] = url to System.currentTimeMillis()
+                // 官方客户端会从 sip 里择优；我们这里测速后选最快的节点
+                val picked = runCatching {
+                    CdnPicker.pick(ref.sips, ref.raws[q.code].orEmpty(), url)
+                }.getOrDefault(url)
+                cache[mid] = picked to System.currentTimeMillis()
                 val text = when (q.code) {
                     "M500" -> "标准"; "M800" -> "高品质"; "F000" -> "无损"
                     "O801" -> "Hi-Res"; "AI00" -> "母带"; "D004" -> "杜比"; else -> ""
                 }
                 qualities[mid] = text
                 onResolved?.invoke(mid, text)
-                return url
+                return picked
             }
         }
         // 版权受限：换可播版本

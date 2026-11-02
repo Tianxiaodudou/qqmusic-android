@@ -110,6 +110,7 @@ object PlayerController {
         if (exo != null) return
         val ctx = context.applicationContext
         appContext = ctx
+        TrackResolver.attach(ctx)
         // 播放缓存：缓冲过的字节落盘（LRU 1.5GB），重听同一首/回拖不再重新下载，
         // 高音质下卡顿主要靠「缓存 + 更大的缓冲窗口」缓解（ExoPlayer 本身是单连接拉流）。
         val cache = runCatching {
@@ -124,8 +125,16 @@ object PlayerController {
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
             .setAllowCrossProtocolRedirects(true)
+        // 懒解析上游：MediaItem 里存的是 qqmusic://track/<mid>，播放到哪一首才去换直链，
+        // 这样整个队列能一次性交给 ExoPlayer，系统侧才有原生的上一首/下一首
+        val resolving = androidx.media3.datasource.ResolvingDataSource.Factory(upstream) { spec ->
+            val mid = TrackResolver.midOf(spec.uri)
+            val url = TrackResolver.resolve(mid)
+                ?: throw java.io.IOException("拿不到播放地址：" + mid)
+            spec.withUri(Uri.parse(url))
+        }
         val cacheFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
-            .setUpstreamDataSourceFactory(upstream)
+            .setUpstreamDataSourceFactory(resolving)
         if (cache != null) {
             cacheFactory.setCache(cache)
             cacheFactory.setCacheWriteDataSinkFactory(
@@ -179,6 +188,22 @@ object PlayerController {
                 if (state == Player.STATE_READY) durationMs = p.duration.coerceAtLeast(0L)
             }
 
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val mid = mediaItem?.mediaId ?: return
+                val idx = queue.indexOfFirst { it.mid == mid }
+                if (idx < 0) return
+                loadedSong?.let { prev ->
+                    if (prev.mid != mid) appContext?.let { c -> ResumeStore.save(c, prev.mid, positionMs, durationMs) }
+                }
+                index = idx
+                val song = queue[idx]
+                loadedSong = song
+                durationMs = song.interval * 1000L
+                actualQuality = TrackResolver.qualityOf(mid)
+                appContext?.let { c -> positionMs = ResumeStore.get(c, mid) }
+                prefetchAround()
+            }
+
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
                 AudioFx.attach(ctx, audioSessionId, Settings.eqPreset(ctx))
             }
@@ -191,7 +216,8 @@ object PlayerController {
                     // 高音质源有问题时降一档重来，避免卡在同一个坏文件上
                     forcedQuality = Settings.Quality.HIGH
                     runCatching { if (sourcePath.isNotEmpty()) java.io.File(sourcePath).delete() }
-                    load(song, startAt = positionMs, autoPlay = true, alt = true)
+                    TrackResolver.clear()
+                    applyPlaylist(index)
                     return
                 }
                 loading = false
@@ -269,17 +295,59 @@ object PlayerController {
 
     fun play(list: List<MusicApi.Song>, at: Int) {
         if (at !in list.indices) return
-        val grew = queue.size != list.size
         queue = list
         index = at
-        if (grew) runCatching { refreshSession() }
-        load(list[at])
+        applyPlaylist(at)
     }
 
     fun playAt(at: Int) {
-        val song = queue.getOrNull(at) ?: return
+        if (at !in queue.indices) return
         index = at
-        load(song)
+        val p = exo
+        if (p != null && p.mediaItemCount > 0) {
+            p.seekTo(at, 0L)
+            p.play()
+        } else {
+            applyPlaylist(at)
+        }
+    }
+
+    /**
+     * 把整个队列做成 ExoPlayer 的播放列表（每首一个 MediaItem，uri 是 qqmusic://track/<mid>，
+     * 直链由 ResolvingDataSource 懒解析）。这样系统拿到的就是标准 Player：
+     * 通知栏/锁屏/蓝牙的上一首、下一首都由框架自己处理，不需要包装或自定义按钮。
+     */
+    private fun applyPlaylist(startAt: Int) {
+        val p = exo ?: return
+        loading = true
+        error = null
+        val items = queue.map { mediaItemFor(it) }
+        runCatching {
+            p.setMediaItems(items, startAt.coerceIn(0, (items.size - 1).coerceAtLeast(0)), 0L)
+            p.prepare()
+            p.play()
+        }.onFailure { error = "播放失败：" + (it.message ?: "") }
+        loading = false
+        val song = queue.getOrNull(startAt) ?: return
+        loadedSong = song
+        durationMs = song.interval * 1000L
+        actualQuality = TrackResolver.qualityOf(song.mid)
+        prefetchAround()
+    }
+
+    private fun mediaItemFor(song: MusicApi.Song): MediaItem {
+        val artwork = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 500)
+        val metadata = androidx.media3.common.MediaMetadata.Builder()
+            .setTitle(song.name)
+            .setArtist(song.singers)
+            .setAlbumTitle(song.album)
+            .apply { if (artwork.isNotEmpty()) setArtworkUri(Uri.parse(artwork)) }
+            .build()
+        return MediaItem.Builder()
+            .setMediaId(song.mid)
+            .setUri(TrackResolver.uriOf(song.mid))
+            .setMediaMetadata(metadata)
+            .build()
     }
 
     /** 追加到播放队列；已经在队列里的不重复加。队列原本为空时立即开始播。 */
@@ -290,10 +358,12 @@ object PlayerController {
         if (add.isEmpty()) return
         val startEmpty = queue.isEmpty()
         queue = queue + add
-        runCatching { refreshSession() }
         if (startEmpty) {
             index = 0
-            load(queue[0])
+            applyPlaylist(0)
+        } else {
+            // 队列变长：把新增的补到播放列表尾部，系统侧立刻能看到新的下一首
+            runCatching { exo?.addMediaItems(queue.drop(exo?.mediaItemCount ?: 0).map { mediaItemFor(it) }) }
         }
     }
 
@@ -303,7 +373,7 @@ object PlayerController {
         // 解析音源期间不要重复触发 load，否则会把正在进行的解析取消掉，越点越慢
         if (loading) return
         if (p.isPlaying) p.pause() else {
-            if (p.playbackState == Player.STATE_IDLE) load(current!!) else p.play()
+            if (p.playbackState == Player.STATE_IDLE) applyPlaylist(index) else p.play()
         }
     }
 
@@ -330,20 +400,37 @@ object PlayerController {
             else -> 0
         }
         index = target
-        load(queue[target])
+        val pl = exo
+        if (pl != null && pl.mediaItemCount == queue.size) {
+            pl.seekTo(target, 0L)
+            pl.play()
+        } else {
+            applyPlaylist(target)
+        }
     }
 
-    fun prev() {
+    /** 应用内「上一首」：3 秒内回上一首，超过 3 秒先回到本曲开头（常见播放器行为）。 */
+    fun prev() = prevInternal(restartFirst = true)
+
+    /** 系统侧「上一首」（耳机/车机/锁屏）：永远切到上一首，不重头播。 */
+    fun prevTrack() = prevInternal(restartFirst = false)
+
+    private fun prevInternal(restartFirst: Boolean) {
         if (queue.isEmpty()) return
         val p = exo
-        if (p != null && p.currentPosition > 3000) {
+        if (restartFirst && p != null && p.currentPosition > 3000) {
             p.seekTo(0)
             positionMs = 0
             return
         }
         val target = if (index > 0) index - 1 else queue.lastIndex
         index = target
-        load(queue[target])
+        if (p != null && p.mediaItemCount == queue.size) {
+            p.seekTo(target, 0L)
+            p.play()
+        } else {
+            applyPlaylist(target)
+        }
     }
 
     fun seekTo(ms: Long) {
@@ -408,47 +495,10 @@ object PlayerController {
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
             )
-            val sessionPlayer = QueuePlayer(
-                player = player,
-                onNext = { next() },
-                onPrevious = { prev() },
-                hasNext = { true },
-                hasPrevious = { true },
-            )
-            val nextCmd = androidx.media3.session.SessionCommand("qqmusic.NEXT", android.os.Bundle.EMPTY)
-            val prevCmd = androidx.media3.session.SessionCommand("qqmusic.PREV", android.os.Bundle.EMPTY)
-            val buttons = listOf(
-                androidx.media3.session.CommandButton.Builder()
-                    .setSessionCommand(prevCmd)
-                    .setDisplayName("上一首")
-                    .setIconResId(android.R.drawable.ic_media_previous)
-                    .build(),
-                androidx.media3.session.CommandButton.Builder()
-                    .setSessionCommand(nextCmd)
-                    .setDisplayName("下一首")
-                    .setIconResId(android.R.drawable.ic_media_next)
-                    .build(),
-            )
-            val callback = object : androidx.media3.session.MediaSession.Callback {
-                override fun onCustomCommand(
-                    session: androidx.media3.session.MediaSession,
-                    controller: androidx.media3.session.MediaSession.ControllerInfo,
-                    customCommand: androidx.media3.session.SessionCommand,
-                    args: android.os.Bundle,
-                ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
-                    when (customCommand.customAction) {
-                        "qqmusic.NEXT" -> next()
-                        "qqmusic.PREV" -> prev()
-                    }
-                    return com.google.common.util.concurrent.Futures.immediateFuture(
-                        androidx.media3.session.SessionResult(androidx.media3.session.SessionResult.RESULT_SUCCESS),
-                    )
-                }
-            }
-            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, sessionPlayer)
+            // 现在播放器里是标准播放列表（每首歌一个 MediaItem），直接用原生 Player 建会话：
+            // 上一首/下一首命令由框架按时间线自动给出，通知栏与锁屏都是系统标准控件
+            mediaSession = androidx.media3.session.MediaSession.Builder(ctx, player)
                 .setSessionActivity(sessionActivity)
-                .setCustomLayout(buttons)
-                .setCallback(callback)
                 .build()
         }
     }
@@ -473,8 +523,12 @@ object PlayerController {
         urlCache.clear()
         forcedQuality?.let { if (it.ordinal > q.ordinal) forcedQuality = null }
         stallDowngrades = 0
-        val song = current ?: return
-        load(song, startAt = positionMs, autoPlay = playing)
+        if (current == null) return
+        val pos = positionMs
+        TrackResolver.clear()
+        applyPlaylist(index)
+        runCatching { exo?.seekTo(pos) }
+        if (!playing) runCatching { exo?.pause() }
     }
 
     fun setSleep(minutes: Int) {
@@ -518,7 +572,8 @@ object PlayerController {
         if (loading) return
         // 整首已经并行下好：直接切本地，音质不降也比网络流畅
         if (AudioFetch.cached(ctx, song.mid) != null) {
-            load(song, startAt = positionMs, autoPlay = true)
+            exo?.seekTo(positionMs)
+            exo?.play()
             return
         }
         // 用户关掉了自动降档：卡顿就卡着，不偷偷改音质
@@ -529,7 +584,11 @@ object PlayerController {
         stallDowngrades += 1
         forcedQuality = lower
         error = null
-        load(song, startAt = positionMs, autoPlay = true)
+        // 清掉解析缓存后重新按低一档解析当前曲
+        TrackResolver.clear()
+        val pos = positionMs
+        applyPlaylist(index)
+        runCatching { exo?.seekTo(pos) }
     }
 
     fun clearQueue() {
@@ -757,6 +816,8 @@ object PlayerController {
         val sc = scope ?: return
         val targets = listOfNotNull(queue.getOrNull(index + 1), queue.getOrNull(index - 1))
         if (targets.isEmpty()) return
+        // 播放列表模式下，下一首/上一首都是 MediaItem，提前把直链解析好即可
+        targets.forEach { runCatching { TrackResolver.prefetch(it.mid) } }
         sc.launch {
             withContext(Dispatchers.IO) {
                 val wanted = Settings.quality(ctx)

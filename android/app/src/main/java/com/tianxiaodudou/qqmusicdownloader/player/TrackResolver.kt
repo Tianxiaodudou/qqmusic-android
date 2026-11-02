@@ -34,7 +34,12 @@ object TrackResolver {
     /** 解析直链（带音质上限、替换音源兜底、8 分钟缓存）。失败返回 null。 */
     fun resolve(mid: String): String? {
         val ctx = appContext ?: return null
-        cache[mid]?.let { if (System.currentTimeMillis() - it.second < TTL) return it.first }
+        cache[mid]?.let {
+            if (System.currentTimeMillis() - it.second < TTL) {
+                qualities[mid]?.takeIf { q -> q.isNotEmpty() }?.let { q -> onResolved?.invoke(mid, q) }
+                return it.first
+            }
+        }
         val song = TrackCatalog.get(mid) ?: return null
         val wanted = Settings.quality(ctx)
         val chain = Settings.Quality.entries

@@ -133,7 +133,8 @@ object PlayerController {
                 if (idx < 0) return
                 index = idx
                 persistQueue()
-                actualQuality = TrackResolver.qualityOf(mid)
+                // 新曲还没解析完就保留旧值，避免徽章闪一下消失；解析完成后 ticker 会立刻校正
+                TrackResolver.qualityOf(mid).takeIf { it.isNotEmpty() }?.let { actualQuality = it }
                 durationMs = (TrackCatalog.get(mid)?.interval ?: 0) * 1000L
                 appContext?.let { ResumeStore.get(it, mid).let { pos -> if (pos > 0) c.seekTo(pos) } }
             }
@@ -157,6 +158,11 @@ object PlayerController {
                     val d = pl.duration
                     if (d > 0) durationMs = d
                     playing = pl.isPlaying
+                    // 音质徽章自愈：解析是异步的，回调/切歌顺序可能错过，这里每 200ms 校正一次
+                    current?.let { s ->
+                        val q = TrackResolver.qualityOf(s.mid)
+                        if (q.isNotEmpty() && q != actualQuality) actualQuality = q
+                    }
                     if (System.currentTimeMillis() - lastPersistAt > 5000) {
                         lastPersistAt = System.currentTimeMillis()
                         persistQueue()

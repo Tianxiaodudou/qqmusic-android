@@ -128,6 +128,8 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     val context = LocalContext.current
     var tab by rememberSaveable { mutableStateOf(Tab.Home) }
     var showPlayer by remember { mutableStateOf(false) }
+    // 从迷你播放器点「播放列表」时，打开播放器后直接弹队列面板
+    var openQueueOnShow by remember { mutableStateOf(false) }
     var showDownloads by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -170,7 +172,13 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             bottomBar = {
                 Column {
                     // 全局播放器常驻，不再随是否有歌曲而隐藏
-                    MiniPlayer(onOpen = { showPlayer = true }, onQueue = { showPlayer = true })
+                    MiniPlayer(
+                        onOpen = { showPlayer = true },
+                        onQueue = {
+                            openQueueOnShow = true
+                            showPlayer = true
+                        },
+                    )
                     NavigationBar(containerColor = AppTheme.colors.bgElevated, tonalElevation = AppTheme.dimens.none) {
                         Tab.entries.forEach { item ->
                             if (item == Tab.Search) {
@@ -275,7 +283,11 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(tween(160)),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(tween(140)),
         ) {
-            PlayerScreen(onExit = { showPlayer = false })
+            PlayerScreen(
+                onExit = { showPlayer = false },
+                openQueue = openQueueOnShow,
+                onQueueOpened = { openQueueOnShow = false },
+            )
         }
     }
 }

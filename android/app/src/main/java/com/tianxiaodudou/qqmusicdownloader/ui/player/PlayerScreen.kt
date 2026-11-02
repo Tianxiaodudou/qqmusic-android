@@ -158,7 +158,11 @@ internal sealed interface PSheet {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlayerScreen(onExit: () -> Unit) {
+fun PlayerScreen(
+    onExit: () -> Unit,
+    openQueue: Boolean = false,
+    onQueueOpened: () -> Unit = {},
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboardManager.current
@@ -178,6 +182,13 @@ fun PlayerScreen(onExit: () -> Unit) {
     var flashIndex by remember { mutableIntStateOf(-1) }
     var seekPulse by remember { mutableIntStateOf(0) }
     var sheet by remember { mutableStateOf<PSheet?>(null) }
+    // 从迷你播放器「播放列表」进来时，直接把队列面板打开
+    LaunchedEffect(openQueue) {
+        if (openQueue) {
+            sheet = PSheet.Queue
+            onQueueOpened()
+        }
+    }
     var shareLine by remember { mutableStateOf<LyricApi.Line?>(null) }
     var dictLine by remember { mutableStateOf<LyricApi.Line?>(null) }
     var dictEntries by remember { mutableStateOf<List<com.tianxiaodudou.qqmusicdownloader.net.Extras.DictEntry>>(emptyList()) }

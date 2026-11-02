@@ -76,6 +76,7 @@ object PlayerController {
     val current: MusicApi.Song? get() = queue.getOrNull(index)
 
     private var posAt = 0L
+    private var lastPersistAt = 0L
     private var posRealtime = 0L
 
     /** 播放位置外推：UI 每帧读它做逐字歌词，不用等控制器回传。 */
@@ -131,6 +132,7 @@ object PlayerController {
                 val idx = queue.indexOfFirst { it.mid == mid }
                 if (idx < 0) return
                 index = idx
+                persistQueue()
                 actualQuality = TrackResolver.qualityOf(mid)
                 durationMs = (TrackCatalog.get(mid)?.interval ?: 0) * 1000L
                 appContext?.let { ResumeStore.get(it, mid).let { pos -> if (pos > 0) c.seekTo(pos) } }
@@ -140,6 +142,8 @@ object PlayerController {
                 error = "播放出错：" + (e.message ?: "未知错误")
             }
         })
+
+        restoreQueue(c)
 
         ticker?.cancel()
         ticker = scope?.launch {
@@ -153,6 +157,10 @@ object PlayerController {
                     val d = pl.duration
                     if (d > 0) durationMs = d
                     playing = pl.isPlaying
+                    if (System.currentTimeMillis() - lastPersistAt > 5000) {
+                        lastPersistAt = System.currentTimeMillis()
+                        persistQueue()
+                    }
                     val song = current
                     if (pl.isPlaying && song != null) {
                         appContext?.let { ResumeStore.save(it, song.mid, positionMs, durationMs) }
@@ -165,6 +173,32 @@ object PlayerController {
                 }
                 delay(200)
             }
+        }
+    }
+
+    /** 从本地恢复上次的队列、当前曲目与进度（不自动播放）。 */
+    private fun restoreQueue(c: MediaController) {
+        val ctx = appContext ?: return
+        if (queue.isNotEmpty()) return
+        val snap = QueueStore.load(ctx) ?: return
+        queue = snap.songs
+        index = snap.index.coerceIn(0, snap.songs.lastIndex)
+        TrackCatalog.putAll(snap.songs)
+        durationMs = snap.songs[index].interval * 1000L
+        positionMs = snap.positionMs
+        runCatching {
+            c.setMediaItems(snap.songs.map { mediaItemFor(it) }, index, snap.positionMs)
+            c.prepare()
+            c.pause()
+        }
+    }
+
+    private fun persistQueue() {
+        val ctx = appContext ?: return
+        if (queue.isEmpty()) {
+            QueueStore.clear(ctx)
+        } else {
+            QueueStore.save(ctx, queue, index, positionMs)
         }
     }
 
@@ -184,6 +218,7 @@ object PlayerController {
             c.play()
         }.onFailure { error = "播放失败：" + (it.message ?: "") }
         durationMs = list[at].interval * 1000L
+        persistQueue()
         prefetchAround()
     }
 
@@ -209,6 +244,7 @@ object PlayerController {
         } else {
             runCatching { c.addMediaItems(add.map { mediaItemFor(it) }) }
         }
+        persistQueue()
     }
 
     fun removeAt(at: Int) {
@@ -289,6 +325,7 @@ object PlayerController {
         playing = false
         positionMs = 0
         durationMs = 0
+        appContext?.let { QueueStore.clear(it) }
     }
 
     // ---------------- 设置类 ----------------

@@ -421,6 +421,7 @@ fun PlayerScreen(onExit: () -> Unit) {
                 when (s) {
                     PSheet.Quality -> QualitySheet(
                         current = quality,
+                        song = song,
                         onPick = { q ->
                             quality = q
                             PlayerController.setQuality(q)

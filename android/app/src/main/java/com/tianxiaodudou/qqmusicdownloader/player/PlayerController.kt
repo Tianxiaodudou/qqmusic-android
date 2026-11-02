@@ -111,6 +111,9 @@ object PlayerController {
         val ctx = context.applicationContext
         appContext = ctx
         TrackResolver.attach(ctx)
+        TrackResolver.onResolved = { mid, quality ->
+            if (current?.mid == mid) actualQuality = quality
+        }
         // 播放缓存：缓冲过的字节落盘（LRU 1.5GB），重听同一首/回拖不再重新下载，
         // 高音质下卡顿主要靠「缓存 + 更大的缓冲窗口」缓解（ExoPlayer 本身是单连接拉流）。
         val cache = runCatching {

@@ -109,24 +109,54 @@ private fun SheetHeader(title: String, subtitle: String = "", trailing: @Composa
 }
 
 @Composable
-fun QualitySheet(current: Settings.Quality, onPick: (Settings.Quality) -> Unit) {
+fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick: (Settings.Quality) -> Unit) {
+    // 每首歌实际提供的档位不同：没有的档位置灰，不可点
+    fun available(q: Settings.Quality): Boolean {
+        val s = song ?: return true
+        return when (q) {
+            Settings.Quality.STANDARD -> s.size128 > 0 || s.size320 > 0
+            Settings.Quality.HIGH -> s.size320 > 0
+            Settings.Quality.LOSSLESS -> s.sizeFlac > 0
+            Settings.Quality.HIRES -> s.sizeFlac > 0 && s.sizeNew.isNotEmpty()
+            Settings.Quality.MASTER -> s.sizeNew.isNotEmpty()
+            Settings.Quality.DOLBY -> s.sizeDolby > 0
+        }
+    }
+
     Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.spacingMd)) {
-        SheetHeader("音质上限", "账号无权限时自动降级；实际在播音质看播放页顶栏")
+        SheetHeader("音质上限", "灰色档位表示这首歌没有该音质；账号无权限时还会自动降级")
         Settings.Quality.entries.forEach { q ->
+            val ok = available(q)
             Row(
-                Modifier.fillMaxWidth().clickable { onPick(q) }.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing13),
+                Modifier.fillMaxWidth()
+                    .clickable(enabled = ok) { onPick(q) }
+                    .padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacing13),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(q.label, fontSize = AppTheme.typography.title.fontSize, color = SheetTitle)
-                    Text(q.detail, fontSize = AppTheme.typography.caption.fontSize, color = SheetSub)
+                    Text(
+                        q.label,
+                        fontSize = AppTheme.typography.title.fontSize,
+                        color = if (ok) SheetTitle else AppTheme.colors.textDisabled,
+                    )
+                    Text(
+                        if (ok) q.detail else "这首歌没有该音质",
+                        fontSize = AppTheme.typography.caption.fontSize,
+                        color = if (ok) SheetSub else AppTheme.colors.textDisabled,
+                    )
                 }
-                if (q == current) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(AppTheme.dimens.iconMd))
+                if (q == current) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        null,
+                        tint = if (ok) Accent else AppTheme.colors.textDisabled,
+                        modifier = Modifier.size(AppTheme.dimens.iconMd),
+                    )
+                }
             }
         }
     }
 }
-
 @Composable
 fun SyncSheet(offsetMs: Int, onChange: (Int) -> Unit, onReset: () -> Unit) {
     var value by remember { mutableStateOf(offsetMs / 1000f) }

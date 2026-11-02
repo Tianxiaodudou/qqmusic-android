@@ -19,18 +19,26 @@ object AudioFx {
     private var session = 0
     private var preset = 0
 
+    @Volatile
+    private var lastAttachAt = 0L
+
     fun attach(context: Context, sessionId: Int, index: Int) {
         preset = index
+        // 音频会话没变就不重建效果器：重复 new Equalizer/BassBoost 会在输出链上产生咔哒声
         if (sessionId == session && eq != null) {
-            apply(index)
+            runCatching { apply(index) }
             return
         }
-        release()
+        // 处理系统短时间内连续回调同一次会话的情况
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (sessionId == session && now - lastAttachAt < 1500) return
+        lastAttachAt = now
+        runCatching { release() }
         session = sessionId
         if (sessionId == 0) return
         runCatching { eq = Equalizer(0, sessionId) }
         runCatching { bass = BassBoost(0, sessionId) }
-        apply(index)
+        runCatching { apply(index) }
     }
 
     fun apply(index: Int) {

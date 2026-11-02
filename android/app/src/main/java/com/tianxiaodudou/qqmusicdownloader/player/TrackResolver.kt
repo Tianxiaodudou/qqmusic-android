@@ -20,6 +20,9 @@ object TrackResolver {
 
     val SCHEME = "qqmusic"
 
+    /** 解析出某一首的实际音质时回调，用于刷新播放页顶栏的音质徽章。 */
+    var onResolved: ((mid: String, quality: String) -> Unit)? = null
+
     fun attach(ctx: Context) { appContext = ctx.applicationContext }
 
     fun uriOf(mid: String): Uri = Uri.parse(SCHEME + "://track/" + mid)
@@ -48,6 +51,7 @@ object TrackResolver {
                     "O801" -> "Hi-Res"; "AI00" -> "母带"; "D004" -> "杜比"; else -> ""
                 }
                 qualities[mid] = text
+                onResolved?.invoke(mid, text)
                 return url
             }
         }
@@ -58,6 +62,7 @@ object TrackResolver {
             if (!url.isNullOrEmpty()) {
                 cache[mid] = url to System.currentTimeMillis()
                 qualities[mid] = "替换音源"
+                onResolved?.invoke(mid, "替换音源")
                 return url
             }
         }

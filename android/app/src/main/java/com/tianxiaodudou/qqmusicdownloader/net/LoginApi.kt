@@ -67,10 +67,12 @@ object LoginApi {
         val code = args[0]
         val redirect = args[2]
         val nick = if (args.size > 5) args[5] else ""
+        Diag.log("login", "ptuiCB code=" + code + " args=" + args.size)
         return when (code) {
             "0" -> try {
                 State.LoggedIn(authorize(redirect, nick))
             } catch (e: Exception) {
+                Diag.log("login", "authorize failed: " + e)
                 State.Failed(e.message ?: "换取登录态的某一步失败了")
             }
             "1", "67" -> State.Scanned
@@ -98,6 +100,7 @@ object LoginApi {
                 if (i >= 0) code = finalUrl.substring(i + 5).substringBefore('&')
             }
         }
+        Diag.log("login", "authorize redirect=" + redirect.take(160) + " final=" + finalUrl.take(160) + " code=" + code.take(20))
         if (code.isEmpty()) {
             // 兜底：y.qq.com 登录后可能直接把 qm_keyst 下发到 cookie 里
             val key = QqClient.cookie("qm_keyst") ?: QqClient.cookie("qqmusic_key")

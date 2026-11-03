@@ -23,6 +23,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         QqClient.init(applicationContext)
+        com.tianxiaodudou.qqmusicdownloader.net.Diag.init(this)
         QqClient.session = Session.load(this)
         com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeStore.init(this)
         askNotificationPermission()

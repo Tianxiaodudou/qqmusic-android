@@ -101,13 +101,26 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
         }
         image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
         status = if (wechat) "打开微信扫一扫" else "打开手机 QQ 扫一扫"
+        var failures = 0
         while (true) {
             delay(2000)
+            var errText = ""
             val st = withContext(Dispatchers.IO) {
-                runCatching { if (wechat) LoginApi.wxPoll(uuid) else LoginApi.poll() }.getOrNull()
+                runCatching { if (wechat) LoginApi.wxPoll(uuid) else LoginApi.poll() }
+                    .onFailure {
+                        errText = it.message ?: it.toString()
+                        com.tianxiaodudou.qqmusicdownloader.net.Diag.log("login", "poll error: " + errText)
+                    }
+                    .getOrNull()
             }
             when (st) {
-                null -> Unit
+                null -> {
+                    failures += 1
+                    // 之前异常被静默吞掉，界面就一直停在“已扫码”什么都不动
+                    if (failures >= 2 && errText.isNotEmpty()) {
+                        status = "登录状态查询失败：" + errText.take(80)
+                    }
+                }
                 is LoginApi.State.LoggedIn -> {
                     onLoggedIn(st.session)
                     return@LaunchedEffect
@@ -123,6 +136,7 @@ private fun QrBlock(onLoggedIn: (Session) -> Unit, wechat: Boolean) {
                     return@LaunchedEffect
                 }
                 is LoginApi.State.Failed -> {
+                    com.tianxiaodudou.qqmusicdownloader.net.Diag.log("login", "state failed: " + st.message)
                     status = "登录失败：" + st.message
                     return@LaunchedEffect
                 }

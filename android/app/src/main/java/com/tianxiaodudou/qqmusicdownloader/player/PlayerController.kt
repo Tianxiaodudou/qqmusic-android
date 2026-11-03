@@ -366,6 +366,32 @@ object PlayerController {
         positionMs = ms
     }
 
+    /** 退出登录用：立刻停播、清空队列、释放会话并停掉服务，系统媒体控件也随之消失。 */
+    fun stopAndClear() {
+        runCatching {
+            controller?.let { c ->
+                c.pause()
+                c.clearMediaItems()
+            }
+        }
+        runCatching { controller?.release() }
+        controller = null
+        queue = emptyList()
+        index = -1
+        playing = false
+        loading = false
+        positionMs = 0
+        durationMs = 0
+        actualQuality = ""
+        error = null
+        sleepEndAt = 0
+        sleepAfterCurrent = false
+        appContext?.let { ctx ->
+            QueueStore.clear(ctx)
+            runCatching { ctx.stopService(android.content.Intent(ctx, PlaybackService::class.java)) }
+        }
+    }
+
     fun clearQueue() {
         controller?.clearMediaItems()
         queue = emptyList()

@@ -119,6 +119,8 @@ fun AppRoot() {
         })
     } else {
         MainScaffold(current, onLogout = {
+            // 退出登录必须把播放也停掉，否则服务继续放着、系统媒体键还能切歌
+            com.tianxiaodudou.qqmusicdownloader.player.PlayerController.stopAndClear()
             Session.clear(context)
             session = null
         })

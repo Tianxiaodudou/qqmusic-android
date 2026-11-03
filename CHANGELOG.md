@@ -1,5 +1,17 @@
 # 更新日志
 
+## v2.61.0 (2026-11-03)
+
+### 修复：退出登录后仍在放歌、系统媒体键还能切歌
+- 退出登录现在会调用 `PlayerController.stopAndClear()`：暂停、清空播放列表、释放 MediaController、
+  清掉持久化队列并 `stopService`，通知栏/锁屏/蓝牙的媒体控件随之消失
+
+### 排查：QQ 扫码登录点了没反应
+- 之前轮询异常被 `getOrNull()` 静默吞掉，界面永远停在“已扫码，请确认”，也没有任何日志
+- 现在：轮询连续失败会把错误显示在二维码下方；同时新增**落盘诊断日志** `Diag`
+  （release 包被 R8 去掉 `Log.*`，logcat 看不到），写入
+  `/sdcard/Android/data/com.tianxiaodudou.qqmusicdownloader/files/diag.log`，记录了 
+  `ptuiCB` 状态码、授权跳转地址、最终 URL、code 以及异常栈
 ## v2.60.0 (2026-11-03)
 
 ### 修复：「推荐歌单」进去一直是空白（真因找到了）

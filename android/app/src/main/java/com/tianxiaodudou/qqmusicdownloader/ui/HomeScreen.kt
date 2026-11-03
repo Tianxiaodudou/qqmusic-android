@@ -290,6 +290,16 @@ fun HomeScreen(
             }
             return@LaunchedEffect
         }
+        if (v is HomeView.Songlists) {
+            // 之前这里漏了分支：页面永远拿不到数据，进去就是空白（只有标题和返回）
+            if (songlists.isNullOrEmpty()) {
+                songlists = null
+                songlists = withContext(Dispatchers.IO) {
+                    runCatching { RecommendApi.songlists(num = PAGE) }.getOrDefault(emptyList())
+                }
+            }
+            return@LaunchedEffect
+        }
         if (v is HomeView.Albums) {
             if (albums.isNullOrEmpty()) albums = withContext(Dispatchers.IO) {
                 runCatching { AlbumApi.newAlbums(num = PAGE, page = 1) }.getOrDefault(emptyList())

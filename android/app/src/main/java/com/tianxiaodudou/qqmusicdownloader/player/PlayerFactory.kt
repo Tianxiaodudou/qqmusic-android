@@ -58,9 +58,22 @@ object PlayerFactory {
                 androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .setAudioOffloadSupportProvider(
-                        androidx.media3.exoplayer.audio.DefaultAudioOffloadSupportProvider(context),
-                    )
+                    .apply {
+                        if (com.tianxiaodudou.qqmusicdownloader.net.Settings.audioOffload(context)) {
+                            setAudioOffloadSupportProvider(
+                                androidx.media3.exoplayer.audio.DefaultAudioOffloadSupportProvider(context),
+                            )
+                        }
+                    }
+                    .setExperimentalAudioOffloadListener(object : androidx.media3.exoplayer.ExoPlayer.AudioOffloadListener {
+                        override fun onOffloadedPlayback(isOffloaded: Boolean) {
+                            android.util.Log.i("QQAudio", "offload=" + isOffloaded)
+                        }
+
+                        override fun onSleepingForOffloadChanged(isSleeping: Boolean) {
+                            android.util.Log.i("QQAudio", "offloadSleeping=" + isSleeping)
+                        }
+                    })
                     .setAudioTrackBufferSizeProvider { minBufferSize, _, _, _, _, _, _ ->
                         minBufferSize * 4
                     }
@@ -86,7 +99,7 @@ object PlayerFactory {
             )
             .build()
         // 允许使用硬件卸载通道（不强制：设备/编码不支持时框架自动回退普通路径）
-        runCatching {
+        if (com.tianxiaodudou.qqmusicdownloader.net.Settings.audioOffload(ctx)) runCatching {
             player.trackSelectionParameters = player.trackSelectionParameters
                 .buildUpon()
                 .setAudioOffloadPreferences(

@@ -26,6 +26,11 @@ class PlaybackService : MediaSessionService() {
                     .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
             )
+            p.addListener(object : androidx.media3.common.Player.Listener {
+                override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    android.util.Log.i("QQAudio", "audioSession=" + audioSessionId)
+                }
+            })
             session = MediaSession.Builder(this, p)
                 .setSessionActivity(sessionActivity)
                 .build()

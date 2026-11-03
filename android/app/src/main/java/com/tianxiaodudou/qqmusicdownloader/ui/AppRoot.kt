@@ -397,6 +397,7 @@ private fun MinePage(
     // 「我的」页分组折叠：默认全收起，同一时间只允许展开一个
     var openSection by remember { mutableStateOf("") }
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
+    var offload by remember { mutableStateOf(Settings.audioOffload(context)) }
     var desktopLyrics by remember { mutableStateOf(Settings.desktopLyrics(context)) }
     var btLyrics by remember { mutableStateOf(Settings.btLyrics(context)) }
     var themeMode by remember { mutableStateOf(Settings.themeMode(context)) }
@@ -560,6 +561,14 @@ private fun MinePage(
             MineRow("首页模块", "各模块显示 / 隐藏与条数", divider = false) { Nav.push(Route.HomeModules) }
         }
         FoldSection("播放与下载", openSection == "play", onToggle = { toggleSection("play") }) {
+            MineRow(
+                "硬件音频卸载",
+                if (offload) "已开启 · 压缩帧直送 DSP，省 CPU（重启播放器生效）" else "已关闭 · 走应用解码普通路径",
+            ) {
+                offload = !offload
+                Settings.setAudioOffload(context, offload)
+                toast = if (offload) "下次播放生效：已启用硬件卸载" else "下次播放生效：已改为普通解码路径"
+            }
             MineRow(
                 "缓冲卡顿自动降音质",
                 if (autoDowngrade) "已开启 · 卡住 6 秒自动降一档" else "已关闭 · 卡顿也保持当前音质",

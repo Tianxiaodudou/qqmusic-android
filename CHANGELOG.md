@@ -1,5 +1,15 @@
 # 更新日志
 
+## v2.52.0 (2026-11-03)
+
+### 诊断增强：能对账「音频会话 / 硬件卸载 / underrun」
+- 新增日志 `QQAudio: audioSession=<id>`（播放器音频会话号）与 `QQAudio: offload=true/false`、
+  `offloadSleeping=...`（是否真的走了硬件卸载通道、是否进入卸载休眠）
+- 新增设置项「硬件音频卸载」（我的 → 播放与下载，默认开启）：
+  关闭后不再注册 `AudioOffloadSupportProvider`、不请求卸载模式，用于 A/B 对比咔顿是否与卸载有关（下次播放生效）
+- 定位依据（上一轮日志）：`AudioFlinger: threadLoop: blocked before threadloop_write() for 51326 msecs, thread 37`
+  与 `updateOffloaded() => offload 1 on audio io 37`、Dolby `EFFECT_CMD_OFFLOAD` 同刻发生，
+  随后 ours（sessionId 473 / com.tianxiaodudou.qqmusicdownloader）出现 `ACTIVE underrun`（9 次）
 ## v2.51.0 (2026-11-03)
 
 ### 修复：2.49 起无法播放（媒体键全失效、不自动播放）

@@ -55,6 +55,7 @@ object Settings {
     private const val K_DESKTOP_LYRICS = "desktop_lyrics"
     private const val K_BT_LYRICS = "bt_lyrics"
     private const val K_THEME = "theme_mode"
+    private const val K_OFFLOAD = "audio_offload"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -73,6 +74,13 @@ object Settings {
         HomeModule("charts", "排行榜"),
         HomeModule("guess", "猜你喜欢"),
     )
+
+    /** 硬件音频卸载开关（默认开）：开=压缩帧直送 DSP，省 CPU；关=走应用解码的普通路径。 */
+    fun audioOffload(context: Context): Boolean = prefs(context).getBoolean(K_OFFLOAD, true)
+
+    fun setAudioOffload(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(K_OFFLOAD, on).apply()
+    }
 
     /** 主题模式：跟随系统 / 日间 / 夜间（默认跟随系统）。 */
     fun themeMode(context: Context): com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode =

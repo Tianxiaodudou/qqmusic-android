@@ -139,6 +139,7 @@ object PlayerController {
 
     private fun bind(c: MediaController) {
         runCatching { c.setPlaybackSpeed(speed) }
+        applyModeTo(c)
         c.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
@@ -154,6 +155,11 @@ object PlayerController {
                 val mid = mediaItem?.mediaId ?: return
                 val idx = queue.indexOfFirst { it.mid == mid }
                 if (idx < 0) return
+                if (sleepAfterCurrent) {
+                    // 单曲循环下不会发生切歌，这里只在真的换曲时触发
+                    sleepAfterCurrent = false
+                    runCatching { c.pause() }
+                }
                 index = idx
                 persistQueue()
                 // 新曲还没解析完就保留旧值，避免徽章闪一下消失；解析完成后 ticker 会立刻校正
@@ -376,6 +382,28 @@ object PlayerController {
         mode = m
         appContext?.let {
             it.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(K_MODE, m.name).apply()
+        }
+        // 关键：把模式交给播放器本身。之前只改了 UI 状态，播放列表走到头时
+        // ExoPlayer 仍按默认的“自动下一首”前进，单曲循环自然不生效。
+        controller?.let { applyModeTo(it) }
+    }
+
+    private fun applyModeTo(c: MediaController) {
+        runCatching {
+            when (mode) {
+                Mode.LIST -> {
+                    c.shuffleModeEnabled = false
+                    c.repeatMode = Player.REPEAT_MODE_ALL
+                }
+                Mode.SINGLE -> {
+                    c.shuffleModeEnabled = false
+                    c.repeatMode = Player.REPEAT_MODE_ONE
+                }
+                Mode.SHUFFLE -> {
+                    c.shuffleModeEnabled = true
+                    c.repeatMode = Player.REPEAT_MODE_ALL
+                }
+            }
         }
     }
 

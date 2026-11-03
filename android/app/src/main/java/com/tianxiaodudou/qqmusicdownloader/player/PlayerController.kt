@@ -267,9 +267,12 @@ object PlayerController {
     }
 
     fun playAt(at: Int) {
-        if (at !in queue.indices) return
+        val c = controller ?: run {
+            if (at in queue.indices) pendingPlay = queue to at
+            return
+        }
+        if (at !in 0 until c.mediaItemCount) return
         index = at
-        val c = controller ?: run { pendingPlay = queue to at; return }
         buildAt(c, at)
     }
 
@@ -317,19 +320,22 @@ object PlayerController {
 
     fun next(auto: Boolean = false) {
         val c = controller ?: return
-        if (queue.isEmpty()) return
+        if (c.mediaItemCount == 0) return
         if (auto && mode == Mode.SINGLE) {
             c.seekTo(0)
             c.play()
             return
         }
+        // 以播放列表的实际位置为准，避免本地 index 与实际播放项不同步时点不动
+        val cur = c.currentMediaItemIndex.coerceAtLeast(0)
+        val count = c.mediaItemCount
         val target = when {
-            mode == Mode.SHUFFLE && queue.size > 1 -> {
-                var n = index
-                while (n == index) n = Random.nextInt(queue.size)
+            mode == Mode.SHUFFLE && count > 1 -> {
+                var n = cur
+                while (n == cur) n = Random.nextInt(count)
                 n
             }
-            index + 1 < queue.size -> index + 1
+            cur + 1 < count -> cur + 1
             else -> 0
         }
         index = target
@@ -339,8 +345,10 @@ object PlayerController {
     /** 上一首：所有入口（应用内、迷你播放器、耳机/车机/锁屏）都直接切上一首，不回当前曲开头。 */
     fun prev() {
         val c = controller ?: return
-        if (queue.isEmpty()) return
-        val target = if (index > 0) index - 1 else queue.lastIndex
+        if (c.mediaItemCount == 0) return
+        val cur = c.currentMediaItemIndex.coerceAtLeast(0)
+        val count = c.mediaItemCount
+        val target = if (cur > 0) cur - 1 else count - 1
         index = target
         buildAt(c, target)
     }

@@ -144,7 +144,6 @@ internal sealed interface PSheet {
     data object Sync : PSheet
     data object Queue : PSheet
     data object More : PSheet
-    data object Eq : PSheet
     data object Speed : PSheet
     data object Sleep : PSheet
     data object Style : PSheet
@@ -478,7 +477,6 @@ fun PlayerScreen(
 
                     PSheet.More -> MoreSheet(
                         qualityLabel = quality.label,
-                        eqPreset = Settings.eqPreset(context),
                         speed = PlayerController.speed,
                         sleepActive = PlayerController.sleepEndAt > 0 || PlayerController.sleepAfterCurrent,
                         offsetCount = Settings.offsetCount(context),
@@ -499,7 +497,6 @@ fun PlayerScreen(
                         onSimilar = { sheet = PSheet.Similar },
                         onRelated = { sheet = PSheet.Related },
                         onVersions = { sheet = PSheet.Versions },
-                        onEq = { sheet = PSheet.Eq },
                         onSpeed = { sheet = PSheet.Speed },
                         onSleep = { sheet = PSheet.Sleep },
                         onStyle = { sheet = PSheet.Style },
@@ -515,15 +512,6 @@ fun PlayerScreen(
                         onAbout = {
                             sheet = null
                             showAbout = true
-                        },
-                    )
-
-                    PSheet.Eq -> EqSheet(
-                        current = Settings.eqPreset(context),
-                        onPick = {
-                            Settings.setEqPreset(context, it)
-                            // 只改处理器参数：下一个 buffer 生效，不重配播放器
-                            com.tianxiaodudou.qqmusicdownloader.player.AudioFx.setPreset(it)
                         },
                     )
 

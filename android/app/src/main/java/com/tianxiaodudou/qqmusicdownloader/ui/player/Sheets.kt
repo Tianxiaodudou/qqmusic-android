@@ -35,7 +35,6 @@ import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Feedback
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
@@ -75,7 +74,6 @@ import com.tianxiaodudou.qqmusicdownloader.net.LyricApi
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.PlaylistApi
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
-import com.tianxiaodudou.qqmusicdownloader.player.AudioFx
 import com.tianxiaodudou.qqmusicdownloader.player.PlayerController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -357,7 +355,6 @@ fun QueueSheet(
 @Composable
 fun MoreSheet(
     qualityLabel: String,
-    eqPreset: Int,
     speed: Float,
     sleepActive: Boolean,
     offsetCount: Int,
@@ -369,7 +366,6 @@ fun MoreSheet(
     onSimilar: () -> Unit,
     onRelated: () -> Unit,
     onVersions: () -> Unit,
-    onEq: () -> Unit,
     onSpeed: () -> Unit,
     onSleep: () -> Unit,
     onStyle: () -> Unit,
@@ -388,12 +384,6 @@ fun MoreSheet(
         MenuRow(Icons.Rounded.QueueMusic, "相关歌单", onClick = onRelated)
         MenuRow(Icons.Rounded.RestartAlt, "其他版本", onClick = onVersions)
         MenuDivider()
-        MenuRow(
-            Icons.Rounded.GraphicEq,
-            "均衡器",
-            value = AudioFx.PRESETS.getOrElse(eqPreset) { "关闭" },
-            onClick = onEq,
-        )
         MenuRow(Icons.Rounded.Speed, "播放速度", value = String.format("%.1fx", speed), onClick = onSpeed)
         MenuRow(Icons.Rounded.Bedtime, "睡眠定时", value = if (sleepActive) "已开启" else "", onClick = onSleep)
         MenuRow(Icons.Rounded.TextFields, "歌词样式", onClick = onStyle)
@@ -433,22 +423,6 @@ private fun MenuRow(
         Text(label, fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
         if (value.isNotEmpty()) Text(value, fontSize = AppTheme.typography.bodySmall.fontSize, color = SheetSub)
         Icon(Icons.Rounded.ChevronRight, null, tint = AppTheme.colors.textDisabled, modifier = Modifier.size(AppTheme.dimens.iconMd))
-    }
-}
-
-@Composable
-fun EqSheet(current: Int, onPick: (Int) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
-        SheetHeader("均衡器", "改变声音风格，不影响音质")
-        AudioFx.PRESETS.forEachIndexed { i, name ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onPick(i) }.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacingMd),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(name, fontSize = AppTheme.typography.body.fontSize, color = SheetTitle, modifier = Modifier.weight(1f))
-                if (i == current) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(AppTheme.dimens.iconMd))
-            }
-        }
     }
 }
 

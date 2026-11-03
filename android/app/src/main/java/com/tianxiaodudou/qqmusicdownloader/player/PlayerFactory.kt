@@ -60,14 +60,6 @@ object PlayerFactory {
                     .setAudioTrackBufferSizeProvider { minBufferSize, _, _, _, _, _, _ ->
                         minBufferSize * 4
                     }
-                    // 均衡器与音量增益放进播放器内部（解码后、AudioTrack 之前）：
-                    // 不触碰音频会话，就不会把系统拉到「混音+效果链」上
-                    .setAudioProcessorChain(
-                        androidx.media3.exoplayer.audio.DefaultAudioSink.DefaultAudioProcessorChain(
-                            EqProcessor(),
-                            GainProcessor(),
-                        )
-                    )
                     .build()
         }
 

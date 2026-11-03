@@ -1,5 +1,12 @@
 # 更新日志
 
+## v2.47.0 (2026-11-03)
+
+### 彻底移除音频效果器（干净版本）
+- 删除 `EqProcessor` / `GainProcessor` / `ProcessorState` / `AudioFx`（文件与单测一并移除）
+  以及 `DefaultAudioSink.setAudioProcessorChain(...)` 的接入，播放链路回到**原生 ExoPlayer 默认处理**
+- 删除播放页「均衡器」入口与面板、设置里的「音量增益」入口与对话框，以及对应的 Settings 读写和键
+- 保留 2.44 的两项与音效无关的稳定性改动：默认不创建任何系统 AudioEffect、AudioTrack 缓冲放大 4 倍
 ## v2.46.0 (2026-11-03)
 
 ### 修复：2.45 起全程咔咔声、没有正常音

@@ -50,13 +50,11 @@ object Settings {
     private const val K_CENTER = "style_center"
     private const val K_TRANS = "style_trans"
     private const val K_ROMA = "style_roma"
-    private const val K_EQ = "eq_preset"
     private const val K_PAID = "paid_policy"
     private const val K_AUTO_DOWNGRADE = "auto_downgrade"
     private const val K_DESKTOP_LYRICS = "desktop_lyrics"
     private const val K_BT_LYRICS = "bt_lyrics"
     private const val K_THEME = "theme_mode"
-    private const val K_GAIN = "volume_gain"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -75,13 +73,6 @@ object Settings {
         HomeModule("charts", "排行榜"),
         HomeModule("guess", "猜你喜欢"),
     )
-
-    /** 全局音量增益档位 0..9（0 = 不增益）。 */
-    fun volumeGain(context: Context): Int = prefs(context).getInt(K_GAIN, 0).coerceIn(0, 9)
-
-    fun setVolumeGain(context: Context, level: Int) {
-        prefs(context).edit().putInt(K_GAIN, level.coerceIn(0, 9)).apply()
-    }
 
     /** 主题模式：跟随系统 / 日间 / 夜间（默认跟随系统）。 */
     fun themeMode(context: Context): com.tianxiaodudou.qqmusicdownloader.ui.theme.ThemeMode =
@@ -216,13 +207,6 @@ object Settings {
         prefs(context).edit()
             .remove(K_SCALE).remove(K_CENTER).remove(K_TRANS).remove(K_ROMA)
             .apply()
-    }
-
-    /** 0 = 关闭，其余见 [AudioFx.PRESETS]。 */
-    fun eqPreset(context: Context): Int = prefs(context).getInt(K_EQ, 0)
-
-    fun setEqPreset(context: Context, index: Int) {
-        prefs(context).edit().putInt(K_EQ, index).apply()
     }
 
     /** 清掉无损解密缓存与封面临时文件，返回释放的字节数。 */

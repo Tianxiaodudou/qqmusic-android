@@ -1,5 +1,13 @@
 # 更新日志
 
+## v2.49.0 (2026-11-03)
+
+### 硬件卸载链路加诊断日志（确认是否真的绕过 CPU 解码）
+- 启动时用 `AudioManager.isOffloadedPlaybackSupported` 逐项打印 MP3 / AAC / FLAC(44.1k) / FLAC(96k) 的结果，
+  tag 为 `AudioOffload`，格式：`MP3 44.1k -> 支持卸载` / `不支持（会走 CPU 解码）`
+- 说明：v2.48 起的配置走的是 Android 官方 offload 通道——**受支持的编码不再由应用解码**，
+  压缩帧直接写入 AudioTrack 的卸载模式，由 DSP/音频 HAL 解码并输出；不支持时框架自动回退 PCM 路径
+- FLAC 常量按 API 30+ 才存在的情况做了兼容（直接使用数值），避免老系统取不到
 ## v2.48.0 (2026-11-03)
 
 ### 新增：硬件音频卸载（audio offload）

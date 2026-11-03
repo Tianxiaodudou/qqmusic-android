@@ -67,6 +67,8 @@ object PlayerFactory {
                     .build()
         }
 
+        logOffloadSupport(ctx)
+
         val player = ExoPlayer.Builder(ctx, renderers)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -99,5 +101,46 @@ object PlayerFactory {
                 .build()
         }
         return player to cache
+    }
+
+    /**
+     * 打印设备对「压缩音频直送 DSP/HAL」的支持情况，便于用 logcat 确认是否真的走了硬件卸载。
+     * 只有 API 29+ 才有 isOffloadedPlaybackSupported。
+     */
+    private fun enc(encoding: Int, rate: Int): android.media.AudioFormat =
+        android.media.AudioFormat.Builder()
+            .setEncoding(encoding)
+            .setSampleRate(rate)
+            .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_STEREO)
+            .build()
+
+    private fun logOffloadSupport(ctx: android.content.Context) {
+        if (android.os.Build.VERSION.SDK_INT < 29) {
+            android.util.Log.i("AudioOffload", "API " + android.os.Build.VERSION.SDK_INT + " 不支持卸载通道")
+            return
+        }
+        val am = ctx.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+        val attrs = android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+        // FLAC 的编码常量从 API 30 才有，这里直接用数值，避免版本差异
+        val flac = 0x1500000 // AudioFormat.ENCODING_FLAC
+        val formats = listOf(
+            "MP3 44.1k" to enc(android.media.AudioFormat.ENCODING_MP3, 44100),
+            "AAC 44.1k" to enc(android.media.AudioFormat.ENCODING_AAC_LC, 44100),
+            "FLAC 44.1k" to enc(flac, 44100),
+            "FLAC 96k" to enc(flac, 96000),
+        )
+        formats.forEach { (name, fmt) ->
+            val ok = runCatching {
+                am.javaClass.getMethod(
+                    "isOffloadedPlaybackSupported",
+                    android.media.AudioFormat::class.java,
+                    android.media.AudioAttributes::class.java,
+                ).invoke(am, fmt, attrs) as? Boolean ?: false
+            }.getOrDefault(false)
+            android.util.Log.i("AudioOffload", name + " -> " + if (ok) "支持卸载" else "不支持（会走 CPU 解码）")
+        }
     }
 }

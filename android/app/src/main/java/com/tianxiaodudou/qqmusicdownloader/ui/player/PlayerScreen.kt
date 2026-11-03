@@ -198,12 +198,13 @@ fun PlayerScreen(
     // 返回链：词典 -> 分享 -> 关于 -> 任意面板 -> 收起播放页
     // 播放页自己消化返回：先关面板/词典/分享/关于，没有面板就退出播放页。
     // 之前只在「有面板」时才拦截，导致退出还要多按一次。
-    BackHandler(enabled = true) {
+    // 面板开着时不要抢返回：ModalBottomSheet 自己会消费返回并关闭面板，
+    // 之前两处同时处理会导致「按一次返回把面板和播放页一起关掉」。
+    BackHandler(enabled = sheet == null) {
         when {
             dictLine != null -> dictLine = null
             shareLine != null -> shareLine = null
             showAbout -> showAbout = false
-            sheet != null -> sheet = null
             else -> onExit()
         }
     }

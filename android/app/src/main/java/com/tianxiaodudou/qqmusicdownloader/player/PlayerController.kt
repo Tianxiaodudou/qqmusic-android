@@ -336,26 +336,16 @@ object PlayerController {
         buildAt(c, target)
     }
 
-    /** 应用内上一首：3 秒内回上一首，超过 3 秒先回本曲开头。 */
+    /** 上一首：所有入口（应用内、迷你播放器、耳机/车机/锁屏）都直接切上一首，不回当前曲开头。 */
     fun prev() {
-        val c = controller ?: return
-        if (queue.isEmpty()) return
-        if (c.currentPosition > 3000) {
-            c.seekTo(0)
-            positionMs = 0
-            return
-        }
-        prevTrack()
-    }
-
-    /** 系统侧上一首：永远切到上一首。 */
-    fun prevTrack() {
         val c = controller ?: return
         if (queue.isEmpty()) return
         val target = if (index > 0) index - 1 else queue.lastIndex
         index = target
         buildAt(c, target)
     }
+
+    fun prevTrack() = prev()
 
     fun seekTo(ms: Long) {
         controller?.seekTo(ms)

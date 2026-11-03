@@ -963,7 +963,17 @@ private fun PlayerControls(
                 PlayerController.Mode.SINGLE -> Icons.Rounded.RepeatOne
                 PlayerController.Mode.SHUFFLE -> Icons.Rounded.Shuffle
             }
-            Icon(icon, contentDescription = "播放模式", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.iconLg))
+            // contentDescription 带上当前模式，屏幕阅读器和自动化测试都能读到
+            Icon(
+                icon,
+                contentDescription = when (mode) {
+                    PlayerController.Mode.LIST -> "播放模式：列表循环"
+                    PlayerController.Mode.SINGLE -> "播放模式：单曲循环"
+                    PlayerController.Mode.SHUFFLE -> "播放模式：随机播放"
+                },
+                tint = TextHi,
+                modifier = Modifier.size(AppTheme.dimens.iconLg),
+            )
         }
         Spacer(Modifier.weight(1f))
         AppIconButton(onClick = onPrev, modifier = Modifier.size(AppTheme.dimens.coverLg)) {

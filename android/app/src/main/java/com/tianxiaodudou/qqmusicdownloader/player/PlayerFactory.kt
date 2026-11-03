@@ -75,9 +75,9 @@ object PlayerFactory {
                         }
                     })
                     // 系统级效果链（MIUI 的 Dolby/MiSound）会把我们的轨拉进混音线程，
-                    // 相机/桌面模糊造成的调度抖动会直接把缓冲吃空，这里给 8 倍余量。
+                    // 相机/桌面模糊造成的调度抖动会直接把缓冲吃空，这里给 12 倍余量。
                     .setAudioTrackBufferSizeProvider { minBufferSize, _, _, _, _, _, _ ->
-                        minBufferSize * 8
+                        minBufferSize * 12
                     }
                     .build()
         }

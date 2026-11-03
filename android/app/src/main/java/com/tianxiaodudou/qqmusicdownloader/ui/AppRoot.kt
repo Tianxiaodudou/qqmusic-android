@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -353,6 +354,9 @@ private fun MiniPlayer(onOpen: () -> Unit, onQueue: () -> Unit) {
                     fontSize = AppTheme.typography.badge.fontSize,
                     color = AppTheme.colors.textSecondary,
                 )
+            }
+            AppIconButton(onClick = { PlayerController.prev() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
+                Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = AppTheme.colors.textPrimary)
             }
             AppIconButton(onClick = { PlayerController.toggle() }, modifier = Modifier.size(AppTheme.dimens.touchTarget)) {
                 Icon(

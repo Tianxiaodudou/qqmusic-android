@@ -248,6 +248,38 @@ fun LoadingBox(modifier: Modifier = Modifier, text: String = "") {
     }
 }
 
+/**
+ * 歌曲列表骨架屏：请求还没回来时先占位，避免“点进去一片空白、什么都看不到”。
+ * 用主题色块绘制，不依赖动画，滚动时也不掉帧。
+ */
+@Composable
+fun SongListSkeleton(modifier: Modifier = Modifier, rows: Int = 8) {
+    Column(modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding)) {
+        repeat(rows) {
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = AppTheme.dimens.spacing10),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(AppTheme.dimens.buttonHeight).clip(AppTheme.shapes.cardSmall)
+                        .background(AppTheme.colors.chipBg),
+                )
+                Column(Modifier.weight(1f).padding(start = AppTheme.dimens.spacing10)) {
+                    Box(
+                        Modifier.fillMaxWidth(0.55f).height(AppTheme.dimens.spacingMd)
+                            .clip(AppTheme.shapes.cardSmall).background(AppTheme.colors.chipBg),
+                    )
+                    Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+                    Box(
+                        Modifier.fillMaxWidth(0.3f).height(AppTheme.dimens.spacingSm)
+                            .clip(AppTheme.shapes.cardSmall).background(AppTheme.colors.chipBg),
+                    )
+                }
+            }
+        }
+    }
+}
+
 /** 统一空状态：说明文字 + 可选操作。 */
 @Composable
 fun EmptyState(text: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {

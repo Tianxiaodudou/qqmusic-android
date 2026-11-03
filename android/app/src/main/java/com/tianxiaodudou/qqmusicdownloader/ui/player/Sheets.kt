@@ -355,7 +355,6 @@ fun QueueSheet(
 @Composable
 fun MoreSheet(
     qualityLabel: String,
-    speed: Float,
     sleepActive: Boolean,
     offsetCount: Int,
     onShare: () -> Unit,
@@ -366,7 +365,6 @@ fun MoreSheet(
     onSimilar: () -> Unit,
     onRelated: () -> Unit,
     onVersions: () -> Unit,
-    onSpeed: () -> Unit,
     onSleep: () -> Unit,
     onStyle: () -> Unit,
     onClearOffsets: () -> Unit,
@@ -384,7 +382,6 @@ fun MoreSheet(
         MenuRow(Icons.Rounded.QueueMusic, "相关歌单", onClick = onRelated)
         MenuRow(Icons.Rounded.RestartAlt, "其他版本", onClick = onVersions)
         MenuDivider()
-        MenuRow(Icons.Rounded.Speed, "播放速度", value = String.format("%.1fx", speed), onClick = onSpeed)
         MenuRow(Icons.Rounded.Bedtime, "睡眠定时", value = if (sleepActive) "已开启" else "", onClick = onSleep)
         MenuRow(Icons.Rounded.TextFields, "歌词样式", onClick = onStyle)
         if (offsetCount > 0) {
@@ -426,27 +423,6 @@ private fun MenuRow(
     }
 }
 
-@Composable
-fun SpeedSheet(current: Float, onPick: (Float) -> Unit) {
-    val options = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
-    Column(Modifier.fillMaxWidth().padding(bottom = AppTheme.dimens.pagePadding)) {
-        SheetHeader("播放速度")
-        options.forEach { v ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onPick(v) }.padding(horizontal = AppTheme.dimens.spacing22, vertical = AppTheme.dimens.spacingMd),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    if (v == 1f) "1.0x（原速）" else v.toString().removeSuffix(".0") + "x",
-                    fontSize = AppTheme.typography.body.fontSize,
-                    color = SheetTitle,
-                    modifier = Modifier.weight(1f),
-                )
-                if (abs(v - current) < 0.01f) Icon(Icons.Rounded.Check, null, tint = Accent, modifier = Modifier.size(AppTheme.dimens.iconMd))
-            }
-        }
-    }
-}
 
 @Composable
 fun SleepSheet(

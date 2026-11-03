@@ -95,7 +95,7 @@ object PlayerController {
             if (current?.mid == mid) actualQuality = quality
         }
         scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
-        speed = Settings.speed(ctx)
+        speed = 1f
         mode = runCatching {
             Mode.valueOf(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(K_MODE, "LIST") ?: "LIST")
         }.getOrDefault(Mode.LIST)
@@ -413,12 +413,6 @@ object PlayerController {
             Mode.SINGLE -> Mode.SHUFFLE
             Mode.SHUFFLE -> Mode.LIST
         })
-    }
-
-    fun changeSpeed(v: Float) {
-        speed = v
-        controller?.setPlaybackSpeed(v)
-        appContext?.let { Settings.setSpeed(it, v) }
     }
 
     /** 换音质：立即对当前曲生效（替换当前 MediaItem 让数据源重新解析），不需要切歌。 */

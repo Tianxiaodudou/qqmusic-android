@@ -144,7 +144,6 @@ internal sealed interface PSheet {
     data object Sync : PSheet
     data object Queue : PSheet
     data object More : PSheet
-    data object Speed : PSheet
     data object Sleep : PSheet
     data object Style : PSheet
     data object Info : PSheet
@@ -478,7 +477,6 @@ fun PlayerScreen(
 
                     PSheet.More -> MoreSheet(
                         qualityLabel = quality.label,
-                        speed = PlayerController.speed,
                         sleepActive = PlayerController.sleepEndAt > 0 || PlayerController.sleepAfterCurrent,
                         offsetCount = Settings.offsetCount(context),
                         onShare = {
@@ -498,7 +496,6 @@ fun PlayerScreen(
                         onSimilar = { sheet = PSheet.Similar },
                         onRelated = { sheet = PSheet.Related },
                         onVersions = { sheet = PSheet.Versions },
-                        onSpeed = { sheet = PSheet.Speed },
                         onSleep = { sheet = PSheet.Sleep },
                         onStyle = { sheet = PSheet.Style },
                         onClearOffsets = {
@@ -513,13 +510,6 @@ fun PlayerScreen(
                         onAbout = {
                             sheet = null
                             showAbout = true
-                        },
-                    )
-
-                    PSheet.Speed -> SpeedSheet(
-                        current = PlayerController.speed,
-                        onPick = {
-                            PlayerController.changeSpeed(it)
                         },
                     )
 

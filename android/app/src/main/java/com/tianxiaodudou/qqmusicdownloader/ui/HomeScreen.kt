@@ -632,7 +632,8 @@ fun HomeScreen(
             }
             val list = songs
             if (list == null) {
-                LoadingBox(Modifier.fillMaxSize())
+                // 骨架屏：请求期间就有可见内容，不会像白屏
+                SongListSkeleton(Modifier.fillMaxSize())
             } else if (list.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(error.ifEmpty { "暂无歌曲" }, color = MaterialTheme.colorScheme.onSurfaceVariant)

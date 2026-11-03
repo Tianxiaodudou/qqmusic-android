@@ -67,8 +67,6 @@ object PlayerFactory {
                     .build()
         }
 
-        logOffloadSupport(ctx)
-
         val player = ExoPlayer.Builder(ctx, renderers)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -114,7 +112,13 @@ object PlayerFactory {
             .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_STEREO)
             .build()
 
-    private fun logOffloadSupport(ctx: android.content.Context) {
+    /** 只做诊断：任何异常都必须吞掉，绝不能影响播放器创建。 */
+    fun logOffloadSupport(ctx: android.content.Context) {
+        runCatching { logOffloadSupportInternal(ctx) }
+            .onFailure { android.util.Log.w("AudioOffload", "能力探测失败：" + it) }
+    }
+
+    private fun logOffloadSupportInternal(ctx: android.content.Context) {
         if (android.os.Build.VERSION.SDK_INT < 29) {
             android.util.Log.i("AudioOffload", "API " + android.os.Build.VERSION.SDK_INT + " 不支持卸载通道")
             return
@@ -126,12 +130,12 @@ object PlayerFactory {
             .build()
         // FLAC 的编码常量从 API 30 才有，这里直接用数值，避免版本差异
         val flac = 0x1500000 // AudioFormat.ENCODING_FLAC
-        val formats = listOf(
-            "MP3 44.1k" to enc(android.media.AudioFormat.ENCODING_MP3, 44100),
-            "AAC 44.1k" to enc(android.media.AudioFormat.ENCODING_AAC_LC, 44100),
-            "FLAC 44.1k" to enc(flac, 44100),
-            "FLAC 96k" to enc(flac, 96000),
-        )
+        val formats = buildList {
+            runCatching { add("MP3 44.1k" to enc(android.media.AudioFormat.ENCODING_MP3, 44100)) }
+            runCatching { add("AAC 44.1k" to enc(android.media.AudioFormat.ENCODING_AAC_LC, 44100)) }
+            runCatching { add("FLAC 44.1k" to enc(flac, 44100)) }
+            runCatching { add("FLAC 96k" to enc(flac, 96000)) }
+        }
         formats.forEach { (name, fmt) ->
             val ok = runCatching {
                 am.javaClass.getMethod(

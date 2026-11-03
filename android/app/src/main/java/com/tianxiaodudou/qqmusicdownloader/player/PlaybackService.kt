@@ -29,7 +29,11 @@ class PlaybackService : MediaSessionService() {
             session = MediaSession.Builder(this, p)
                 .setSessionActivity(sessionActivity)
                 .build()
+            // 只做诊断，放在会话建好之后，失败也不影响播放
+            PlayerFactory.logOffloadSupport(this)
             // 播放器完全由服务持有；UI 通过 MediaController 观察这个会话
+        }.onFailure {
+            android.util.Log.e("PlaybackService", "初始化失败", it)
         }
         runCatching {
             if (com.tianxiaodudou.qqmusicdownloader.net.Settings.desktopLyrics(this)) {

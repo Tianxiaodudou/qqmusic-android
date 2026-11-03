@@ -100,18 +100,41 @@ object PlayerController {
             Mode.valueOf(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(K_MODE, "LIST") ?: "LIST")
         }.getOrDefault(Mode.LIST)
 
+        connect(ctx)
+    }
+
+    /** 连接服务里的 MediaSession；失败自动重试，连上后补做挂起的播放请求。 */
+    private fun connect(ctx: Context) {
+        runCatching { ctx.startService(android.content.Intent(ctx, PlaybackService::class.java)) }
         runCatching {
-            ctx.startService(android.content.Intent(ctx, PlaybackService::class.java))
             val token = SessionToken(ctx, android.content.ComponentName(ctx, PlaybackService::class.java))
             val future = MediaController.Builder(ctx, token).buildAsync()
             future.addListener(
                 {
-                    controller = runCatching { future.get() }.getOrNull()
-                    controller?.let { bind(it) }
+                    val c = runCatching { future.get() }.getOrNull()
+                    if (c != null) {
+                        controller = c
+                        bind(c)
+                        flushPending()
+                    } else {
+                        android.util.Log.w("PlayerController", "MediaController 连接失败，2 秒后重试")
+                        android.os.Handler(android.os.Looper.getMainLooper())
+                            .postDelayed({ if (controller == null) connect(ctx) }, 2000)
+                    }
                 },
                 ContextCompat.getMainExecutor(ctx),
             )
         }
+    }
+
+    // 控制器还没连上时用户就点了歌：先记住请求，连上后自动执行
+    private var pendingPlay: Pair<List<MusicApi.Song>, Int>? = null
+    private var connecting = false
+
+    private fun flushPending() {
+        val p = pendingPlay ?: return
+        pendingPlay = null
+        play(p.first, p.second)
     }
 
     private fun bind(c: MediaController) {
@@ -212,10 +235,25 @@ object PlayerController {
 
     fun play(list: List<MusicApi.Song>, at: Int) {
         if (at !in list.indices) return
-        val c = controller ?: return
+        // 先把队列写进状态：即使控制器还没连上，界面也能立刻显示这首歌
         queue = list
         index = at
         TrackCatalog.putAll(list)
+        durationMs = list[at].interval * 1000L
+        val c = controller
+        if (c == null) {
+            pendingPlay = list to at
+            if (!connecting) {
+                connecting = true
+                appContext?.let { ctx ->
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        connecting = false
+                        if (controller == null) connect(ctx) else flushPending()
+                    }, 300)
+                }
+            }
+            return
+        }
         TrackResolver.clear()
         val items = list.map { mediaItemFor(it) }
         runCatching {
@@ -229,9 +267,9 @@ object PlayerController {
     }
 
     fun playAt(at: Int) {
-        val c = controller ?: return
         if (at !in queue.indices) return
         index = at
+        val c = controller ?: run { pendingPlay = queue to at; return }
         buildAt(c, at)
     }
 

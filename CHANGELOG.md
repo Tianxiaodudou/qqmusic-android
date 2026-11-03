@@ -1,5 +1,16 @@
 # 更新日志
 
+## v2.53.0 (2026-11-03)
+
+### 排查结论与调整（相机/桌面切换时的咔顿）
+- 现场证据（adb 复现 3+6 次相机开关）：卡顿全部发生在**关闭相机回到桌面**的瞬间，
+  `RenderEngine makePassBlurBetterDownShader` + launcher `backgroundBlur` 同时出现，
+  紧接着 `AudioFlinger: track(sessionID=473 我们的) ACTIVE underrun due to thread sleep of 1920 frames`（约 43ms）
+- 同一时刻 `dumpsys media.audio_flinger` 显示我们的输出线程类型是 **MIXER**（不是 OFFLOAD），
+  且会话上被系统挂了 Dolby「Music Listener」效果链——所以硬件卸载对当前曲目没有生效，
+  音频必然经过混音线程，系统动画抢 CPU 时就会饿死
+- 调整：AudioTrack 缓冲从 4 倍提到 **8 倍**（约 +80ms 余量），用延迟换抗抖动；
+  「硬件音频卸载」开关保留，可 A/B 对比
 ## v2.52.0 (2026-11-03)
 
 ### 诊断增强：能对账「音频会话 / 硬件卸载 / underrun」

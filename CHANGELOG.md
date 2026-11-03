@@ -1,5 +1,18 @@
 # 更新日志
 
+## v2.45.0 (2026-11-03)
+
+### 均衡器与音量增益改成播放器内部处理（AudioProcessor）
+- 新增 `EqProcessor`（7 段 biquad，60/150/400/1k/2.5k/6k/12k Hz，预设沿用原来的 7 套曲线）与
+  `GainProcessor`（0–9 dB + 峰值限幅），两者通过 `DefaultAudioSink.setAudioProcessorChain` 挂在
+  **解码之后、写入 AudioTrack 之前**，不再使用系统 `AudioEffect`
+- 为什么改：会话上挂任何 AudioEffect 都会强制 AudioFlinger 走混音+效果链，
+  亮屏/回桌面时被系统动画抢调度就 underrun 爆音（上次日志已定位）。现在音频会话是干净的，
+  AudioTrack 可以走直通/快速路径
+- **即时生效**：两个处理器常驻不增删，改预设/改档位只写一个 volatile 参数，下一个 buffer 就生效，
+  不重建 AudioSink、不暂停、不重配；感知延迟约等于当前 AudioTrack 缓冲深度（100–200ms）
+- **无咔声**：增益做逐样本斜坡（约 40ms 过渡）；EQ 系数按 buffer 平滑逼近目标曲线；换预设是渐变而不是硬切
+- 单测覆盖：EQ 旁路（±1 量化误差）、EQ 改变信号且不越界、增益旁路、增益放大且限幅不过载
 ## v2.44.0 (2026-11-03)
 
 ### 修复：亮屏 / 回桌面时 1–2 秒「咔啦咔啦」噪音（已抓到现场证据）

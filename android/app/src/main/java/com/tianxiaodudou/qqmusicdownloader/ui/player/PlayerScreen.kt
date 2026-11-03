@@ -522,7 +522,8 @@ fun PlayerScreen(
                         current = Settings.eqPreset(context),
                         onPick = {
                             Settings.setEqPreset(context, it)
-                            com.tianxiaodudou.qqmusicdownloader.player.AudioFx.apply(it)
+                            // 只改处理器参数：下一个 buffer 生效，不重配播放器
+                            com.tianxiaodudou.qqmusicdownloader.player.AudioFx.setPreset(it)
                         },
                     )
 

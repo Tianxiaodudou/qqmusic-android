@@ -698,7 +698,7 @@ private fun MinePage(
                                 .clickable {
                                     gainLevel = level
                                     Settings.setVolumeGain(context, level)
-                                    com.tianxiaodudou.qqmusicdownloader.player.AudioFx.setGain(level)
+                                    com.tianxiaodudou.qqmusicdownloader.player.ProcessorState.gainLevel = level
                                     showGain = false
                                 }
                                 .padding(vertical = AppTheme.dimens.spacingMd),

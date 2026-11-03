@@ -29,17 +29,10 @@ class PlaybackService : MediaSessionService() {
             session = MediaSession.Builder(this, p)
                 .setSessionActivity(sessionActivity)
                 .build()
-            // 均衡器挂在服务持有的播放器上；关闭（preset=0）时 AudioFx 内部直接脱离
-            p.addListener(object : androidx.media3.common.Player.Listener {
-                override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                    AudioFx.attach(
-                        this@PlaybackService,
-                        audioSessionId,
-                        com.tianxiaodudou.qqmusicdownloader.net.Settings.eqPreset(this@PlaybackService),
-                    )
-                }
-            })
-            AudioFx.attach(this, p.audioSessionId, com.tianxiaodudou.qqmusicdownloader.net.Settings.eqPreset(this))
+            // 均衡器/增益现在跑在播放器内部的 AudioProcessor 链上（不碰音频会话），
+            // 启动时把持久化的档位同步给处理器即可
+            ProcessorState.eqPreset = com.tianxiaodudou.qqmusicdownloader.net.Settings.eqPreset(this)
+            ProcessorState.gainLevel = com.tianxiaodudou.qqmusicdownloader.net.Settings.volumeGain(this)
             // 播放器完全由服务持有；UI 通过 MediaController 观察这个会话
         }
         runCatching {

@@ -1,5 +1,14 @@
 # 更新日志
 
+## v2.48.0 (2026-11-03)
+
+### 新增：硬件音频卸载（audio offload）
+- `DefaultAudioSink` 接入 `DefaultAudioOffloadSupportProvider`，并给播放器设置
+  `AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED`：解码后的 PCM 直接走芯片的硬件音频通道，
+  由 DSP/音频 HAL 硬件混音，**CPU 不再参与混音**，因此系统调度抖动、亮屏/回桌面时的抢 CPU 都不再影响出声
+- 设备或编码不支持卸载时（例如部分蓝牙编解码、倍速播放、非整数采样率），框架会自动回退到普通 AudioTrack 路径，不会没声音
+- 保留 AudioTrack 缓冲 4 倍的兜底设置（回退路径时仍然生效）
+- 提示：卸载通道下系统级音效、均衡器这类后处理无法生效（这也是它省 CPU 的原因）；本版本来就不含任何效果器
 ## v2.47.0 (2026-11-03)
 
 ### 彻底移除音频效果器（干净版本）

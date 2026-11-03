@@ -46,8 +46,9 @@ object PlayerFactory {
             )
         }
 
-        // 混音线程被系统动画/亮屏抢调度时，小缓冲会直接 underrun（咔啦声）。
-        // 把 AudioTrack 缓冲放大到默认的 4 倍，用一点延迟换稳定。
+        // 硬件音频卸载（audio offload）：把解码后的 PCM 直接交给 DSP/音频 HAL 的硬件通道，
+        // CPU 只负责喂数据、不参与混音，抗系统调度抖动最好，也最省电。
+        // 设备/编码不支持时框架会自动回退到普通 AudioTrack 路径。
         val renderers = object : androidx.media3.exoplayer.DefaultRenderersFactory(ctx) {
             override fun buildAudioSink(
                 context: android.content.Context,
@@ -57,6 +58,9 @@ object PlayerFactory {
                 androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioOffloadSupportProvider(
+                        androidx.media3.exoplayer.audio.DefaultAudioOffloadSupportProvider(context),
+                    )
                     .setAudioTrackBufferSizeProvider { minBufferSize, _, _, _, _, _, _ ->
                         minBufferSize * 4
                     }
@@ -81,6 +85,19 @@ object PlayerFactory {
                     .build(),
             )
             .build()
+        // 允许使用硬件卸载通道（不强制：设备/编码不支持时框架自动回退普通路径）
+        runCatching {
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setAudioOffloadPreferences(
+                    androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.Builder()
+                        .setAudioOffloadMode(
+                            androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED,
+                        )
+                        .build(),
+                )
+                .build()
+        }
         return player to cache
     }
 }

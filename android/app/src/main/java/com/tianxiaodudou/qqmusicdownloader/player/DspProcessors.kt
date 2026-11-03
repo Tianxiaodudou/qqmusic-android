@@ -1,5 +1,6 @@
 package com.tianxiaodudou.qqmusicdownloader.player
 
+import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import java.nio.ByteBuffer
@@ -7,13 +8,12 @@ import java.nio.ByteOrder
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 
 /**
  * 均衡器与音量增益的运行时参数（UI 改这里，播放线程下一个 buffer 就读到）。
- * 两个处理器常驻在播放器内部的处理链上，**不增删处理器**，所以改档即时生效、不会重配 AudioSink。
+ * 两个处理器常驻在播放器内部的处理链上，不增删处理器，所以改档即时生效、不会重配 AudioSink。
  */
 object ProcessorState {
     @Volatile
@@ -38,9 +38,12 @@ internal object EqPresets {
     fun curve(preset: Int): FloatArray = CURVES[preset.coerceIn(0, CURVES.lastIndex)]
 }
 
+/** 仅处理单/双声道 16-bit PCM；其它格式返回 NOT_SET 让处理器整体旁路。 */
+private fun supported(format: AudioProcessor.AudioFormat): Boolean =
+    format.encoding == C.ENCODING_PCM_16BIT && format.channelCount in 1..2
+
 /**
  * 7 段 biquad 均衡器，跑在播放器内部（解码后、写入 AudioTrack 前）。
- * 只处理 16-bit PCM；其它格式直接透传，避免影响兼容性。
  */
 class EqProcessor : BaseAudioProcessor() {
 
@@ -55,9 +58,7 @@ class EqProcessor : BaseAudioProcessor() {
     private val state = Array(freqs.size) { Array(2) { FloatArray(4) } }
 
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
-        if (inputAudioFormat.encoding != androidx.media3.common.C.ENCODING_PCM_16BIT) {
-            return AudioProcessor.AudioFormat.NOT_SET
-        }
+        if (!supported(inputAudioFormat)) return AudioProcessor.AudioFormat.NOT_SET
         sampleRate = inputAudioFormat.sampleRate
         channels = inputAudioFormat.channelCount
         currentDb.fill(0f)
@@ -68,28 +69,24 @@ class EqProcessor : BaseAudioProcessor() {
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
-        val samples = inputBuffer.remaining() / 2
-        if (samples <= 0) return
-        val input = inputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-        val out = replaceOutputBuffer(inputBuffer.remaining()).order(ByteOrder.nativeOrder()).asShortBuffer()
+        if (!inputBuffer.hasRemaining()) return
+        val size = inputBuffer.remaining()
+        val input = inputBuffer.order(ByteOrder.nativeOrder())
+        val output = replaceOutputBuffer(size).order(ByteOrder.nativeOrder())
 
-        // 目标曲线 + 每 buffer 平滑逼近，避免切预设时的阶跃爆音
+        // 目标曲线 + 每 buffer 平滑逼近，切预设是渐变而不是阶跃
         val target = EqPresets.curve(ProcessorState.eqPreset)
-        var moving = false
         for (i in targetDb.indices) {
             targetDb[i] = target.getOrElse(i) { 0f }
             val diff = targetDb[i] - currentDb[i]
-            if (abs(diff) > 0.02f) {
-                currentDb[i] += diff * 0.2f
-                moving = true
-            } else currentDb[i] = targetDb[i]
+            if (abs(diff) > 0.02f) currentDb[i] += diff * 0.2f else currentDb[i] = targetDb[i]
             computeCoeffs(i)
         }
 
-        val frames = samples / channels
+        val frames = size / 2 / channels
         for (f in 0 until frames) {
-            for (ch in 0 until min(channels, 2)) {
-                var v = input.get(f * channels + ch) / 32768f
+            for (ch in 0 until channels) {
+                var v = input.short / 32768f
                 for (b in freqs.indices) {
                     val c = coeffs[b]
                     if (c[0] == 0f) continue
@@ -98,17 +95,10 @@ class EqProcessor : BaseAudioProcessor() {
                     s[1] = s[0]; s[0] = v; s[3] = s[2]; s[2] = y
                     v = y
                 }
-                val idx = f * channels + ch
-                out.put(idx, (v.coerceIn(-1f, 1f) * 32767f).toInt().toShort())
+                output.putShort((v.coerceIn(-1f, 1f) * 32767f).toInt().toShort())
             }
-            // 超过 2 声道时其余声道直接透传
-            for (ch in 2 until channels) out.put(f * channels + ch, input.get(f * channels + ch))
         }
-        if (moving) {
-            // 让下一个 buffer 继续逼近
-        }
-        inputBuffer.position(inputBuffer.limit())
-        out.position(samples)
+        output.flip()
     }
 
     private fun computeCoeffs(band: Int) {
@@ -147,8 +137,8 @@ class EqProcessor : BaseAudioProcessor() {
 }
 
 /**
- * 音量增益 + 软限幅，同样跑在播放器内部。
- * 档位 0..9 对应 0..+9 dB；增益变化做逐样本斜坡，切档不会有 zipper noise。
+ * 音量增益 + 软限幅，同一条播放器内部处理链。
+ * 档位 0..9 对应 0..+9 dB；增益变化做逐样本斜坡，切档没有 zipper noise。
  */
 class GainProcessor : BaseAudioProcessor() {
 
@@ -158,9 +148,7 @@ class GainProcessor : BaseAudioProcessor() {
     private var limiter = 1f
 
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
-        if (inputAudioFormat.encoding != androidx.media3.common.C.ENCODING_PCM_16BIT) {
-            return AudioProcessor.AudioFormat.NOT_SET
-        }
+        if (!supported(inputAudioFormat)) return AudioProcessor.AudioFormat.NOT_SET
         channels = inputAudioFormat.channelCount
         current = factorFor(ProcessorState.gainLevel)
         envelope = 0f
@@ -170,36 +158,34 @@ class GainProcessor : BaseAudioProcessor() {
 
     private fun factorFor(level: Int): Float = 10f.pow(level.coerceIn(0, 9) / 20f)
 
+    private val frame = FloatArray(2)
+
     override fun queueInput(inputBuffer: ByteBuffer) {
-        val samples = inputBuffer.remaining() / 2
-        if (samples <= 0) return
-        val input = inputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
-        val out = replaceOutputBuffer(inputBuffer.remaining()).order(ByteOrder.nativeOrder()).asShortBuffer()
+        if (!inputBuffer.hasRemaining()) return
+        val size = inputBuffer.remaining()
+        val input = inputBuffer.order(ByteOrder.nativeOrder())
+        val output = replaceOutputBuffer(size).order(ByteOrder.nativeOrder())
 
         val target = factorFor(ProcessorState.gainLevel)
-        // 约 40ms 完成过渡（44.1k 下每样本 0.0006 的指数逼近）
         val ramp = 0.0006f
-        val frames = samples / channels
+        val frames = size / 2 / channels
         for (f in 0 until frames) {
-            // 每帧取该帧的峰值用于限幅包络
             var peak = 0f
             for (ch in 0 until channels) {
-                val v = abs(input.get(f * channels + ch) / 32768f)
-                if (v > peak) peak = v
+                frame[ch] = input.short / 32768f
+                val a = abs(frame[ch])
+                if (a > peak) peak = a
             }
             envelope = maxOf(peak, envelope * 0.9995f)
             val needed = if (envelope * target > 0.95f) 0.95f / (envelope * target) else 1f
-            // 限幅器：迅速下压、缓慢恢复，避免削顶破音
             limiter = if (needed < limiter) needed else limiter + (1f - limiter) * 0.0002f
             current += (target - current) * ramp
             for (ch in 0 until channels) {
-                val idx = f * channels + ch
-                val v = input.get(idx) / 32768f * current * limiter
-                out.put(idx, (v.coerceIn(-1f, 1f) * 32767f).toInt().toShort())
+                val v = (frame[ch] * current * limiter).coerceIn(-1f, 1f)
+                output.putShort((v * 32767f).toInt().toShort())
             }
         }
-        inputBuffer.position(inputBuffer.limit())
-        out.position(samples)
+        output.flip()
     }
 
     override fun onFlush() {

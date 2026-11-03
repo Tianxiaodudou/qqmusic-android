@@ -465,7 +465,7 @@ fun HomeScreen(
             }
             val sl = songlists
             if (sl == null) {
-                LoadingBox(Modifier.fillMaxSize())
+                SongListSkeleton(Modifier.fillMaxSize())
             } else if (sl.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无推荐歌单", color = MaterialTheme.colorScheme.onSurfaceVariant)

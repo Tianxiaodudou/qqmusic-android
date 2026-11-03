@@ -69,6 +69,19 @@ object RecommendApi {
 
     /** 推荐歌单，对应 fpk 的 music.playlist.PlaylistSquare / GetRecommendFeed。 */
     fun songlists(page: Int = 1, num: Int = 20): List<Songlist> {
+        val direct = runCatching { songlistsDirect(page, num) }.getOrDefault(emptyList())
+        if (direct.isNotEmpty() || page > 1) return direct
+        // PlaylistSquare 接口有时只回空列表：用「为你推荐」里的歌单卡片兜底，
+        // 保证「推荐歌单」页永远有内容，而不是一片空白
+        return runCatching {
+            homeFeed().flatMap { g -> g.cards }
+                .filter { it.kind == "songlist" }
+                .distinctBy { it.id }
+                .map { Songlist(it.id, "", it.name, 0, 0, it.sub, it.cover) }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun songlistsDirect(page: Int = 1, num: Int = 20): List<Songlist> {
         val p = JSONObject()
         p.put("From", num * (page - 1))
         p.put("Size", num)

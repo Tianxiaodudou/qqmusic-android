@@ -49,16 +49,31 @@ object AudioFx {
         runCatching { release() }
         session = sessionId
         if (sessionId == 0) return
-        runCatching { eq = Equalizer(0, sessionId) }
-        runCatching { bass = BassBoost(0, sessionId) }
-        runCatching { gain = LoudnessEnhancer(sessionId) }
-        runCatching { apply(index) }
-        runCatching { setGain(Settings.volumeGain(context)) }
+        // 只在真的启用时才创建效果器：任何 attach 都会让 AudioFlinger 走混音/效果链，
+        // 亮屏或返回桌面时的 CPU 抖动就更容易把缓冲吃空（产生咔啦声）
+        if (index > 0) {
+            runCatching { eq = Equalizer(0, sessionId) }
+            runCatching { bass = BassBoost(0, sessionId) }
+            runCatching { apply(index) }
+        }
+        val g = Settings.volumeGain(context)
+        if (g > 0) {
+            runCatching { gain = LoudnessEnhancer(sessionId) }
+            runCatching { setGain(g) }
+        }
     }
 
     /** 全局音量增益：level 0..9 -> 0..+9dB（LoudnessEnhancer 的目标增益单位是 mB）。 */
     fun setGain(level: Int) {
         val l = level.coerceIn(0, 9)
+        if (l <= 0) {
+            runCatching { gain?.release() }
+            gain = null
+            return
+        }
+        if (gain == null && lastSessionId != 0) {
+            runCatching { gain = LoudnessEnhancer(lastSessionId) }
+        }
         val e = gain ?: return
         runCatching {
             e.enabled = l > 0

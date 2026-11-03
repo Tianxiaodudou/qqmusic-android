@@ -1,5 +1,17 @@
 # 更新日志
 
+## v2.44.0 (2026-11-03)
+
+### 修复：亮屏 / 回桌面时 1–2 秒「咔啦咔啦」噪音（已抓到现场证据）
+- 现象对应系统日志：`AudioFlinger: threadLoop: track(sessionID=305041) ACTIVE underrun due to thread sleep of 480 frames`，
+  同一时刻系统正在做 `TO_BACK` 回到桌面、launcher 启动 `backgroundBlur……blurRadius(155)` 的重度模糊动画，
+  音频混音线程被抢调度 → 缓冲被吃空 → 爆音
+- 我们的放大器：只要给音频会话挂了任何 AudioEffect（均衡器/低音增强/响度增强），
+  AudioFlinger 就必须走混音+效果链，抗抖动能力显著下降。之前即使均衡器「关闭」也会挂上效果器
+- 修复 ①：效果器**按需创建**——均衡器预设为 0 时完全不创建 Equalizer/BassBoost，
+  音量增益为 0 时完全不创建 LoudnessEnhancer；关闭时立即 release
+- 修复 ②：把 AudioTrack 缓冲放大到系统最小值的 4 倍（自定义 RenderersFactory），
+  给亮屏/返回桌面这类系统级卡顿留出余量（代价是少量输出延迟）
 ## v2.43.0 (2026-11-02)
 
 ### 新增：全局音量增益（10 档）

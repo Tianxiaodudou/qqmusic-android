@@ -46,7 +46,24 @@ object PlayerFactory {
             )
         }
 
-        val player = ExoPlayer.Builder(ctx)
+        // 混音线程被系统动画/亮屏抢调度时，小缓冲会直接 underrun（咔啦声）。
+        // 把 AudioTrack 缓冲放大到默认的 4 倍，用一点延迟换稳定。
+        val renderers = object : androidx.media3.exoplayer.DefaultRenderersFactory(ctx) {
+            override fun buildAudioSink(
+                context: android.content.Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean,
+            ): androidx.media3.exoplayer.audio.AudioSink =
+                androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioTrackBufferSizeProvider { minBufferSize, _, _, _, _, _, _ ->
+                        minBufferSize * 4
+                    }
+                    .build()
+        }
+
+        val player = ExoPlayer.Builder(ctx, renderers)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)

@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
 class MultiConnDataSource(private val context: Context) : DataSource {
 
     private companion object {
-        const val SEGMENTS = 4
+        const val SEGMENTS = 6
         const val MIN_SIZE = 4L * 1024 * 1024
         const val WAIT_MS = 60L
     }

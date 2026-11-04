@@ -1,5 +1,21 @@
 # 更新日志
 
+## v2.73.0 (2026-11-05)
+
+### 实测结果（方案 1+2）
+**1) vkey 里没有 CDN 节点列表**
+- 日志：`[cdn] vkey mid=... code=AI00/O801/F000/M800/M500 sips=0 urls=5 default=dl.stream.qqmusic.qq.com`
+- 也就是说 **`sip` 一直是 0**，择优逻辑没有候选，只能落回默认节点 `dl.stream.qqmusic.qq.com`。
+  这就是为什么无论怎么测速都是同一条慢链路
+
+**2) 多连接确实能翻倍，但 4 条还不够**
+- 同一首母带（162MB）实测：4 条连接各自 ~210KB/s，合计 **~845KB/s**（单连接是 208KB/s，约 4 倍）
+- 192kHz FLAC 需要 ~1.1MB/s，4 条仍差一点；期间出现 `AUDIO_SINK_ERROR: timestamp discontinuity` → 掉缓冲后
+  播放器报 `ERROR_CODE_FAILED_RUNTIME_CHECK`
+- 因此把分段数从 4 提到 **6**（理论 ~1.26MB/s）
+
+### 说明
+- 多连接开关仍在「我的 → 播放 → 多连接下载（实验）」，默认关闭；失败会自动退回单连接
 ## v2.72.0 (2026-11-05)
 
 ### 母带缓冲：按方案 1+2 落地

@@ -65,6 +65,7 @@ class GlitchMonitor(private val context: Context) : AnalyticsListener {
         decoderReuseEvaluation: androidx.media3.exoplayer.DecoderReuseEvaluation?,
     ) {
         AudioStats.onFormat(format.sampleRate, format.channelCount, if (format.pcmEncoding == 4) 4 else 2)
+        AudioStats.codecMime = format.sampleMimeType.orEmpty()
         log("FORMAT " + format.sampleMimeType + " " + format.sampleRate + "Hz ch=" + format.channelCount + " codec=" + format.codecs)
     }
 

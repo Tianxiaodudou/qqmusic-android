@@ -36,6 +36,7 @@ class PlaybackService : MediaSessionService() {
                 .build()
             // 只做诊断，放在会话建好之后，失败也不影响播放
             PlayerFactory.logOffloadSupport(this)
+            probeOffloadSupport()
             // 播放器完全由服务持有；UI 通过 MediaController 观察这个会话
         }.onFailure {
             android.util.Log.e("PlaybackService", "初始化失败", it)
@@ -45,6 +46,36 @@ class PlaybackService : MediaSessionService() {
                 DesktopLyrics.setEnabled(this, true)
             }
         }
+    }
+
+    /** 探测 HAL 对 MP3/AAC/FLAC 的卸载支持，结果给状态卡片用。 */
+    private fun probeOffloadSupport() {
+        if (android.os.Build.VERSION.SDK_INT < 29) return
+        val am = getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return
+        val attrs = android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+            .build()
+        fun supported(encoding: Int, rate: Int): Boolean = runCatching {
+            val fmt = android.media.AudioFormat.Builder()
+                .setEncoding(encoding)
+                .setSampleRate(rate)
+                .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_STEREO)
+                .build()
+            am.javaClass.getMethod(
+                "isOffloadedPlaybackSupported",
+                android.media.AudioFormat::class.java,
+                android.media.AudioAttributes::class.java,
+            ).invoke(am, fmt, attrs) as? Boolean ?: false
+        }.getOrDefault(false)
+        AudioStats.offloadMp3 = supported(android.media.AudioFormat.ENCODING_MP3, 44100)
+        AudioStats.offloadAac = supported(android.media.AudioFormat.ENCODING_AAC_LC, 44100)
+        // FLAC 常量 API 30+，直接用数值
+        AudioStats.offloadFlac = supported(0x1500000, 44100)
+        com.tianxiaodudou.qqmusicdownloader.net.Diag.log(
+            "offload",
+            "hal mp3=" + AudioStats.offloadMp3 + " aac=" + AudioStats.offloadAac + " flac=" + AudioStats.offloadFlac,
+        )
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session

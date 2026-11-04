@@ -1,5 +1,15 @@
 # 更新日志
 
+## v2.66.0 (2026-11-04)
+
+### 硬件卸载为什么没生效：状态卡片现在直接告诉你
+- 状态卡片新增：**当前编码**（audio/mpeg、audio/vorbis、audio/flac…）、**设备 HAL 对 MP3/AAC/FLAC 的卸载支持**、
+  以及未激活时的具体原因（编码不支持 / HAL 不支持 / 会话被系统音效占用）
+- 启动时探测 `AudioManager.isOffloadedPlaybackSupported` 并写入 `diag.log`（tag=offload）
+- 说明：QQ 的「Hi-Res」是 OGG/Vorbis，Android 的卸载通道**不支持 OGG**，这种曲目永远会走应用解码+混音；
+  把音质上限设成「高品质（MP3 320k）」才有机会激活卸载
+- 会话上的 Dolby「Music Listener」是系统（MIUI/Dolby）挂在媒体会话上的效果链，应用无权移除；
+  有它挂着时框架不会选择卸载路径。要试卸载，需要先在系统设置里关掉杜比音效，并把音质上限设为高品质
 ## v2.65.0 (2026-11-04)
 
 ### 卡顿日志：开启时真正申请 root（兼容多种管理器）

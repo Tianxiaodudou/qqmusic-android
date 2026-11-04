@@ -408,7 +408,17 @@ private fun AudioStatusCard(context: android.content.Context) {
         StatLine("码率", if (stats.bitrateKbps > 0) stats.bitrateKbps.toString() + " kbps（PCM）" else "—")
         StatLine("位数", if (stats.encoding == 4) "32-bit float" else if (stats.encoding == 2) "16-bit" else "—")
         StatLine("声道", if (stats.channels > 0) stats.channels.toString() else "—")
+        StatLine("编码", stats.codecMime.ifEmpty { "—" })
         StatLine("硬件卸载", if (stats.offload) "已激活（DSP 直出）" else "未激活（应用解码 + 混音）")
+        StatLine("卸载支持", "MP3 " + (if (stats.offloadMp3) "✓" else "✗") + " / AAC " + (if (stats.offloadAac) "✓" else "✗") + " / FLAC " + (if (stats.offloadFlac) "✓" else "✗"))
+        if (!stats.offload && song != null) {
+            Text(
+                stats.offloadHint(),
+                fontSize = AppTheme.typography.caption.fontSize,
+                color = AppTheme.colors.textSecondary,
+                modifier = Modifier.padding(top = AppTheme.dimens.spacing3),
+            )
+        }
         StatLine("PCM 缓冲", if (stats.bufferMs > 0) stats.bufferMs.toString() + " ms / " + stats.bufferBytes / 1024 + " KB（" + pcmTier.mult + "×）" else pcmTier.label)
         StatLine("LoadControl", loadTier.label)
         StatLine("卡顿计数", if (stats.underrunCount > 0) stats.underrunCount.toString() + " 次（最近 " + android.text.format.DateFormat.format("HH:mm:ss", stats.lastUnderrunAt) + "）" else "0")

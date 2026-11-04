@@ -25,7 +25,14 @@ object TrackResolver {
 
     fun attach(ctx: Context) { appContext = ctx.applicationContext }
 
-    fun uriOf(mid: String): Uri = Uri.parse(SCHEME + "://track/" + mid)
+    /**
+     * 直链 URI。带一个 q=<音质上限> 查询参数：
+     * 换音质时 URI 变了，ExoPlayer 才会重新打开数据源（同 URI 的 replaceMediaItem 会被当成没变化）。
+     */
+    fun uriOf(mid: String, qualityTag: String = ""): Uri {
+        val base = SCHEME + "://track/" + mid
+        return Uri.parse(if (qualityTag.isEmpty()) base else base + "?q=" + qualityTag)
+    }
 
     fun midOf(uri: Uri): String = uri.pathSegments.lastOrNull().orEmpty()
 

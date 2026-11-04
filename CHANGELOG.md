@@ -1,5 +1,19 @@
 # 更新日志
 
+## v2.68.0 (2026-11-04)
+
+### 修复：切换音质其实没换源（一直播旧的 FLAC）
+- 之前换档只是 `replaceMediaItem` 一个**完全相同 URI** 的 MediaItem，ExoPlayer 认为没变化，不会重新解析；
+  状态卡片里编码一直是 `audio/flac` 就是这么来的
+- 现在 MediaItem 的 URI 带上 `?q=<音质上限>`，换档即换 URI，数据源重新解析（顺带让「切音质立即生效」真正成立）
+
+### 硬件卸载定位（本机实测）
+- 启动探测结果：`hal mp3=true aac=false flac=false` —— 这台设备的 HAL **只支持 MP3 卸载**；
+  AAC/FLAC 都不支持，所以听无损/母带永远不可能激活卸载
+- QQ 的「Hi-Res」是 OGG/Vorbis，Android 卸载通道不支持 OGG
+- 状态卡片新增：当前编码、HAL 对 MP3/AAC/FLAC 的支持、未激活原因
+- 会话上的 Dolby「Music Listener」是 MIUI/Dolby 系统挂在媒体会话上的效果链，应用无权移除；
+  想验证卸载需要：系统设置里关掉杜比音效 + 音质上限设为「高品质（MP3 320k）」
 ## v2.67.0 (2026-11-04)
 
 ### 修复：服务侧诊断日志丢失

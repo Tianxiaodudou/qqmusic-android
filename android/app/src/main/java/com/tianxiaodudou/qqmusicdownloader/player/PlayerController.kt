@@ -526,12 +526,15 @@ object PlayerController {
         }
     }
 
-    private fun mediaItemFor(song: MusicApi.Song): MediaItem =
-        MediaItem.Builder()
+    private fun mediaItemFor(song: MusicApi.Song): MediaItem {
+        // URI 里带上音质上限：换档时 URI 变化，ExoPlayer 才会重新解析数据源（同 URI 会被当成没变）
+        val tag = appContext?.let { Settings.quality(it).name } ?: ""
+        return MediaItem.Builder()
             .setMediaId(song.mid)
-            .setUri(TrackResolver.uriOf(song.mid))
+            .setUri(TrackResolver.uriOf(song.mid, tag))
             .setMediaMetadata(metadataOf(song, false))
             .build()
+    }
 
     private fun metadataOf(song: MusicApi.Song, lyricTitle: Boolean): MediaMetadata {
         val artwork = com.tianxiaodudou.qqmusicdownloader.ui.player.coverUrl(song.albumMid, 500)

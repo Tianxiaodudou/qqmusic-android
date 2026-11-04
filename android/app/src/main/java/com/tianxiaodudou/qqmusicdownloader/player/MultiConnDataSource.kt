@@ -45,6 +45,8 @@ class MultiConnDataSource(private val context: Context) : DataSource {
     private var done = Array(0) { AtomicLong(0) }
     private var bytesRead = Array(0) { AtomicLong(0) }
     private var threads: List<Thread> = emptyList()
+    @Volatile
+    private var closing = false
     private val lock = Object()
 
     override fun addTransferListener(transferListener: TransferListener) {
@@ -135,7 +137,9 @@ class MultiConnDataSource(private val context: Context) : DataSource {
                 }
             }
         } catch (t: Throwable) {
-            if (t !is InterruptedException) Diag.log("mc", "seg" + i + " error: " + t.message + " done=" + done[i].get())
+            if (!closing && t !is InterruptedException) {
+                Diag.log("mc", "seg" + i + " error: " + t.message + " done=" + done[i].get())
+            }
         }
     }.apply {
         isDaemon = true
@@ -175,6 +179,7 @@ class MultiConnDataSource(private val context: Context) : DataSource {
     override fun getUri(): Uri? = fallback?.uri ?: Uri.parse(url)
 
     override fun close() {
+        closing = true
         fallback?.close()
         fallback = null
         val total = bytesRead.sumOf { it.get() }

@@ -1,5 +1,14 @@
 # 更新日志
 
+## v2.75.0 (2026-11-05)
+
+### 多连接实测：带宽够了，但播放被 AudioTrack 报错中断
+- 6 条连接 20 秒下了 **22.9MB（≈1.15MB/s）**，带宽已经达到母带（192kHz FLAC）所需，
+  但随后播放器报 `ERROR_CODE_FAILED_RUNTIME_CHECK`，`diag.log` 里前一条是
+  `AUDIO_SINK_ERROR: Unexpected audio track timestamp discontinuity`
+- 原因是**高采样率下 PCM 缓冲放太大**：192kHz 时 AudioTrack 用 12×（约 480ms）会触发时间戳不连续检查
+- 修复：`sampleRate >= 96kHz` 时把缓冲倍数压到 **2×**（低采样率仍用 12×），既避开报错又保留抗抖动余量
+- 顺带把切歌/关闭时中断分段线程的 `seg.. error: null` 日志静音（那是正常取消，不是错误）
 ## v2.74.0 (2026-11-05)
 
 ### 多连接并行数改为用户可调（4–32 条）

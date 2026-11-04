@@ -77,7 +77,10 @@ object PlayerFactory {
                     // 系统级效果链（MIUI 的 Dolby/MiSound）会把我们的轨拉进混音线程，
                     // 相机/桌面模糊造成的调度抖动会直接把缓冲吃空，这里给 12 倍余量。
                     .setAudioTrackBufferSizeProvider { minBufferSize, _, _, channels, sampleRate, encoding, _ ->
-                        val mult = AudioTuning.pcmTier(ctx).mult
+                        // 192kHz 这类高采样率下，AudioTrack 缓冲不能像 44.1k 那样放 12 倍，
+                        // 否则会触发 "Unexpected audio track timestamp discontinuity"（实测会导致播放报错中断）
+                        val base = AudioTuning.pcmTier(ctx).mult
+                        val mult = if (sampleRate >= 96_000) minOf(base, 2) else base
                         val bytes = minBufferSize * mult
                         // 估个毫秒数给状态卡片用
                         val bits = if (encoding == android.media.AudioFormat.ENCODING_PCM_FLOAT) 32 else 16

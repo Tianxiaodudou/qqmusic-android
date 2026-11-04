@@ -650,41 +650,27 @@ private fun MinePage(
             MineRow("关注与粉丝", "关注的歌手 / 用户、粉丝、好友") { Nav.push(Route.Social) }
             MineRow("首页模块", "各模块显示 / 隐藏与条数", divider = false) { Nav.push(Route.HomeModules) }
         }
-        FoldSection("播放与下载", openSection == "play", onToggle = { toggleSection("play") }) {
-            AudioStatusCard(context)
-            MineRow(
-                "PCM 缓冲（AudioTrack）",
-                com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context).label +
-                    " · 解码后的 PCM 队列长度，越长越抗系统卡顿",
-            ) { showPcm = true }
-            MineRow(
-                "LoadControl 缓冲",
-                com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context).label +
-                    " · 提前下载/解码多少音频，越长越抗网络抖动",
-            ) { showLoad = true }
-            MineRow(
-                "音频卡顿日志探测",
-                if (glitchLog) "已开启 · 记录 underrun 等事件到 diag.log" else "已关闭 · 开启后可选授予 root 以记录系统层日志",
-            ) {
-                glitchLog = !glitchLog
-                Settings.setGlitchLog(context, glitchLog)
-                toast = if (glitchLog) "已开启；如需系统层卡顿日志（AudioFlinger），请授予 root" else "已关闭卡顿日志"
-            }
+        FoldSection("播放", openSection == "play", onToggle = { toggleSection("play") }) {
             MineRow(
                 "硬件音频卸载",
-                if (offload) "已开启 · 压缩帧直送 DSP，省 CPU（重启播放器生效）" else "已关闭 · 走应用解码普通路径",
+                if (offload) "已开启 · 压缩帧直送 DSP，省 CPU（重放生效）" else "已关闭 · 走应用解码普通路径",
             ) {
                 offload = !offload
                 Settings.setAudioOffload(context, offload)
                 toast = if (offload) "下次播放生效：已启用硬件卸载" else "下次播放生效：已改为普通解码路径"
             }
+            MineRow("PCM 缓冲（AudioTrack）", com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context).label) { showPcm = true }
+            MineRow("LoadControl 缓冲", com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context).label) { showLoad = true }
             MineRow(
-                "缓冲卡顿自动降音质",
-                if (autoDowngrade) "已开启 · 卡住 6 秒自动降一档" else "已关闭 · 卡顿也保持当前音质",
+                "卡顿自动降音质",
+                if (autoDowngrade) "卡住 6 秒自动降一档" else "卡顿也保持当前音质",
             ) {
                 autoDowngrade = !autoDowngrade
                 Settings.setAutoDowngrade(context, autoDowngrade)
             }
+            MineRow("付费内容", paidPolicy.label, divider = false) { showPaid = true }
+        }
+        FoldSection("歌词与外观", openSection == "lyric", onToggle = { toggleSection("lyric") }) {
             MineRow(
                 "桌面歌词",
                 if (desktopLyrics) "已开启 · 悬浮窗可拖动" else "已关闭 · 需要悬浮窗权限",
@@ -705,7 +691,6 @@ private fun MinePage(
                     com.tianxiaodudou.qqmusicdownloader.player.DesktopLyrics.setEnabled(context, want)
                 }
             }
-            MineRow("主题", themeMode.label) { showTheme = true }
             MineRow(
                 "蓝牙歌词",
                 if (btLyrics) "已开启 · 车机标题显示当前歌词" else "已关闭 · 车机显示歌名",
@@ -714,17 +699,31 @@ private fun MinePage(
                 Settings.setBtLyrics(context, btLyrics)
                 com.tianxiaodudou.qqmusicdownloader.player.PlayerController.refreshMetadata()
             }
-            MineRow("付费内容", paidPolicy.label) { showPaid = true }
-            MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }
-            MineRow("下载目录", dirLabel.ifEmpty { "未选择" }) { onPickDir() }
-            MineRow("清除所有歌词偏移", offsetCount.toString() + " 首已调整") {
+            MineRow("主题", themeMode.label) { showTheme = true }
+            MineRow("清除歌词偏移", offsetCount.toString() + " 首已调整", divider = false) {
                 Settings.clearOffsets(context)
                 offsetCount = 0
                 toast = "已清除"
             }
+        }
+        FoldSection("下载与存储", openSection == "storage", onToggle = { toggleSection("storage") }) {
+            MineRow("下载管理", "下载的歌曲与历史记录") { onDownloads() }
+            MineRow("下载目录", dirLabel.ifEmpty { "未选择" }) { onPickDir() }
             MineRow("清理缓存", "无损解密缓存与临时文件", divider = false) {
                 val freed = Settings.clearCache(context)
                 toast = "已清理 " + (freed / 1024 / 1024) + " MB"
+            }
+        }
+        FoldSection("音频诊断", openSection == "diag", onToggle = { toggleSection("diag") }) {
+            AudioStatusCard(context)
+            MineRow(
+                "卡顿日志探测",
+                if (glitchLog) "已开启 · underrun 等事件写入 diag.log" else "已关闭 · 排查卡顿时再开（系统层日志需 root）",
+                divider = false,
+            ) {
+                glitchLog = !glitchLog
+                Settings.setGlitchLog(context, glitchLog)
+                toast = if (glitchLog) "已开启；如需系统层卡顿日志（AudioFlinger），请授予 root" else "已关闭卡顿日志"
             }
         }
         FoldSection("账号与关于", openSection == "about", onToggle = { toggleSection("about") }) {

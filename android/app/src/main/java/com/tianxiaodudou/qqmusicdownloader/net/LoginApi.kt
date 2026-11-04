@@ -56,7 +56,16 @@ object LoginApi {
             "&action=0-0-" + System.currentTimeMillis() +
             "&js_ver=20102616&js_type=1&pt_uistyle=40" +
             "&aid=" + APPID + "&daid=383&pt_3rd_aid=" + THIRD_AID + "&has_onekey=1"
-        val text = QqClient.get(url, mapOf("Referer" to REFERER)).use { it.body?.string().orEmpty() }
+        val (code0, text) = QqClient.get(url, mapOf("Referer" to REFERER)).use { resp ->
+            resp.code to resp.body?.string().orEmpty()
+        }
+        if (code0 != 200 || text.isEmpty()) {
+            // 实测：境外 IP / VPN 下 ptqrlogin 会直接回 403 空响应，扫码永远“没反应”
+            Diag.log("login", "ptqrlogin http=" + code0 + " len=" + text.length)
+            throw QqError(
+                "扫码接口 HTTP " + code0 + if (code0 == 403) "（可能被 VPN/代理拦截，关掉 VPN 再试）" else "（响应为空）",
+            )
+        }
         // 与 fpk 一样先取出 ptuiCB(...) 整体，再按单引号切参数：
         // 严格匹配 6 段的正则在昵称带引号、或参数间有空格时会整体失配，
         // 异常被上层吃掉后就会永远停在「已扫码」。

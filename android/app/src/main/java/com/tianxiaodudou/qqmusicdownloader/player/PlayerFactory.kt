@@ -67,6 +67,7 @@ object PlayerFactory {
                     }
                     .setExperimentalAudioOffloadListener(object : androidx.media3.exoplayer.ExoPlayer.AudioOffloadListener {
                         override fun onOffloadedPlayback(isOffloaded: Boolean) {
+                            AudioStats.offload = isOffloaded
                             android.util.Log.i("QQAudio", "offload=" + isOffloaded)
                         }
 
@@ -76,8 +77,16 @@ object PlayerFactory {
                     })
                     // 系统级效果链（MIUI 的 Dolby/MiSound）会把我们的轨拉进混音线程，
                     // 相机/桌面模糊造成的调度抖动会直接把缓冲吃空，这里给 12 倍余量。
-                    .setAudioTrackBufferSizeProvider { minBufferSize, _, _, _, _, _, _ ->
-                        minBufferSize * 12
+                    .setAudioTrackBufferSizeProvider { minBufferSize, _, _, channels, sampleRate, encoding, _ ->
+                        val mult = AudioTuning.pcmTier(ctx).mult
+                        val bytes = minBufferSize * mult
+                        // 估个毫秒数给状态卡片用
+                        val bits = if (encoding == android.media.AudioFormat.ENCODING_PCM_FLOAT) 32 else 16
+                        val ms = if (sampleRate > 0 && channels > 0) {
+                            (bytes * 1000.0 / (sampleRate * channels * bits / 8.0)).toInt()
+                        } else 0
+                        AudioStats.onBuffer(bytes, ms)
+                        bytes
                     }
                     .build()
         }
@@ -94,12 +103,18 @@ object PlayerFactory {
             .setMediaSourceFactory(DefaultMediaSourceFactory(cacheFactory))
             .setLoadControl(
                 DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(60_000, 240_000, 3_000, 12_000)
+                    .setBufferDurationsMs(
+                        AudioTuning.loadTier(ctx).minBufferMs,
+                        AudioTuning.loadTier(ctx).maxBufferMs,
+                        AudioTuning.loadTier(ctx).forPlaybackMs,
+                        AudioTuning.loadTier(ctx).afterRebufferMs,
+                    )
                     .setBackBuffer(30_000, true)
                     .setPrioritizeTimeOverSizeThresholds(true)
                     .build(),
             )
             .build()
+        runCatching { player.addAnalyticsListener(GlitchMonitor(ctx)) }
         // 允许使用硬件卸载通道（不强制：设备/编码不支持时框架自动回退普通路径）
         if (com.tianxiaodudou.qqmusicdownloader.net.Settings.audioOffload(ctx)) runCatching {
             player.trackSelectionParameters = player.trackSelectionParameters

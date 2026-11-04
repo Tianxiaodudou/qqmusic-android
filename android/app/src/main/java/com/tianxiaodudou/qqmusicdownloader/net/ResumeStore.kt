@@ -28,6 +28,17 @@ object ResumeStore {
         }
     }
 
+    /** 只保留这一首的进度，其它曲目一律清掉（切歌回到 0 秒）。 */
+    fun keepOnly(context: Context, mid: String) {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val keep = setOf("p_" + mid, "t_" + mid)
+        val stale = p.all.keys.filter { it.startsWith("p_") || it.startsWith("t_") }.filter { it !in keep }
+        if (stale.isEmpty()) return
+        val e = p.edit()
+        stale.forEach { e.remove(it) }
+        e.apply()
+    }
+
     fun get(context: Context, mid: String): Long {
         if (mid.isEmpty()) return 0
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

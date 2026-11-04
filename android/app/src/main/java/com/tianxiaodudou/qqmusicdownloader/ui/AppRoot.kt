@@ -377,6 +377,87 @@ private fun MiniPlayer(onOpen: () -> Unit, onQueue: () -> Unit) {
     }
 }
 
+/** 实时音频状态卡片：当前文件、音质、格式、卸载、缓冲。 */
+@Composable
+private fun AudioStatusCard(context: android.content.Context) {
+    val song = PlayerController.current
+    val stats = com.tianxiaodudou.qqmusicdownloader.player.AudioStats
+    val pcmTier = com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context)
+    val loadTier = com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context)
+    val sizeText = remember(song?.mid) {
+        val s = song ?: return@remember ""
+        val mb = when (PlayerController.actualQuality) {
+            "标准" -> s.size128
+            "高品质" -> s.size320
+            "无损", "SQ 无损" -> s.sizeFlac
+            "杜比" -> s.sizeDolby
+            else -> s.sizeFlac
+        }
+        if (mb > 0) String.format("%.1f MB", mb / 1024.0 / 1024.0) else "—"
+    }
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm)
+            .clip(AppTheme.shapes.cardMedium).background(AppTheme.colors.surface1)
+            .padding(AppTheme.dimens.spacingMd),
+    ) {
+        Text("音频状态", fontSize = AppTheme.typography.caption.fontSize, color = AppTheme.colors.textSecondary)
+        Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+        StatLine("文件", song?.name ?: "未在播放")
+        StatLine("音质", PlayerController.actualQuality.ifEmpty { "—" })
+        StatLine("文件大小", sizeText)
+        StatLine("码率", if (stats.bitrateKbps > 0) stats.bitrateKbps.toString() + " kbps（PCM）" else "—")
+        StatLine("位数", if (stats.encoding == 4) "32-bit float" else if (stats.encoding == 2) "16-bit" else "—")
+        StatLine("声道", if (stats.channels > 0) stats.channels.toString() else "—")
+        StatLine("硬件卸载", if (stats.offload) "已激活（DSP 直出）" else "未激活（应用解码 + 混音）")
+        StatLine("PCM 缓冲", if (stats.bufferMs > 0) stats.bufferMs.toString() + " ms / " + stats.bufferBytes / 1024 + " KB（" + pcmTier.mult + "×）" else pcmTier.label)
+        StatLine("LoadControl", loadTier.label)
+        StatLine("卡顿计数", if (stats.underrunCount > 0) stats.underrunCount.toString() + " 次（最近 " + android.text.format.DateFormat.format("HH:mm:ss", stats.lastUnderrunAt) + "）" else "0")
+    }
+}
+
+@Composable
+private fun StatLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = AppTheme.dimens.spacing3), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, fontSize = AppTheme.typography.caption.fontSize, color = AppTheme.colors.textSecondary, modifier = Modifier.width(AppTheme.dimens.qrSize * 0.45f))
+        Text(value, fontSize = AppTheme.typography.bodySmall.fontSize, color = AppTheme.colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** 档位选择对话框：每个档位都有说明。 */
+@Composable
+private fun TierDialog(
+    title: String,
+    intro: String,
+    options: List<Pair<String, String>>,
+    current: Int,
+    onPick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(Modifier.heightIn(max = AppTheme.dimens.detailCover).verticalScroll(rememberScrollState())) {
+                Text(intro, fontSize = AppTheme.typography.caption.fontSize, color = AppTheme.colors.textSecondary)
+                Spacer(Modifier.height(AppTheme.dimens.spacingSm))
+                options.forEachIndexed { i, (label, desc) ->
+                    Column(
+                        Modifier.fillMaxWidth().clickable { onPick(i) }.padding(vertical = AppTheme.dimens.spacingMd),
+                    ) {
+                        Text(
+                            (if (i == current) "● " else "○ ") + label,
+                            fontSize = AppTheme.typography.title.fontSize,
+                            color = if (i == current) AppTheme.colors.brand else AppTheme.colors.textPrimary,
+                        )
+                        Text(desc, fontSize = AppTheme.typography.caption.fontSize, color = AppTheme.colors.textSecondary)
+                    }
+                }
+            }
+        },
+        confirmButton = { AppTextButton("关闭") { onDismiss() } },
+    )
+}
+
 @Composable
 private fun MinePage(
     session: Session,
@@ -404,6 +485,9 @@ private fun MinePage(
     var openSection by remember { mutableStateOf("") }
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
     var offload by remember { mutableStateOf(Settings.audioOffload(context)) }
+    var showPcm by remember { mutableStateOf(false) }
+    var showLoad by remember { mutableStateOf(false) }
+    var glitchLog by remember { mutableStateOf(Settings.glitchLog(context)) }
     var desktopLyrics by remember { mutableStateOf(Settings.desktopLyrics(context)) }
     var btLyrics by remember { mutableStateOf(Settings.btLyrics(context)) }
     var themeMode by remember { mutableStateOf(Settings.themeMode(context)) }
@@ -567,6 +651,25 @@ private fun MinePage(
             MineRow("首页模块", "各模块显示 / 隐藏与条数", divider = false) { Nav.push(Route.HomeModules) }
         }
         FoldSection("播放与下载", openSection == "play", onToggle = { toggleSection("play") }) {
+            AudioStatusCard(context)
+            MineRow(
+                "PCM 缓冲（AudioTrack）",
+                com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context).label +
+                    " · 解码后的 PCM 队列长度，越长越抗系统卡顿",
+            ) { showPcm = true }
+            MineRow(
+                "LoadControl 缓冲",
+                com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context).label +
+                    " · 提前下载/解码多少音频，越长越抗网络抖动",
+            ) { showLoad = true }
+            MineRow(
+                "音频卡顿日志探测",
+                if (glitchLog) "已开启 · 记录 underrun 等事件到 diag.log" else "已关闭 · 开启后可选授予 root 以记录系统层日志",
+            ) {
+                glitchLog = !glitchLog
+                Settings.setGlitchLog(context, glitchLog)
+                toast = if (glitchLog) "已开启；如需系统层卡顿日志（AudioFlinger），请授予 root" else "已关闭卡顿日志"
+            }
             MineRow(
                 "硬件音频卸载",
                 if (offload) "已开启 · 压缩帧直送 DSP，省 CPU（重启播放器生效）" else "已关闭 · 走应用解码普通路径",
@@ -695,6 +798,35 @@ private fun MinePage(
                 }
             },
             confirmButton = { AppTextButton(onClick = { showPaid = false }) { Text("关闭") } },
+        )
+    }
+
+    if (showPcm) {
+        TierDialog(
+            title = "PCM 缓冲（AudioTrack）",
+            intro = "解码后的 PCM 会先进入系统音频队列。队列越长，系统被相机/亮屏/桌面模糊抢 CPU 时越不容易断粮（咔哒声），代价是操作延迟变大。",
+            options = com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.PCM_TIERS.map { it.label to it.desc },
+            current = Settings.pcmBufferTier(context),
+            onPick = { i ->
+                Settings.setPcmBufferTier(context, i)
+                showPcm = false
+                toast = "PCM 缓冲已改，重新播放后生效"
+            },
+            onDismiss = { showPcm = false },
+        )
+    }
+    if (showLoad) {
+        TierDialog(
+            title = "LoadControl 缓冲",
+            intro = "播放器提前下载/解码多少音频。越大越抗网络抖动，但也更吃内存、起播更慢。",
+            options = com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.LOAD_TIERS.map { it.label to it.desc },
+            current = Settings.loadBufferTier(context),
+            onPick = { i ->
+                Settings.setLoadBufferTier(context, i)
+                showLoad = false
+                toast = "LoadControl 缓冲已改，重新播放后生效"
+            },
+            onDismiss = { showLoad = false },
         )
     }
 

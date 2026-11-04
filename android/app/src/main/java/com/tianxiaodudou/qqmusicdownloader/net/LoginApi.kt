@@ -61,7 +61,11 @@ object LoginApi {
         // 严格匹配 6 段的正则在昵称带引号、或参数间有空格时会整体失配，
         // 异常被上层吃掉后就会永远停在「已扫码」。
         val body = Regex("""ptuiCB\((.*?)\)""").find(text)?.groupValues?.get(1)
-            ?: throw QqError("无法解析扫码状态")
+            ?: run {
+                // 原始响应落盘，线上才看得到 QQ 到底回了什么
+                Diag.log("login", "poll raw(" + text.length + "): " + text.take(240).replace("\n", " "))
+                throw QqError("无法解析扫码状态")
+            }
         val args = Regex("""'(.*?)'""").findAll(body).map { it.groupValues[1] }.toList()
         if (args.size < 5) throw QqError("扫码状态参数不完整")
         val code = args[0]

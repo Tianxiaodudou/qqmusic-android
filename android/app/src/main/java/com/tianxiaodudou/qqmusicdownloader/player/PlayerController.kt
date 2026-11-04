@@ -165,7 +165,8 @@ object PlayerController {
                 // 新曲还没解析完就保留旧值，避免徽章闪一下消失；解析完成后 ticker 会立刻校正
                 TrackResolver.qualityOf(mid).takeIf { it.isNotEmpty() }?.let { actualQuality = it }
                 durationMs = (TrackCatalog.get(mid)?.interval ?: 0) * 1000L
-                appContext?.let { ResumeStore.get(it, mid).let { pos -> if (pos > 0) c.seekTo(pos) } }
+                // 只保留当前曲的进度：切到别的歌一律从头放
+                appContext?.let { ctx -> ResumeStore.keepOnly(ctx, mid) }
             }
 
             override fun onPlayerError(e: androidx.media3.common.PlaybackException) {
@@ -198,7 +199,10 @@ object PlayerController {
                     }
                     val song = current
                     if (pl.isPlaying && song != null) {
-                        appContext?.let { ResumeStore.save(it, song.mid, positionMs, durationMs) }
+                        appContext?.let { ctx ->
+                            ResumeStore.save(ctx, song.mid, positionMs, durationMs)
+                            ResumeStore.keepOnly(ctx, song.mid)
+                        }
                     }
                 }
                 val end = sleepEndAt

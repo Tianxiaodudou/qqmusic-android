@@ -56,6 +56,9 @@ object Settings {
     private const val K_BT_LYRICS = "bt_lyrics"
     private const val K_THEME = "theme_mode"
     private const val K_OFFLOAD = "audio_offload"
+    private const val K_PCM_TIER = "pcm_buffer_tier"
+    private const val K_LOAD_TIER = "load_buffer_tier"
+    private const val K_GLITCH_LOG = "glitch_log"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -80,6 +83,27 @@ object Settings {
 
     fun setAudioOffload(context: Context, on: Boolean) {
         prefs(context).edit().putBoolean(K_OFFLOAD, on).apply()
+    }
+
+    /** AudioTrack（PCM）缓冲档位，默认 12 倍。 */
+    fun pcmBufferTier(context: Context): Int = prefs(context).getInt(K_PCM_TIER, 5).coerceIn(0, 10)
+
+    fun setPcmBufferTier(context: Context, tier: Int) {
+        prefs(context).edit().putInt(K_PCM_TIER, tier.coerceIn(0, 10)).apply()
+    }
+
+    /** LoadControl 缓冲档位，默认 60s/240s。 */
+    fun loadBufferTier(context: Context): Int = prefs(context).getInt(K_LOAD_TIER, 4).coerceIn(0, 10)
+
+    fun setLoadBufferTier(context: Context, tier: Int) {
+        prefs(context).edit().putInt(K_LOAD_TIER, tier.coerceIn(0, 10)).apply()
+    }
+
+    /** 卡顿日志探测（默认关）。开启后会记录音频 underrun 等事件，便于事后分析。 */
+    fun glitchLog(context: Context): Boolean = prefs(context).getBoolean(K_GLITCH_LOG, false)
+
+    fun setGlitchLog(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(K_GLITCH_LOG, on).apply()
     }
 
     /** 主题模式：跟随系统 / 日间 / 夜间（默认跟随系统）。 */

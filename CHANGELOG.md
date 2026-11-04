@@ -1,5 +1,19 @@
 # 更新日志
 
+## v2.65.0 (2026-11-04)
+
+### 卡顿日志：开启时真正申请 root（兼容多种管理器）
+- 新增 `RootShell`：依次尝试 `su`、`/system/bin/su`、`/system/xbin/su`、`/sbin/su`、`/vendor/bin/su`、
+  `/debug_ramdisk/su`、Magisk（`/data/adb/magisk/magisk`）、KernelSU（`/data/adb/ksu/bin/ksud`），
+  执行 `id` 等待最长 20 秒——首次调用会弹出管理器的授权框（有的管理器默认拒绝，需要手动允许本应用）
+- 授权成功后，出现 underrun 时会自动用 root 抓 `logcat -d -t 400` 与 `dumpsys media.audio_flinger`，
+  连同应用层事件一起写入 `/sdcard/Android/data/<包名>/files/diag-root.log`
+- 开关打开时会在界面提示“正在申请 root 权限”，并回报最终结果（已授权/未授权）
+
+### QQ 扫码登录：进一步确认是服务端 403
+- 我在 PC 上复刻了完整链路（`xlogin` 预热拿 `pt_login_sig` → `ptqrshow` → `ptqrlogin`），
+  三个域名（ssl.ptlogin2.qq.com / ptlogin2.qq.com / xui.ptlogin2.qq.com）全部 403 空响应；
+  手机上同样记录 `ptqrlogin http=403 len=0` —— 与代码无关，是 QQ 对当前网络出口的拒绝
 ## v2.64.0 (2026-11-04)
 
 ### 我的页面重新分区（原来「播放与下载」一栏塞了 11 项）

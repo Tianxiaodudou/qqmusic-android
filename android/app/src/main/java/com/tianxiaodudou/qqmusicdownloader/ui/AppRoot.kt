@@ -721,9 +721,24 @@ private fun MinePage(
                 if (glitchLog) "已开启 · underrun 等事件写入 diag.log" else "已关闭 · 排查卡顿时再开（系统层日志需 root）",
                 divider = false,
             ) {
-                glitchLog = !glitchLog
-                Settings.setGlitchLog(context, glitchLog)
-                toast = if (glitchLog) "已开启；如需系统层卡顿日志（AudioFlinger），请授予 root" else "已关闭卡顿日志"
+                val want = !glitchLog
+                glitchLog = want
+                Settings.setGlitchLog(context, want)
+                if (want) {
+                    toast = "正在申请 root 权限…（Magisk/KernelSU 会弹授权框，请点允许）"
+                    scope.launch {
+                        val ok = withContext(Dispatchers.IO) {
+                            com.tianxiaodudou.qqmusicdownloader.player.RootShell.request(context)
+                        }
+                        toast = if (ok) {
+                            "已开启；root 已授权（" + com.tianxiaodudou.qqmusicdownloader.player.RootShell.manager + "），卡顿时会抓系统日志"
+                        } else {
+                            "已开启；未获得 root，只记录应用层日志（root 需在管理器里允许本应用）"
+                        }
+                    }
+                } else {
+                    toast = "已关闭卡顿日志"
+                }
             }
         }
         FoldSection("账号与关于", openSection == "about", onToggle = { toggleSection("about") }) {

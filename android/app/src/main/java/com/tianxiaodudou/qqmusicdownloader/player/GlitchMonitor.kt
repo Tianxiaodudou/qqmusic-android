@@ -29,6 +29,17 @@ class GlitchMonitor(private val context: Context) : AnalyticsListener {
             " buf=" + AudioStats.bufferMs + "ms fmt=" + AudioStats.sampleRate + "/" + AudioStats.channels)
     }
 
+    private fun captureSystemSnapshot(reason: String) {
+        if (!RootShell.available) return
+        val out = runCatching {
+            val dir = context.getExternalFilesDir(null) ?: context.filesDir
+            java.io.File(dir, "diag-root.log")
+        }.getOrNull() ?: return
+        runCatching { out.appendText("\n===== " + reason + " @ " + System.currentTimeMillis() + " =====\n") }
+        RootShell.capture("logcat -d -t 400 -v threadtime", out)
+        RootShell.capture("dumpsys media.audio_flinger", out)
+    }
+
     override fun onAudioUnderrun(
         eventTime: AnalyticsListener.EventTime,
         bufferSize: Int,
@@ -36,6 +47,7 @@ class GlitchMonitor(private val context: Context) : AnalyticsListener {
         elapsedSinceLastFeedMs: Long,
     ) {
         AudioStats.onUnderrun()
+        captureSystemSnapshot("UNDERRUN")
         log("UNDERRUN bufferSize=" + bufferSize + " (" + bufferSizeMs + "ms) elapsedSinceLastFeed=" + elapsedSinceLastFeedMs)
     }
 

@@ -61,6 +61,7 @@ object Settings {
     private const val K_GLITCH_LOG = "glitch_log"
     private const val K_OFFLOAD_MP3 = "offload_prefer_mp3"
     private const val K_MULTI_CONN = "multi_conn"
+    private const val K_MULTI_SEGS = "multi_conn_segments"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -116,6 +117,13 @@ object Settings {
 
     fun setMultiConn(context: Context, on: Boolean) {
         prefs(context).edit().putBoolean(K_MULTI_CONN, on).apply()
+    }
+
+    /** 多连接的并行数：4–32，默认 6。 */
+    fun multiConnSegments(context: Context): Int = prefs(context).getInt(K_MULTI_SEGS, 6).coerceIn(4, 32)
+
+    fun setMultiConnSegments(context: Context, n: Int) {
+        prefs(context).edit().putInt(K_MULTI_SEGS, n.coerceIn(4, 32)).apply()
     }
 
     /** 卡顿日志探测（默认关）。开启后会记录音频 underrun 等事件，便于事后分析。 */

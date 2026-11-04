@@ -502,6 +502,8 @@ private fun MinePage(
     var offload by remember { mutableStateOf(Settings.audioOffload(context)) }
     var offloadMp3 by remember { mutableStateOf(Settings.offloadPreferMp3(context)) }
     var multiConn by remember { mutableStateOf(Settings.multiConn(context)) }
+    var segs by remember { mutableIntStateOf(Settings.multiConnSegments(context)) }
+    var showSegs by remember { mutableStateOf(false) }
     var showPcm by remember { mutableStateOf(false) }
     var showLoad by remember { mutableStateOf(false) }
     var glitchLog by remember { mutableStateOf(Settings.glitchLog(context)) }
@@ -686,11 +688,14 @@ private fun MinePage(
             }
             MineRow(
                 "多连接下载（实验）",
-                if (multiConn) "已开启 · 大文件用 4 条连接并行，弱网提速" else "已关闭 · 单连接拉流",
+                if (multiConn) "已开启 · " + segs + " 条连接并行，弱网提速" else "已关闭 · 单连接拉流",
             ) {
                 multiConn = !multiConn
                 Settings.setMultiConn(context, multiConn)
                 toast = if (multiConn) "已开启：下首歌起生效（失败会自动退回单连接）" else "已关闭多连接"
+            }
+            if (multiConn) {
+                MineRow("并行连接数", segs.toString() + " 条（每段不少于 512KB）") { showSegs = true }
             }
             MineRow("PCM 缓冲（AudioTrack）", com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context).label) { showPcm = true }
             MineRow("LoadControl 缓冲", com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context).label) { showLoad = true }
@@ -845,6 +850,36 @@ private fun MinePage(
                 }
             },
             confirmButton = { AppTextButton(onClick = { showPaid = false }) { Text("关闭") } },
+        )
+    }
+
+    if (showSegs) {
+        TierDialog(
+            title = "并行连接数",
+            intro = "同时开几条 Range 连接拉同一首歌。实测单条约 200KB/s，条数越多总带宽越高；" +
+                "但太多会被 CDN 限速或触发风控，建议 6–8 条起步，母带（192kHz FLAC）再往上加。",
+            options = listOf(
+                "4 条" to "约 4×单连接速度（≈800KB/s），最保守",
+                "6 条 · 默认" to "约 6×（≈1.2MB/s），适合无损/母带",
+                "8 条" to "约 8×（≈1.6MB/s），母带起播更快，CDN 压力开始变大",
+                "10 条" to "约 10×，弱网可用；部分节点会开始限速",
+                "12 条" to "约 12×；注意流量消耗，建议只在 Wi-Fi 用",
+                "16 条" to "高并发，部分 CDN 会拒绝或降速",
+                "20 条" to "很可能触发限速/风控，仅用于测试",
+                "24 条" to "同上，收益通常不再增加",
+                "32 条" to "极限值：手机发热、耗电、流量都明显上升，不建议日常使用",
+            ),
+            current = when (segs) {
+                4 -> 0; 6 -> 1; 8 -> 2; 10 -> 3; 12 -> 4; 16 -> 5; 20 -> 6; 24 -> 7; else -> 8
+            },
+            onPick = { i ->
+                val n = listOf(4, 6, 8, 10, 12, 16, 20, 24, 32)[i]
+                segs = n
+                Settings.setMultiConnSegments(context, n)
+                showSegs = false
+                toast = "并行连接数已设为 " + n + " 条，下首歌生效"
+            },
+            onDismiss = { showSegs = false },
         )
     }
 

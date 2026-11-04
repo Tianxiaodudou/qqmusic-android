@@ -17,14 +17,18 @@ import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * 多连接分段下载（实验）。单连接被 CDN/运营商限速时，用 4 条 Range 连接并行拉，
- * 播放器按需从本地临时文件读；任何一步失败都立刻退回普通单连接，保证一定能播。
+ * 多连接分段下载（实验）。
+ *
+ * 单连接被 CDN/运营商限速时，用 N 条 Range 连接并行拉同一首歌的不同区间，
+ * 播放器按需从本地临时文件读取。N 由用户在设置里选（4–32，默认 6）。
+ * 任何一步失败（不支持 Range、HTTP 错误、分段线程异常、起播超时）都立刻退回普通单连接。
  */
 class MultiConnDataSource(private val context: Context) : DataSource {
 
     private companion object {
-        const val SEGMENTS = 6
         const val MIN_SIZE = 4L * 1024 * 1024
+        /** 每段至少 512KB，避免文件小的时候开一堆连接 */
+        const val MIN_SEG_BYTES = 512L * 1024
         const val WAIT_MS = 60L
     }
 
@@ -35,12 +39,11 @@ class MultiConnDataSource(private val context: Context) : DataSource {
     private var raf: RandomAccessFile? = null
     private var file: File? = null
 
-    private val segStart = LongArray(SEGMENTS)
-    private val segLen = LongArray(SEGMENTS)
-    private val done = Array(SEGMENTS) { AtomicLong(0) }
-    private val bytesRead = Array(SEGMENTS) { AtomicLong(0) }
-    @Volatile
-    private var failed = false
+    private var segments = 0
+    private var segStart = LongArray(0)
+    private var segLen = LongArray(0)
+    private var done = Array(0) { AtomicLong(0) }
+    private var bytesRead = Array(0) { AtomicLong(0) }
     private var threads: List<Thread> = emptyList()
     private val lock = Object()
 
@@ -52,11 +55,10 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         url = dataSpec.uri.toString()
         position = dataSpec.position
         val enabled = Settings.multiConn(context)
+        val want = Settings.multiConnSegments(context)
         val size = if (enabled) probeSize(url) else 0L
-        if (!enabled || size < MIN_SIZE) {
-            return openFallback(dataSpec)
-        }
-        return runCatching { openParallel(size) }.getOrElse {
+        if (!enabled || size < MIN_SIZE) return openFallback(dataSpec)
+        return runCatching { openParallel(size, want) }.getOrElse {
             Diag.log("mc", "parallel open failed: " + it.message)
             stopThreads()
             openFallback(dataSpec)
@@ -72,29 +74,35 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         return http.open(dataSpec)
     }
 
-    private fun openParallel(size: Long): Long {
+    private fun openParallel(size: Long, want: Int): Long {
         length = size
+        // 按文件大小收敛连接数：每段不少于 512KB
+        segments = minOf(want.coerceIn(4, 32), (size / MIN_SEG_BYTES).toInt().coerceAtLeast(1))
+        segStart = LongArray(segments)
+        segLen = LongArray(segments)
+        done = Array(segments) { AtomicLong(0) }
+        bytesRead = Array(segments) { AtomicLong(0) }
+
         val dir = File(context.cacheDir, "mc").apply { mkdirs() }
-        // 只留最近 3 个临时文件
         dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
         val f = File(dir, Integer.toHexString(url.hashCode()) + ".bin")
         file = f
         raf = RandomAccessFile(f, "rw").apply { setLength(size) }
-        for (i in 0 until SEGMENTS) {
-            segStart[i] = (size / SEGMENTS) * i
-            segLen[i] = if (i == SEGMENTS - 1) size - segStart[i] else size / SEGMENTS
-            done[i].set(0)
+
+        val per = size / segments
+        for (i in 0 until segments) {
+            segStart[i] = per * i
+            segLen[i] = if (i == segments - 1) size - segStart[i] else per
         }
-        threads = (0 until SEGMENTS).map { i -> startSegment(i) }
-        // 等第一段有点数据再交给播放器，避免一上来就卡在 read()
+        threads = (0 until segments).map { i -> startSegment(i) }
+
         val deadline = System.currentTimeMillis() + 4000
         while (System.currentTimeMillis() < deadline) {
-            if (failed) throw IOException("分段连接失败")
             if (done[0].get() >= 64 * 1024) break
             synchronized(lock) { runCatching { lock.wait(WAIT_MS) } }
         }
         if (done[0].get() == 0L) throw IOException("第一段没有数据")
-        Diag.log("mc", "open size=" + size / 1024 / 1024 + "MB segs=" + SEGMENTS + " first64k=" + (done[0].get() >= 64 * 1024))
+        Diag.log("mc", "open size=" + size / 1024 / 1024 + "MB segs=" + segments)
         return size
     }
 
@@ -115,10 +123,10 @@ class MultiConnDataSource(private val context: Context) : DataSource {
                     while (true) {
                         val n = input.read(buf)
                         if (n <= 0) break
-                        val raf = this.raf ?: break
-                        synchronized(raf) {
-                            raf.seek(start + done[i].get())
-                            raf.write(buf, 0, n)
+                        val r = raf ?: break
+                        synchronized(r) {
+                            r.seek(start + done[i].get())
+                            r.write(buf, 0, n)
                         }
                         done[i].addAndGet(n.toLong())
                         bytesRead[i].addAndGet(n.toLong())
@@ -127,10 +135,7 @@ class MultiConnDataSource(private val context: Context) : DataSource {
                 }
             }
         } catch (t: Throwable) {
-            if (t !is InterruptedException) {
-                failed = true
-                Diag.log("mc", "seg" + i + " error: " + t.message + " done=" + done[i].get())
-            }
+            if (t !is InterruptedException) Diag.log("mc", "seg" + i + " error: " + t.message + " done=" + done[i].get())
         }
     }.apply {
         isDaemon = true
@@ -142,10 +147,10 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         fallback?.let { return it.read(buffer, offset, length) }
         if (position >= this.length) return C.RESULT_END_OF_INPUT
         waitFor(position)
-        val raf = this.raf ?: return C.RESULT_END_OF_INPUT
-        val n = synchronized(raf) {
-            raf.seek(position)
-            raf.read(buffer, offset, minOf(length.toLong(), this.length - position).toInt())
+        val r = raf ?: return C.RESULT_END_OF_INPUT
+        val n = synchronized(r) {
+            r.seek(position)
+            r.read(buffer, offset, minOf(length.toLong(), this.length - position).toInt())
         }
         if (n > 0) position += n
         return if (n <= 0) C.RESULT_END_OF_INPUT else n
@@ -155,13 +160,13 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         val started = System.currentTimeMillis()
         while (true) {
             var idx = -1
-            for (i in 0 until SEGMENTS) {
+            for (i in 0 until segments) {
                 if (pos >= segStart[i] && pos < segStart[i] + segLen[i]) { idx = i; break }
             }
             if (idx < 0) return
             if (segStart[idx] + done[idx].get() > pos) return
             if (System.currentTimeMillis() - started > 30_000) {
-                throw IOException("分段下载超时 pos=" + pos)
+                throw IOException("分段下载超时 pos=" + pos + " seg=" + idx)
             }
             synchronized(lock) { runCatching { lock.wait(WAIT_MS) } }
         }
@@ -174,7 +179,11 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         fallback = null
         val total = bytesRead.sumOf { it.get() }
         if (total > 0) {
-            Diag.log("mc", "closed bytes=" + total / 1024 + "KB per-seg=" + bytesRead.joinToString(",") { (it.get() / 1024).toString() } + "KB")
+            Diag.log(
+                "mc",
+                "closed segs=" + segments + " bytes=" + total / 1024 + "KB per-seg=" +
+                    bytesRead.joinToString(",") { (it.get() / 1024).toString() } + "KB",
+            )
         }
         stopThreads()
         runCatching { raf?.close() }

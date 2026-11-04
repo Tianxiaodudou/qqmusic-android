@@ -59,6 +59,7 @@ object Settings {
     private const val K_PCM_TIER = "pcm_buffer_tier"
     private const val K_LOAD_TIER = "load_buffer_tier"
     private const val K_GLITCH_LOG = "glitch_log"
+    private const val K_OFFLOAD_MP3 = "offload_prefer_mp3"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -97,6 +98,16 @@ object Settings {
 
     fun setLoadBufferTier(context: Context, tier: Int) {
         prefs(context).edit().putInt(K_LOAD_TIER, tier.coerceIn(0, 10)).apply()
+    }
+
+    /**
+     * 卸载优先：设备 HAL 只支持 MP3 卸载时，播放统一用 320k MP3（M800），
+     * 让 CPU 不参与解码与混音。下载仍按用户选的音质走，不受影响。
+     */
+    fun offloadPreferMp3(context: Context): Boolean = prefs(context).getBoolean(K_OFFLOAD_MP3, false)
+
+    fun setOffloadPreferMp3(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(K_OFFLOAD_MP3, on).apply()
     }
 
     /** 卡顿日志探测（默认关）。开启后会记录音频 underrun 等事件，便于事后分析。 */

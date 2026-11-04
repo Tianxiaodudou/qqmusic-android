@@ -495,6 +495,7 @@ private fun MinePage(
     var openSection by remember { mutableStateOf("") }
     var autoDowngrade by remember { mutableStateOf(Settings.autoDowngrade(context)) }
     var offload by remember { mutableStateOf(Settings.audioOffload(context)) }
+    var offloadMp3 by remember { mutableStateOf(Settings.offloadPreferMp3(context)) }
     var showPcm by remember { mutableStateOf(false) }
     var showLoad by remember { mutableStateOf(false) }
     var glitchLog by remember { mutableStateOf(Settings.glitchLog(context)) }
@@ -668,6 +669,14 @@ private fun MinePage(
                 offload = !offload
                 Settings.setAudioOffload(context, offload)
                 toast = if (offload) "下次播放生效：已启用硬件卸载" else "下次播放生效：已改为普通解码路径"
+            }
+            MineRow(
+                "卸载优先（播放用 MP3）",
+                if (offloadMp3) "已开启 · 设备仅支持 MP3 卸载，播放统一 320k MP3（下载不受影响）" else "已关闭 · 按所选音质播放",
+            ) {
+                offloadMp3 = !offloadMp3
+                Settings.setOffloadPreferMp3(context, offloadMp3)
+                toast = if (offloadMp3) "已开启：下次播放起改用 320k MP3，可启用硬件卸载" else "已关闭：按音质上限播放"
             }
             MineRow("PCM 缓冲（AudioTrack）", com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context).label) { showPcm = true }
             MineRow("LoadControl 缓冲", com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context).label) { showLoad = true }

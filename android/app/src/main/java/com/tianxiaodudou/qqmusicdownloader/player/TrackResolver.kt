@@ -48,7 +48,13 @@ object TrackResolver {
             }
         }
         val song = TrackCatalog.get(mid) ?: return null
-        val wanted = Settings.quality(ctx)
+        var wanted = Settings.quality(ctx)
+        // 卸载优先 + 设备只支持 MP3 卸载时，播放压到 320k MP3（下载路径不受影响）
+        if (Settings.offloadPreferMp3(ctx) && AudioStats.offloadMp3 &&
+            wanted.ordinal > Settings.Quality.HIGH.ordinal
+        ) {
+            wanted = Settings.Quality.HIGH
+        }
         val chain = Settings.Quality.entries
             .filter { it.ordinal <= wanted.ordinal }
             .sortedByDescending { it.ordinal }

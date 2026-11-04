@@ -22,11 +22,10 @@ object PlayerFactory {
             )
         }.getOrNull()
 
-        val upstream = androidx.media3.datasource.DefaultHttpDataSource.Factory()
-            .setUserAgent(com.tianxiaodudou.qqmusicdownloader.net.QqClient.userAgent())
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(20_000)
-            .setAllowCrossProtocolRedirects(true)
+        // 叶子数据源：默认单连接；开启「多连接下载（实验）」后对大文件走 4 段并行，
+        // 内部任何失败都会自动退回单连接（MultiConnDataSource 自己兜底）
+        val upstream: androidx.media3.datasource.DataSource.Factory =
+            MultiConnDataSource.Factory(ctx)
 
         // 懒解析：MediaItem 存 qqmusic://track/<mid>，播放到那首才换直链
         val resolving = androidx.media3.datasource.ResolvingDataSource.Factory(upstream) { spec ->

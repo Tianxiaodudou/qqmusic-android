@@ -60,6 +60,7 @@ object Settings {
     private const val K_LOAD_TIER = "load_buffer_tier"
     private const val K_GLITCH_LOG = "glitch_log"
     private const val K_OFFLOAD_MP3 = "offload_prefer_mp3"
+    private const val K_MULTI_CONN = "multi_conn"
 
     /** 首页/搜索的每页条数：固定 15，向下滚动继续加载。 */
     const val PAGE_SIZE = 15
@@ -108,6 +109,13 @@ object Settings {
 
     fun setOffloadPreferMp3(context: Context, on: Boolean) {
         prefs(context).edit().putBoolean(K_OFFLOAD_MP3, on).apply()
+    }
+
+    /** 多连接分段下载（实验，默认关）：单连接被限速时用 4 条 Range 连接并行拉。 */
+    fun multiConn(context: Context): Boolean = prefs(context).getBoolean(K_MULTI_CONN, false)
+
+    fun setMultiConn(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean(K_MULTI_CONN, on).apply()
     }
 
     /** 卡顿日志探测（默认关）。开启后会记录音频 underrun 等事件，便于事后分析。 */

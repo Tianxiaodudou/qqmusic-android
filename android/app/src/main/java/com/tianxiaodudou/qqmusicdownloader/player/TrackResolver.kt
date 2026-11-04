@@ -3,6 +3,7 @@ package com.tianxiaodudou.qqmusicdownloader.player
 import android.content.Context
 import android.net.Uri
 import com.tianxiaodudou.qqmusicdownloader.net.Extras
+import com.tianxiaodudou.qqmusicdownloader.net.Diag
 import com.tianxiaodudou.qqmusicdownloader.net.MusicApi
 import com.tianxiaodudou.qqmusicdownloader.net.Settings
 import java.util.concurrent.ConcurrentHashMap
@@ -61,6 +62,13 @@ object TrackResolver {
         val codes = chain.map { it.code }.filter { it.isNotEmpty() }.distinct()
         val ref = runCatching { MusicApi.streamBatchEx(song, codes) }
             .getOrDefault(MusicApi.StreamRef(emptyMap(), emptyMap(), emptyList()))
+        // 诊断：vkey 到底给了几个 CDN 节点（为空说明一直在用默认节点，没有择优空间）
+        Diag.log(
+            "cdn",
+            "vkey mid=" + mid + " code=" + codes.joinToString("/") +
+                " sips=" + ref.sips.size + " urls=" + ref.urls.size +
+                " default=" + (ref.urls.values.firstOrNull()?.substringAfter("://")?.substringBefore('/') ?: "-"),
+        )
         val batch = ref.urls
         for (q in chain) {
             val url = batch[q.code]

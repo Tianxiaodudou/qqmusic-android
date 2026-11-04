@@ -1,6 +1,7 @@
 package com.tianxiaodudou.qqmusicdownloader.player
 
 import com.tianxiaodudou.qqmusicdownloader.net.QqClient
+import com.tianxiaodudou.qqmusicdownloader.net.Diag
 import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
 
@@ -32,12 +33,22 @@ object CdnPicker {
         bases.minByOrNull { scores[hostOf(it)] ?: Long.MAX_VALUE }
             ?.let { best -> if (scores.containsKey(hostOf(best))) return urlOf(best, raw) }
 
-        val candidates = bases.take(3).map { it to urlOf(it, raw) }
-        val results = candidates.map { (base, url) ->
-            Triple(base, url, probe(url))
-        }.filter { it.third > 0 }
-        results.forEach { scores[hostOf(it.first)] = it.third }
-        return results.minByOrNull { it.third }?.second ?: candidates.first().second
+        // 用「持续吞吐」而不是「首个包延迟」来挑节点：母带这种 1MB/s 级的流，延迟低但带宽小的节点最坑
+        val candidates = bases.take(4).map { it to urlOf(it, raw) }
+        val results = ArrayList<Triple<String, String, Long>>()
+        for ((base, url) in candidates) {
+            val kbps = throughput(url)
+            if (kbps > 0) results.add(Triple(base, url, kbps))
+        }
+        results.forEach { scores[hostOf(it.first)] = -it.third }
+        val best = results.maxByOrNull { it.third }
+        Diag.log(
+            "cdn",
+            "pick " + (best?.first?.let { hostOf(it) } ?: "fallback") +
+                " " + (best?.third ?: 0) + "KB/s, candidates=" +
+                results.joinToString(",") { hostOf(it.first) + "=" + it.third + "KB/s" },
+        )
+        return best?.second ?: candidates.first().second
     }
 
     private fun normalize(sips: List<String>): List<String> =
@@ -45,7 +56,35 @@ object CdnPicker {
             .map { it.replaceFirst("http://", "https://").trimEnd('/') + "/" }
             .distinct()
 
-    /** 拉 32KB 计耗时（毫秒），失败返回 -1。 */
+    /** 拉 256KB 测持续吞吐（KB/s），失败返回 -1。 */
+    private fun throughput(url: String): Long {
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", QqClient.userAgent())
+            .header("Range", "bytes=0-262143")
+            .build()
+        val start = System.nanoTime()
+        return runCatching {
+            QqClient.http.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) return@use -1L
+                var total = 0L
+                resp.body?.byteStream()?.use { input ->
+                    val buf = ByteArray(32 * 1024)
+                    var idle = 0
+                    while (total < 256 * 1024) {
+                        val n = input.read(buf)
+                        if (n <= 0) { idle++; if (idle > 2) break; continue }
+                        total += n
+                    }
+                }
+                val ms = (System.nanoTime() - start) / 1_000_000
+                if (total <= 0 || ms <= 0) -1L else total * 1000 / ms
+            }
+        }.getOrDefault(-1L)
+    }
+
+    /** 旧的延迟探测，保留给其它调用。 */
+    @Suppress("unused")
     private fun probe(url: String): Long {
         val req = Request.Builder()
             .url(url)

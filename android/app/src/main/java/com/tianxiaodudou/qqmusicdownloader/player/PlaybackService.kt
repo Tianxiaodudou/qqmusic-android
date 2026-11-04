@@ -16,6 +16,8 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // 服务可能先于 Activity 启动：这里也初始化诊断日志，否则服务侧日志全部丢失
+        com.tianxiaodudou.qqmusicdownloader.net.Diag.init(this)
         runCatching {
             val (p, _) = PlayerFactory.build(this)
             player = p

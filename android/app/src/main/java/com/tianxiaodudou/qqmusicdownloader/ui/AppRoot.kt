@@ -384,16 +384,13 @@ private fun AudioStatusCard(context: android.content.Context) {
     val stats = com.tianxiaodudou.qqmusicdownloader.player.AudioStats
     val pcmTier = com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.pcmTier(context)
     val loadTier = com.tianxiaodudou.qqmusicdownloader.player.AudioTuning.loadTier(context)
-    val sizeText = remember(song?.mid) {
-        val s = song ?: return@remember ""
-        val mb = when (PlayerController.actualQuality) {
-            "标准" -> s.size128
-            "高品质" -> s.size320
-            "无损", "SQ 无损" -> s.sizeFlac
-            "杜比" -> s.sizeDolby
-            else -> s.sizeFlac
-        }
-        if (mb > 0) String.format("%.1f MB", mb / 1024.0 / 1024.0) else "—"
+    val actualQ = com.tianxiaodudou.qqmusicdownloader.player.SongSize.qualityOfLabel(PlayerController.actualQuality)
+    val sizeText = remember(song?.mid, actualQ) {
+        val s = song ?: return@remember "—"
+        val q = actualQ ?: return@remember "—"
+        com.tianxiaodudou.qqmusicdownloader.player.SongSize.fmt(
+            com.tianxiaodudou.qqmusicdownloader.player.SongSize.bytesOf(s, q),
+        )
     }
     Column(
         Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.pagePadding, vertical = AppTheme.dimens.spacingSm)
@@ -404,7 +401,15 @@ private fun AudioStatusCard(context: android.content.Context) {
         Spacer(Modifier.height(AppTheme.dimens.spacingSm))
         StatLine("文件", song?.name ?: "未在播放")
         StatLine("音质", PlayerController.actualQuality.ifEmpty { "—" })
-        StatLine("文件大小", sizeText)
+        StatLine("文件大小", sizeText + if (actualQ != null) "（实际播放：" + actualQ.label + "）" else "")
+        // 选择器里的档位大小和实际播放的可能不是一个文件（例如开了「卸载优先」会实际播 320k MP3）
+        run {
+            val capQ = Settings.quality(context)
+            val capSize = com.tianxiaodudou.qqmusicdownloader.player.SongSize.fmt(
+                song?.let { com.tianxiaodudou.qqmusicdownloader.player.SongSize.bytesOf(it, capQ) } ?: 0L,
+            )
+            StatLine("音质上限", capQ.label + " · " + capSize)
+        }
         StatLine("码率", if (stats.bitrateKbps > 0) stats.bitrateKbps.toString() + " kbps（PCM）" else "—")
         StatLine("位数", if (stats.encoding == 4) "32-bit float" else if (stats.encoding == 2) "16-bit" else "—")
         StatLine("声道", if (stats.channels > 0) stats.channels.toString() else "—")

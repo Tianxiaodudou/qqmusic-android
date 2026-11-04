@@ -121,24 +121,11 @@ fun QualitySheet(current: Settings.Quality, song: MusicApi.Song? = null, onPick:
         }
     }
 
-    /** 这首歌在该档位下的文件大小（字节），拿不到返回 0。 */
-    fun bytesOf(q: Settings.Quality): Long {
-        val s = song ?: return 0L
-        return when (q) {
-            Settings.Quality.STANDARD -> s.size128.toLong()
-            Settings.Quality.HIGH -> s.size320.toLong()
-            Settings.Quality.LOSSLESS -> s.sizeFlac.toLong()
-            Settings.Quality.HIRES -> s.sizeNew.firstOrNull { it > 0 }?.toLong() ?: 0L
-            Settings.Quality.MASTER -> s.sizeNew.lastOrNull { it > 0 }?.toLong() ?: 0L
-            Settings.Quality.DOLBY -> s.sizeDolby.toLong()
-        }
-    }
+    // 与「音频状态卡片」共用同一份大小映射，避免两处显示不一致
+    fun bytesOf(q: Settings.Quality): Long =
+        song?.let { com.tianxiaodudou.qqmusicdownloader.player.SongSize.bytesOf(it, q) } ?: 0L
 
-    fun fmtSize(bytes: Long): String {
-        if (bytes <= 0) return ""
-        val mb = bytes / 1024.0 / 1024.0
-        return if (mb >= 10) String.format("%.0f MB", mb) else String.format("%.1f MB", mb)
-    }
+    fun fmtSize(bytes: Long): String = com.tianxiaodudou.qqmusicdownloader.player.SongSize.fmt(bytes)
 
     fun hasPermission(q: Settings.Quality): Boolean {
         val acc = com.tianxiaodudou.qqmusicdownloader.net.UserApi.Account

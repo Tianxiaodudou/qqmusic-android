@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# 同一分支/标签的新一轮推送直接取消旧的一轮，避免重复占用 runner
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -31,9 +36,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # 复用 Gradle 环境：依赖缓存 + 构建缓存 + 守护进程都在 runner 之间复用
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.3'
+          cache-read-only: false
+          gradle-home-cache-cleanup: true
 
       # 固定签名：密钥以 base64 存在仓库 Secrets，每次构建还原同一份，
       # 新版本才能直接覆盖安装旧版本。
@@ -54,25 +62,9 @@ jobs:
           keytool -list -v -keystore "$RUNNER_TEMP/signing/release.p12" -storetype PKCS12 \
             -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E "Alias name|SHA256"
 
-      - name: 单元测试（3DES 移植对拍）
-        id: unit
-        continue-on-error: true
-        working-directory: android
-        env:
-          VERSION: ${{ steps.ver.outputs.version }}
-        run: |
-          set -o pipefail
-          gradle --build-cache testDebugUnitTest -PappVersion="$VERSION" 2>&1 | tee test.log
-
-      - name: 单元测试失败时输出错误
-        if: steps.unit.outcome == 'failure'
-        working-directory: android
-        run: |
-          sed -n 's/.*<failure message="\([^"]*\)".*/\1/p' app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | head -10 | while IFS= read -r line; do echo "::error::ASSERT $line"; done
-          head -40 test.log | while IFS= read -r line; do echo "::error::HEAD $line"; done
-          exit 1
-
-      - name: 构建 release APK
+      # 只构建 release：不再产出 debug 变体（快一半），
+      # 单元测试也跑在 release 变体上（testReleaseUnitTest），与出包共用一次编译。
+      - name: 构建 release APK + 单元测试
         id: build
         continue-on-error: true
         working-directory: android
@@ -84,12 +76,13 @@ jobs:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
           set -o pipefail
-          gradle --build-cache --stacktrace assembleRelease -PappVersion="$VERSION" 2>&1 | tee build.log
+          gradle --build-cache --stacktrace assembleRelease testReleaseUnitTest -PappVersion="$VERSION" 2>&1 | tee build.log
 
       - name: 构建失败时把错误写进注解
         if: steps.build.outcome == 'failure'
         working-directory: android
         run: |
+          sed -n 's/.*<failure message="\([^"]*\)".*/::error::ASSERT \1/p' app/build/test-results/testReleaseUnitTest/*.xml 2>/dev/null | head -10
           grep -E "^e: |error:|FAILURE:|Caused by|Execution failed|FAILED" build.log | head -40 | while IFS= read -r line; do echo "::error::$line"; done
           tail -50 build.log
           exit 1

@@ -548,6 +548,9 @@ fun SongInfoSheet(
     Column(Modifier.fillMaxWidth().padding(horizontal = AppTheme.dimens.spacing22).padding(bottom = AppTheme.dimens.spacing20)) {
         SheetHeader("歌曲信息")
         InfoRow("歌名", song.name)
+        // 这首歌在 QQ 音乐服务器上的唯一 ID（songmid），排查/反馈问题时报它最直接
+        InfoRow("歌曲 ID", if (song.mid.isEmpty()) "—" else song.mid)
+        InfoRow("音乐库 ID", if (song.mediaMid.isEmpty()) "—" else song.mediaMid)
         InfoRow("演唱", song.singers)
         InfoRow("专辑", song.album.ifEmpty { "—" })
         InfoRow("音源", if (source.isEmpty()) qualityLabel else source)

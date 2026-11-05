@@ -373,6 +373,40 @@ object MusicApi {
         return StreamRef(out, raws, sips, results)
     }
 
+    /**
+     * 批量探测「这些歌在指定音质上能不能拿到播放地址」。
+     * 一次 GetVkey 请求可以带多首，返回 mid -> result（0 成功、104003 无权限…）。
+     */
+    fun probeBatch(songs: List<Song>, code: String): Map<String, Int> {
+        if (songs.isEmpty()) return emptyMap()
+        val p = JSONObject()
+        p.put("uin", QqClient.session?.uin ?: "0")
+        val names = JSONArray()
+        val mids = JSONArray()
+        val types = JSONArray()
+        for (s in songs) {
+            names.put(code + s.mediaMid + extOf(code))
+            mids.put(s.mid)
+            types.put(0)
+        }
+        p.put("filename", names)
+        p.put("guid", QqClient.guid)
+        p.put("songmid", mids)
+        p.put("songtype", types)
+        p.put("ctx", 0)
+        val data = runCatching { QqClient.cgi("music.vkey.GetVkey", "UrlGetVkey", p) }.getOrNull()
+            ?: return emptyMap()
+        val arr = data.optJSONArray("midurlinfo") ?: return emptyMap()
+        val out = HashMap<String, Int>()
+        for (i in 0 until arr.length()) {
+            val info = arr.optJSONObject(i) ?: continue
+            val mid = info.optString("songmid")
+            if (mid.isEmpty()) continue
+            out[mid] = info.optInt("result", 0)
+        }
+        return out
+    }
+
     private fun extOf(code: String): String = when {
         code.startsWith("M") -> ".mp3"
         code.startsWith("F") || code.startsWith("AI") || code.startsWith("Q0") -> ".flac"

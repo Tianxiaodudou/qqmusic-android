@@ -1,5 +1,14 @@
 # 更新日志
 
+## v2.84.0 (2026-11-05)
+
+### 歌曲信息弹窗显示唯一 ID
+- 新增「歌曲 ID（songmid）」与「音乐库 ID（mediaMid）」，反馈问题时报这个最准确
+
+### 付费判定校准工具
+- 音频诊断新增「批量校准付费判定」：搜索 20 组关键词（约 150 首）+ 分批 `GetVkey` 探测 320k/FLAC 的 result，
+  把「payPlay/payMonth/priceTrack/priceAlbum/size128/size320/sizeFlac + r320/rFlac」逐首写入 `diag.log`（tag=probe）
+- 目的：用真实数据确定「免费 / 绿钻 / 单曲付费 / 无版权」的判别式（当前仍有 pay_month=1 但实际全曲可播的免费歌）
 ## v2.83.0 (2026-11-05)
 
 ### 修正付费判定优先级（依据真机抓到的原始字段）

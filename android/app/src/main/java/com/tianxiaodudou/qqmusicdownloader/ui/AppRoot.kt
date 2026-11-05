@@ -809,17 +809,45 @@ private fun MinePage(
         FoldSection("音频诊断", openSection == "diag", onToggle = { toggleSection("diag") }) {
             AudioStatusCard(context)
             MineRow(
-                "抓取付费字段样例",
-                "搜索「隔岸 / 点歌的人」等样例，把 pay/size 原始字段写进 diag.log",
+                "批量校准付费判定",
+                "搜索上百首歌 + 逐首探测 vkey 权限，把「字段 + 能否播放」写进 diag.log",
             ) {
-                toast = "正在抓取…"
+                toast = "正在校准（约 30 秒）…"
                 scope.launch {
                     withContext(Dispatchers.IO) {
-                        listOf("隔岸 姚六一", "隔岸 柳丁", "点歌的人 海来阿木").forEach { q ->
-                            runCatching { MusicApi.search(q) }
+                        runCatching {
+                            val queries = listOf(
+                                "隔岸", "点歌的人", "起风了", "晴天", "孤勇者", "光年之外", "青花瓷", "演员",
+                                "小幸运", "后来", "稻香", "遥远的她", "追光者", "云烟成雨", "白月光与朱砂痣",
+                                "海阔天空", "夜空中最亮的星", "理想三旬", "成都", "斑马斑马",
+                            )
+                            val songs = LinkedHashMap<String, MusicApi.Song>()
+                            for (q in queries) {
+                                runCatching { MusicApi.search(q) }.getOrDefault(emptyList())
+                                    .take(8)
+                                    .forEach { songs[it.mid] = it }
+                            }
+                            val list = songs.values.toList()
+                            val r320 = HashMap<String, Int>()
+                            val rFlac = HashMap<String, Int>()
+                            list.chunked(25).forEach { chunk ->
+                                r320.putAll(runCatching { MusicApi.probeBatch(chunk, "M800") }.getOrDefault(emptyMap()))
+                                rFlac.putAll(runCatching { MusicApi.probeBatch(chunk, "F000") }.getOrDefault(emptyMap()))
+                            }
+                            list.forEach { s ->
+                                com.tianxiaodudou.qqmusicdownloader.net.Diag.log(
+                                    "probe",
+                                    s.mid + " | " + s.name + " - " + s.singers +
+                                        " | payPlay=" + s.payPlay + " payMonth=" + s.payMonth +
+                                        " priceTrack=" + s.priceTrack + " priceAlbum=" + s.priceAlbum +
+                                        " s128=" + s.size128 + " s320=" + s.size320 + " flac=" + s.sizeFlac +
+                                        " | r320=" + (r320[s.mid] ?: -1) + " rFlac=" + (rFlac[s.mid] ?: -1),
+                                )
+                            }
+                            com.tianxiaodudou.qqmusicdownloader.net.Diag.log("probe", "TOTAL=" + list.size)
                         }
                     }
-                    toast = "已写入 diag.log（[song] 行）"
+                    toast = "校准完成，共写入 diag.log"
                 }
             }
             MineRow(

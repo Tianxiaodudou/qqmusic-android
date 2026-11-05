@@ -19,6 +19,8 @@ object MusicApi {
         /** pay_play = 1 表示需要单独购买（付费单曲 / 数字专辑），已购买会变回 0。 */
         val payPlay: Int = 0,
         val payMonth: Int = 0,
+        /** pay_down = 1 表示下载需要付费。 */
+        val payDown: Int = 0,
         val priceTrack: Int = 0,
         val priceAlbum: Int = 0,
         val size128: Int = 0,
@@ -240,6 +242,7 @@ object MusicApi {
             singerMid = firstSingerMid,
             payPlay = pay?.optInt("pay_play", 0) ?: 0,
             payMonth = pay?.optInt("pay_month", 0) ?: 0,
+            payDown = pay?.optInt("pay_down", 0) ?: 0,
             priceTrack = pay?.optInt("price_track", 0) ?: 0,
             priceAlbum = pay?.optInt("price_album", 0) ?: 0,
             size128 = file?.optInt("size_128mp3", 0) ?: 0,
@@ -249,8 +252,21 @@ object MusicApi {
             sizeNew = file?.optJSONArray("size_new")?.let { a ->
                 (0 until a.length()).map { a.optInt(it, 0) }
             } ?: emptyList(),
-        )
+        ).also { s ->
+            // 诊断：把判定用到的原始字段落盘，方便按真实数据校准（有上限，避免刷爆日志）
+            if (songLogCount < 400) {
+                songLogCount++
+                com.tianxiaodudou.qqmusicdownloader.net.Diag.log(
+                    "song",
+                    s.name + " | " + s.singers + " | payPlay=" + s.payPlay + " payMonth=" + s.payMonth +
+                        " payDown=" + s.payDown + " priceTrack=" + s.priceTrack + " priceAlbum=" + s.priceAlbum +
+                        " s128=" + s.size128 + " s320=" + s.size320 + " flac=" + s.sizeFlac + " new=" + s.sizeNew,
+                )
+            }
+        }
     }
+
+    private var songLogCount = 0
 
     /** 热搜词：music.musicsearch.HotkeyService / GetHotkeyForQQMusicMobile。 */
     fun hotKeys(): List<String> {

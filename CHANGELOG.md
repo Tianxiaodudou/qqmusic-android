@@ -1,5 +1,11 @@
 # 更新日志
 
+## v2.85.0 (2026-11-05)
+
+### 校准入口改为 intent（便于自动化取证）
+- `adb shell am start -n com.tianxiaodudou.qqmusicdownloader/.MainActivity --ez calib true`
+  会搜索 25 组关键词（约 150 首）并分批探测 320k / FLAC 的 vkey result，逐首写入 `diag.log`（tag=probe），
+  同时记录当前判定结果 `judge=...`，用于和真实可播性对拍
 ## v2.84.0 (2026-11-05)
 
 ### 歌曲信息弹窗显示唯一 ID

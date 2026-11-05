@@ -19,19 +19,17 @@ object SongAccess {
 
     fun of(song: MusicApi.Song): Info {
         val vip = UserApi.Account.isVip
-        val superVip = UserApi.Account.isSuper
         val noAudio = song.size128 <= 0 && song.size320 <= 0 && song.sizeFlac <= 0
         return when {
             // 完全没有可用音频：下架/无版权
             noAudio -> Info(Kind.NONE, "无版权", "这首歌当前没有可用音源")
-            // 数字单曲/专辑：必须购买
-            song.paid -> Info(Kind.PAID, "付费", "数字单曲，购买后才能完整播放")
-            // 需要会员：没会员标 VIP
-            (song.payPlay == 1 || song.payMonth == 1) && !vip ->
-                Info(Kind.VIP, "VIP", "需要绿钻会员才能完整播放（可用 30 秒试听）")
-            // 需要超级会员才有高音质：标 VIP（无损/母带档位）
-            song.sizeNew.isNotEmpty() && !superVip && song.sizeFlac <= 0 ->
-                Info(Kind.VIP, "VIP", "该音质需要超级会员")
+            // 数字单曲/专辑：必须购买（这个字段最可靠）
+            song.priceTrack > 0 || song.priceAlbum > 0 ->
+                Info(Kind.PAID, "付费", "数字单曲/数字专辑，购买后才能完整播放")
+            // 需要会员：只有在「连 128k 免费版都没有」时才算真要会员，
+            // 否则免费歌曲也会被 pay_play 误标成 VIP（之前的误报就是这里来的）
+            song.payPlay == 1 && song.size128 <= 0 && !vip ->
+                Info(Kind.VIP, "VIP", "需要绿钻会员才能播放")
             else -> Info(Kind.FREE, "", "")
         }
     }

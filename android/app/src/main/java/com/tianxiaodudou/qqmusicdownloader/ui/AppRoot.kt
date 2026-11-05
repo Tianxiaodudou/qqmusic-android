@@ -153,7 +153,33 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         }
     }
 
+    // 轻量提示条（用于“为什么不能播放”这类原因说明）
+    var notice by remember { mutableStateOf("") }
+    fun showNotice(text: String) { notice = text }
+    LaunchedEffect(notice) {
+        if (notice.isNotEmpty()) {
+            kotlinx.coroutines.delay(3500)
+            notice = ""
+        }
+    }
+
     fun playAt(list: List<MusicApi.Song>, i: Int) {
+        val song = list.getOrNull(i) ?: return
+        val access = com.tianxiaodudou.qqmusicdownloader.player.SongAccess.of(song)
+        when (access.kind) {
+            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NONE -> {
+                showNotice(access.label + "：" + access.hint)
+                return
+            }
+            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.PAID -> {
+                showNotice("需购买：" + access.hint)
+                return
+            }
+            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.VIP -> {
+                showNotice(access.hint)
+            }
+            else -> Unit
+        }
         Nav.clear()
         PlayerController.play(list, i)
         showPlayer = true
@@ -171,6 +197,21 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize()) {
+        if (notice.isNotEmpty()) {
+            Box(Modifier.fillMaxSize().padding(horizontal = AppTheme.dimens.pagePadding)) {
+                Text(
+                    notice,
+                    color = AppTheme.colors.textPrimary,
+                    fontSize = AppTheme.typography.bodySmall.fontSize,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = AppTheme.dimens.coverLg)
+                        .clip(AppTheme.shapes.dialog)
+                        .background(AppTheme.colors.surface1)
+                        .padding(horizontal = AppTheme.dimens.spacingMd, vertical = AppTheme.dimens.spacingSm),
+                )
+            }
+        }
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {

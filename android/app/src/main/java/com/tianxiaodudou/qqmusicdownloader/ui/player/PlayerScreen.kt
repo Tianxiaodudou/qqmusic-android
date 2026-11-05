@@ -1004,6 +1004,16 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
                     .coerceIn(0f, 100f)
             } else 0f
             val ringColor = AppTheme.colors.textOnBrand
+            // 旋转动画：否则环形进度看起来是“静止”的，用户不知道在加载
+            val spin = androidx.compose.animation.core.rememberInfiniteTransition(label = "spin")
+            val angle by spin.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    animation = androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.LinearEasing),
+                ),
+                label = "angle",
+            )
             androidx.compose.foundation.Canvas(Modifier.size(AppTheme.dimens.coverXs)) {
                 val stroke = size.minDimension * 0.12f
                 drawCircle(
@@ -1013,7 +1023,7 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
                 )
                 drawArc(
                     color = ringColor,
-                    startAngle = -90f,
+                    startAngle = angle - 90f,
                     sweepAngle = if (pct > 0.5f) pct / 100f * 360f else 300f,
                     useCenter = false,
                     style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),

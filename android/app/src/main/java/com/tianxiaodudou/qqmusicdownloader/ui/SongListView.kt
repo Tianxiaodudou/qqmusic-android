@@ -243,7 +243,8 @@ fun SongListView(
             LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f)) {
                 itemsIndexed(shown) { i, song ->
                     val checked = selected.contains(song.mid)
-                    val locked = song.paid
+                    val access = com.tianxiaodudou.qqmusicdownloader.player.SongAccess.of(song)
+                    val locked = song.paid || access.kind == com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NONE
                     Row(
                         Modifier.fillMaxWidth()
                             .alpha(if (locked) 0.4f else 1f)
@@ -308,9 +309,9 @@ fun SongListView(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        if (locked) {
+                        if (access.kind != com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.FREE) {
                             Text(
-                                "付费",
+                                access.label,
                                 fontSize = AppTheme.typography.badge.fontSize,
                                 color = AppTheme.colors.warning,
                                 modifier = Modifier

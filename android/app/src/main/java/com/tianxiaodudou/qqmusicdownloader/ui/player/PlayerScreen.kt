@@ -971,15 +971,7 @@ private fun PlayerControls(
             Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         PlayPauseButton(playing, loading, onToggle)
-        // 缓冲时给出明确状态，避免只剩按钮变成三个点、用户不知道在等什么
-        if (loading && PlayerController.bufferedMs <= PlayerController.positionMs + 500) {
-            Text(
-                "正在缓冲…",
-                fontSize = AppTheme.typography.caption.fontSize,
-                color = AppTheme.colors.textSecondary,
-                modifier = Modifier.padding(start = AppTheme.dimens.spacingXs),
-            )
-        }
+
         AppIconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
@@ -1006,7 +998,27 @@ private fun PlayPauseButton(playing: Boolean, loading: Boolean, onClick: () -> U
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
-            Text("…", style = AppTheme.typography.pageTitle, color = AppTheme.colors.textOnBrand)
+            // 缓冲中：按钮本身显示环形进度 + 百分比，不再另起一行文字
+            val pct = if (PlayerController.bufferedMs > 0 && PlayerController.durationMs > 0) {
+                ((PlayerController.bufferedMs - PlayerController.positionMs).toFloat() / PlayerController.durationMs * 100)
+                    .coerceIn(0f, 100f)
+            } else 0f
+            val ringColor = AppTheme.colors.textOnBrand
+            androidx.compose.foundation.Canvas(Modifier.size(AppTheme.dimens.coverXs)) {
+                val stroke = size.minDimension * 0.12f
+                drawCircle(
+                    color = ringColor.copy(alpha = 0.25f),
+                    radius = (size.minDimension - stroke) / 2f,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(stroke),
+                )
+                drawArc(
+                    color = ringColor,
+                    startAngle = -90f,
+                    sweepAngle = if (pct > 0.5f) pct / 100f * 360f else 300f,
+                    useCenter = false,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                )
+            }
         } else {
             Icon(
                 if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,

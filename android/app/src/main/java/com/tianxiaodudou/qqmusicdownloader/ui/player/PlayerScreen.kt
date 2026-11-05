@@ -971,6 +971,15 @@ private fun PlayerControls(
             Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         PlayPauseButton(playing, loading, onToggle)
+        // 缓冲时给出明确状态，避免只剩按钮变成三个点、用户不知道在等什么
+        if (loading && PlayerController.bufferedMs <= PlayerController.positionMs + 500) {
+            Text(
+                "正在缓冲…",
+                fontSize = AppTheme.typography.caption.fontSize,
+                color = AppTheme.colors.textSecondary,
+                modifier = Modifier.padding(start = AppTheme.dimens.spacingXs),
+            )
+        }
         AppIconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }

@@ -30,6 +30,9 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         /** 每段至少 512KB，避免文件小的时候开一堆连接 */
         const val MIN_SEG_BYTES = 512L * 1024
         const val WAIT_MS = 60L
+        /** 熔断：多连接卡死后 5 分钟内不再尝试（避免反复卡） */
+        @Volatile
+        var disabledUntil = 0L
     }
 
     private var fallback: DefaultHttpDataSource? = null
@@ -56,7 +59,7 @@ class MultiConnDataSource(private val context: Context) : DataSource {
     override fun open(dataSpec: DataSpec): Long {
         url = dataSpec.uri.toString()
         position = dataSpec.position
-        val enabled = Settings.multiConn(context)
+        val enabled = Settings.multiConn(context) && System.currentTimeMillis() > disabledUntil
         val want = Settings.multiConnSegments(context)
         val size = if (enabled) probeSize(url) else 0L
         if (!enabled || size < MIN_SIZE) return openFallback(dataSpec)
@@ -108,12 +111,14 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         }
         threads = (0 until segments).map { i -> startSegment(i) }
 
-        val deadline = System.currentTimeMillis() + 4000
+        // 所有分段都要真的开始下，否则播放器会卡在 waitFor 等一个永不到来的段
+        val deadline = System.currentTimeMillis() + 5000
         while (System.currentTimeMillis() < deadline) {
-            if (done[0].get() >= 64 * 1024) break
+            if ((0 until segments).all { done[it].get() > 0 }) break
             synchronized(lock) { runCatching { lock.wait(WAIT_MS) } }
         }
-        if (done[0].get() == 0L) throw IOException("第一段没有数据")
+        val stalled = (0 until segments).filter { done[it].get() == 0L }
+        if (stalled.isNotEmpty()) throw IOException("分段未就绪: " + stalled.joinToString(","))
         Diag.log("mc", "open size=" + size / 1024 / 1024 + "MB segs=" + segments)
         return size
     }
@@ -128,7 +133,8 @@ class MultiConnDataSource(private val context: Context) : DataSource {
             .build()
         try {
             QqClient.http.newCall(req).execute().use { resp ->
-                if (!resp.isSuccessful) throw IOException("HTTP " + resp.code)
+                // 必须真的 206：有的节点无视 Range 返回 200 + 整包，按段写会把字节写到错误偏移
+                if (resp.code != 206) throw IOException("HTTP " + resp.code + "（不支持 Range）")
                 val body = resp.body ?: throw IOException("empty body")
                 body.byteStream().use { input ->
                     val buf = ByteArray(64 * 1024)
@@ -179,8 +185,12 @@ class MultiConnDataSource(private val context: Context) : DataSource {
             }
             if (idx < 0) return
             if (segStart[idx] + done[idx].get() > pos) return
-            if (System.currentTimeMillis() - started > 30_000) {
-                throw IOException("分段下载超时 pos=" + pos + " seg=" + idx)
+            if (System.currentTimeMillis() - started > 10_000) {
+                // 熔断 5 分钟：避免每次切歌都在这里等 30 秒，直接退回单连接
+                disabledUntil = System.currentTimeMillis() + 5 * 60_000L
+                AudioStats.mcFallbacks += 1
+                Diag.log("mc", "read timeout pos=" + pos + " seg=" + idx + " → 熔断 5 分钟")
+                throw IOException("分段下载超时 pos=" + pos)
             }
             synchronized(lock) { runCatching { lock.wait(WAIT_MS) } }
         }

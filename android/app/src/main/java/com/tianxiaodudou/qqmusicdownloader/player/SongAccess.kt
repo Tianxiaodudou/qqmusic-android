@@ -27,11 +27,15 @@ object SongAccess {
         return when {
             // 三个文件大小全为 0：没有任何可下发文件（下架 / 无版权）
             !hasFile -> Info(Kind.NO_COPYRIGHT, "无版权", "这首歌当前没有可用音源（下架或无版权）")
-            // 单曲售价 / 专辑售价 > 0：数字单曲、数字专辑，需要单独购买
-            song.priceTrack > 0 -> Info(Kind.PAID_TRACK, "单曲付费", "数字单曲，需单独购买（" + fen(song.priceTrack) + "）")
-            song.priceAlbum > 0 -> Info(Kind.PAID_ALBUM, "专辑付费", "出自数字专辑，需购买专辑（" + fen(song.priceAlbum) + "）")
-            // pay_month = 1：需要绿钻 / 付费包
+            // pay_month = 1：需要绿钻 / 付费包（优先级最高：实测大量 VIP 歌同时带 price_track=200，
+            // 若先看价格会把「隔岸-柳丁」这类 VIP 歌误标成单曲付费）
             song.payMonth == 1 && !vip -> Info(Kind.VIP, "绿钻", "需要绿钻或付费包才能播放")
+            // 真正需要单独购买：没有绿钻权限、且 pay_play=1、并且确实标了单曲/专辑售价。
+            // 反过来，price_track 非 0 但 pay_play=0 的是免费歌（实测「隔岸-姚六一」就是这种）。
+            song.payPlay == 1 && song.priceTrack > 0 ->
+                Info(Kind.PAID_TRACK, "单曲付费", "数字单曲，需单独购买（" + fen(song.priceTrack) + "）")
+            song.payPlay == 1 && song.priceAlbum > 0 ->
+                Info(Kind.PAID_ALBUM, "专辑付费", "出自数字专辑，需购买专辑（" + fen(song.priceAlbum) + "）")
             else -> Info(Kind.FREE, "", "")
         }
     }

@@ -167,12 +167,13 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         val song = list.getOrNull(i) ?: return
         val access = com.tianxiaodudou.qqmusicdownloader.player.SongAccess.of(song)
         when (access.kind) {
-            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NONE -> {
+            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NO_COPYRIGHT -> {
                 showNotice(access.label + "：" + access.hint)
                 return
             }
-            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.PAID -> {
-                showNotice("需购买：" + access.hint)
+            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.PAID_TRACK,
+            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.PAID_ALBUM -> {
+                showNotice(access.label + "：" + access.hint)
                 return
             }
             com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.VIP -> {

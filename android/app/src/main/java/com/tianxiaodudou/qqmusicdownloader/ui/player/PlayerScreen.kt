@@ -971,6 +971,18 @@ private fun PlayerControls(
             Icon(Icons.Rounded.SkipPrevious, contentDescription = "上一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))
         }
         PlayPauseButton(playing, loading, onToggle)
+        // 取不到音源时直接显示原因（104003 无权限 / 104013 设备受限 等）
+        val err = PlayerController.error
+        if (!err.isNullOrEmpty()) {
+            Text(
+                err,
+                fontSize = AppTheme.typography.caption.fontSize,
+                color = AppTheme.colors.error,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = AppTheme.dimens.spacingXs),
+            )
+        }
 
         AppIconButton(onClick = onNext, modifier = Modifier.size(AppTheme.dimens.coverLg)) {
             Icon(Icons.Rounded.SkipNext, contentDescription = "下一首", tint = TextHi, modifier = Modifier.size(AppTheme.dimens.spacing32))

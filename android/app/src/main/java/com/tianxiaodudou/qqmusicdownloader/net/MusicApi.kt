@@ -309,6 +309,8 @@ object MusicApi {
         val urls: Map<String, String>,
         val raws: Map<String, String>,
         val sips: List<String>,
+        /** key = 音质 code，value = vkey 返回的 result（0 成功，104003 无权限，104004 取不到，104013 设备受限） */
+        val results: Map<String, Int> = emptyMap(),
     )
 
     fun streamBatch(song: Song, codes: List<String>): Map<String, String> = streamBatchEx(song, codes).urls
@@ -340,16 +342,19 @@ object MusicApi {
         }
         val out = HashMap<String, String>()
         val raws = HashMap<String, String>()
+        val results = HashMap<String, Int>()
         for (i in 0 until arr.length()) {
             val info = arr.optJSONObject(i) ?: continue
             val purl = info.optString("purl")
-            if (purl.isEmpty()) continue
             val fn = info.optString("filename")
             val code = codes.firstOrNull { fn.startsWith(it) } ?: codes.getOrNull(i) ?: continue
+            // 把权限结果码也带回上层：104003=无权限，104004=VKey 失败，104013=设备受限
+            results[code] = info.optInt("result", 0)
+            if (purl.isEmpty()) continue
             raws[code] = purl
             out[code] = if (purl.startsWith("http")) purl else "https://dl.stream.qqmusic.qq.com/" + purl
         }
-        return StreamRef(out, raws, sips)
+        return StreamRef(out, raws, sips, results)
     }
 
     private fun extOf(code: String): String = when {

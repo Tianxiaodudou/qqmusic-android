@@ -24,6 +24,9 @@ object TrackResolver {
     /** 解析出某一首的实际音质时回调，用于刷新播放页顶栏的音质徽章。 */
     var onResolved: ((mid: String, quality: String) -> Unit)? = null
 
+    /** 解析失败（vkey 没给可用直链）时回调，reason 是给用户看的原因。 */
+    var onFailed: ((mid: String, reason: String) -> Unit)? = null
+
     fun attach(ctx: Context) { appContext = ctx.applicationContext }
 
     /**
@@ -87,6 +90,16 @@ object TrackResolver {
                 return picked
             }
         }
+        // 一个 purl 都没拿到：用 vkey 的 result 码给出准确原因（语义见 QQMusicApi）
+        val results = ref.results.values
+        val reason = when {
+            results.contains(104003) -> "无权限：需要绿钻/付费包，或当前账号等级不够（104003）"
+            results.contains(104013) -> "设备受限：该歌曲限制此设备播放（104013）"
+            results.contains(104004) -> "取不到播放地址：VKey 获取失败（104004）"
+            results.isEmpty() -> "取不到播放地址：接口没有返回结果"
+            else -> "当前账号无法播放这首歌（result=" + results.first() + "）"
+        }
+        onFailed?.invoke(mid, reason)
         // 版权受限：换可播版本
         val replaced = runCatching { Extras.replacement(song) }.getOrNull() ?: return null
         for (q in chain) {

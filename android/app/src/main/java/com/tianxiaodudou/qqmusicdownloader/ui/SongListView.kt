@@ -244,7 +244,7 @@ fun SongListView(
                 itemsIndexed(shown) { i, song ->
                     val checked = selected.contains(song.mid)
                     val access = com.tianxiaodudou.qqmusicdownloader.player.SongAccess.of(song)
-                    val locked = song.paid || access.kind == com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NONE
+                    val locked = song.paid || access.kind == com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NO_COPYRIGHT
                     Row(
                         Modifier.fillMaxWidth()
                             .alpha(if (locked) 0.4f else 1f)

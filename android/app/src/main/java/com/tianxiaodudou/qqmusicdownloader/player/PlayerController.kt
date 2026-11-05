@@ -93,8 +93,12 @@ object PlayerController {
         val ctx = context.applicationContext
         appContext = ctx
         TrackResolver.attach(ctx)
+        TrackResolver.onFailed = { _, reason -> error = reason }
         TrackResolver.onResolved = { mid, quality ->
-            if (current?.mid == mid) actualQuality = quality
+            if (current?.mid == mid) {
+                actualQuality = quality
+                error = null
+            }
         }
         scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
         speed = 1f

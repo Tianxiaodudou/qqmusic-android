@@ -120,10 +120,10 @@ object Settings {
     }
 
     /** 多连接的并行数：4–32，默认 6。 */
-    fun multiConnSegments(context: Context): Int = prefs(context).getInt(K_MULTI_SEGS, 6).coerceIn(4, 32)
+    fun multiConnSegments(context: Context): Int = prefs(context).getInt(K_MULTI_SEGS, 6).coerceIn(4, 8)
 
     fun setMultiConnSegments(context: Context, n: Int) {
-        prefs(context).edit().putInt(K_MULTI_SEGS, n.coerceIn(4, 32)).apply()
+        prefs(context).edit().putInt(K_MULTI_SEGS, n.coerceIn(4, 8)).apply()
     }
 
     /** 卡顿日志探测（默认关）。开启后会记录音频 underrun 等事件，便于事后分析。 */

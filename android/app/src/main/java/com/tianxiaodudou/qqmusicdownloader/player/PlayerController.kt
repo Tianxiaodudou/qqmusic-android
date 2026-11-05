@@ -75,6 +75,8 @@ object PlayerController {
 
     val current: MusicApi.Song? get() = queue.getOrNull(index)
 
+    private var lastRx = 0L
+    private var lastRxAt = 0L
     private var posAt = 0L
     private var lastPersistAt = 0L
     private var posRealtime = 0L
@@ -185,6 +187,18 @@ object PlayerController {
                     posAt = positionMs
                     posRealtime = android.os.SystemClock.elapsedRealtime()
                     bufferedMs = pl.bufferedPosition.coerceAtLeast(0L)
+                    com.tianxiaodudou.qqmusicdownloader.player.AudioStats.bufferAheadMs =
+                        (bufferedMs - positionMs).coerceAtLeast(0L)
+                    runCatching {
+                        val rx = android.net.TrafficStats.getUidRxBytes(android.os.Process.myUid())
+                        val nowMs = android.os.SystemClock.elapsedRealtime()
+                        if (lastRxAt > 0 && nowMs > lastRxAt && rx > lastRx) {
+                            val kbps = (rx - lastRx) * 1000 / (nowMs - lastRxAt) / 1024
+                            com.tianxiaodudou.qqmusicdownloader.player.AudioStats.netKbps = kbps
+                        }
+                        lastRx = rx
+                        lastRxAt = nowMs
+                    }
                     val d = pl.duration
                     if (d > 0) durationMs = d
                     playing = pl.isPlaying

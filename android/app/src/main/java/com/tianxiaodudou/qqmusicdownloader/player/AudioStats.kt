@@ -21,6 +21,24 @@ object AudioStats {
     var bufferMs by mutableStateOf(0)
     /** 播放中的音频码率（kbps，按解码格式与声道估算）。 */
     var bitrateKbps by mutableStateOf(0)
+    /** 音频会话号与输出路由。 */
+    var sessionId by mutableStateOf(0)
+    var routeName by mutableStateOf("")
+
+    /** 缓冲余量（buffered - position，毫秒）与实时下行速率（KB/s）。 */
+    var bufferAheadMs by mutableStateOf(0L)
+    var netKbps by mutableStateOf(0L)
+
+    /** 多连接统计。 */
+    var mcSegments by mutableStateOf(0)
+    var mcOpened by mutableStateOf(0)
+    var mcFallbacks by mutableStateOf(0)
+    var mcBytes by mutableStateOf(0L)
+
+    /** 错误与异常计数。 */
+    var sinkErrors by mutableStateOf(0)
+    var timestampJumps by mutableStateOf(0)
+
     /** 当前曲目的编码（例如 audio/mp4a-latm、audio/vorbis、audio/flac）。 */
     var codecMime by mutableStateOf("")
 

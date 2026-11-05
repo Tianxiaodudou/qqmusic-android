@@ -61,6 +61,7 @@ class MultiConnDataSource(private val context: Context) : DataSource {
         val size = if (enabled) probeSize(url) else 0L
         if (!enabled || size < MIN_SIZE) return openFallback(dataSpec)
         return runCatching { openParallel(size, want) }.getOrElse {
+            AudioStats.mcFallbacks += 1
             Diag.log("mc", "parallel open failed: " + it.message)
             stopThreads()
             openFallback(dataSpec)
@@ -79,16 +80,25 @@ class MultiConnDataSource(private val context: Context) : DataSource {
     private fun openParallel(size: Long, want: Int): Long {
         length = size
         // 按文件大小收敛连接数：每段不少于 512KB
-        segments = minOf(want.coerceIn(4, 32), (size / MIN_SEG_BYTES).toInt().coerceAtLeast(1))
+        segments = minOf(want.coerceIn(4, 8), (size / MIN_SEG_BYTES).toInt().coerceAtLeast(1))
         segStart = LongArray(segments)
         segLen = LongArray(segments)
         done = Array(segments) { AtomicLong(0) }
         bytesRead = Array(segments) { AtomicLong(0) }
 
         val dir = File(context.cacheDir, "mc").apply { mkdirs() }
-        dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { it.delete() }
-        val f = File(dir, Integer.toHexString(url.hashCode()) + ".bin")
+        // 清理：保留最近 3 个，另外任何超过 10 分钟的残留一律删掉
+        val now = System.currentTimeMillis()
+        dir.listFiles()?.forEach { f2 ->
+            if (now - f2.lastModified() > 10 * 60_000L) runCatching { f2.delete() }
+        }
+        dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(3)?.forEach { runCatching { it.delete() } }
+        // 每个实例一个独立文件：之前按 URL 哈希命名，同一首歌被两个 DataSource 同时打开时
+        // 会往同一个文件里交错写，读出来的字节就是错的 —— 这正是“破音/断续”的来源。
+        val f = File(dir, Integer.toHexString(url.hashCode()) + "-" + java.util.UUID.randomUUID().toString().take(8) + ".bin")
         file = f
+        AudioStats.mcOpened += 1
+        AudioStats.mcSegments = segments
         raf = RandomAccessFile(f, "rw").apply { setLength(size) }
 
         val per = size / segments

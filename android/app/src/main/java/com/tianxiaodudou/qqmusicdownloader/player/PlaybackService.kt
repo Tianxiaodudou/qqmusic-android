@@ -30,6 +30,16 @@ class PlaybackService : MediaSessionService() {
             )
             p.addListener(object : androidx.media3.common.Player.Listener {
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
+                    AudioStats.sessionId = audioSessionId
+                    AudioStats.routeName = runCatching {
+                        val am = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                        when {
+                            am.isBluetoothA2dpOn -> "蓝牙"
+                            am.isWiredHeadsetOn -> "有线耳机"
+                            am.isSpeakerphoneOn -> "扬声器"
+                            else -> "默认输出"
+                        }
+                    }.getOrDefault("")
                     android.util.Log.i("QQAudio", "audioSession=" + audioSessionId)
                 }
             })

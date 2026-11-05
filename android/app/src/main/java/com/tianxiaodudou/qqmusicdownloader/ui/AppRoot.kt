@@ -426,7 +426,19 @@ private fun AudioStatusCard(context: android.content.Context) {
         }
         StatLine("PCM 缓冲", if (stats.bufferMs > 0) stats.bufferMs.toString() + " ms / " + stats.bufferBytes / 1024 + " KB（" + pcmTier.mult + "×）" else pcmTier.label)
         StatLine("LoadControl", loadTier.label)
+        StatLine("采样率", if (stats.sampleRate > 0) stats.sampleRate.toString() + " Hz" else "—")
+        StatLine("输出路由", stats.routeName.ifEmpty { "—" })
+        StatLine("音频会话", if (stats.sessionId != 0) stats.sessionId.toString() else "—")
+        StatLine("缓冲余量", stats.bufferAheadMs.toString() + " ms")
+        StatLine("实时下行", stats.netKbps.toString() + " KB/s")
+        StatLine(
+            "多连接",
+            if (stats.mcOpened == 0) "未使用" else
+                stats.mcSegments.toString() + " 段 · 已开 " + stats.mcOpened + " 次 · 回退 " + stats.mcFallbacks +
+                    " 次 · 累计 " + stats.mcBytes / 1024 / 1024 + " MB",
+        )
         StatLine("卡顿计数", if (stats.underrunCount > 0) stats.underrunCount.toString() + " 次（最近 " + android.text.format.DateFormat.format("HH:mm:ss", stats.lastUnderrunAt) + "）" else "0")
+        StatLine("Sink 错误", stats.sinkErrors.toString() + " · 时间戳跳变 " + stats.timestampJumps)
     }
 }
 
@@ -688,7 +700,7 @@ private fun MinePage(
             }
             MineRow(
                 "多连接下载（实验）",
-                if (multiConn) "已开启 · " + segs + " 条连接并行，弱网提速" else "已关闭 · 单连接拉流",
+                if (multiConn) "已开启 · " + segs + " 条连接并行（上限 8）" else "已关闭 · 单连接拉流",
             ) {
                 multiConn = !multiConn
                 Settings.setMultiConn(context, multiConn)
@@ -859,21 +871,15 @@ private fun MinePage(
             intro = "同时开几条 Range 连接拉同一首歌。实测单条约 200KB/s，条数越多总带宽越高；" +
                 "但太多会被 CDN 限速或触发风控，建议 6–8 条起步，母带（192kHz FLAC）再往上加。",
             options = listOf(
-                "4 条" to "约 4×单连接速度（≈800KB/s），最保守",
-                "6 条 · 默认" to "约 6×（≈1.2MB/s），适合无损/母带",
-                "8 条" to "约 8×（≈1.6MB/s），母带起播更快，CDN 压力开始变大",
-                "10 条" to "约 10×，弱网可用；部分节点会开始限速",
-                "12 条" to "约 12×；注意流量消耗，建议只在 Wi-Fi 用",
-                "16 条" to "高并发，部分 CDN 会拒绝或降速",
-                "20 条" to "很可能触发限速/风控，仅用于测试",
-                "24 条" to "同上，收益通常不再增加",
-                "32 条" to "极限值：手机发热、耗电、流量都明显上升，不建议日常使用",
+                "4 条" to "最保守：约 4×单连接速度，并发压力最小，适合先验证稳定性",
+                "6 条 · 默认" to "约 6×单连接速度，多数网络下的稳妥档位",
+                "8 条" to "上限：约 8×单连接速度，起播最快；并发过高时个别 CDN 会限速",
             ),
             current = when (segs) {
-                4 -> 0; 6 -> 1; 8 -> 2; 10 -> 3; 12 -> 4; 16 -> 5; 20 -> 6; 24 -> 7; else -> 8
+                4 -> 0; 6 -> 1; else -> 2
             },
             onPick = { i ->
-                val n = listOf(4, 6, 8, 10, 12, 16, 20, 24, 32)[i]
+                val n = listOf(4, 6, 8)[i]
                 segs = n
                 Settings.setMultiConnSegments(context, n)
                 showSegs = false

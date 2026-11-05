@@ -52,6 +52,8 @@ class GlitchMonitor(private val context: Context) : AnalyticsListener {
     }
 
     override fun onAudioSinkError(eventTime: AnalyticsListener.EventTime, audioSinkError: Exception) {
+        AudioStats.sinkErrors += 1
+        if (audioSinkError.message?.contains("discontinuity", true) == true) AudioStats.timestampJumps += 1
         log("AUDIO_SINK_ERROR " + audioSinkError)
     }
 

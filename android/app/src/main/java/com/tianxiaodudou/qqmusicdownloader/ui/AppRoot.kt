@@ -809,6 +809,20 @@ private fun MinePage(
         FoldSection("音频诊断", openSection == "diag", onToggle = { toggleSection("diag") }) {
             AudioStatusCard(context)
             MineRow(
+                "抓取付费字段样例",
+                "搜索「隔岸 / 点歌的人」等样例，把 pay/size 原始字段写进 diag.log",
+            ) {
+                toast = "正在抓取…"
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        listOf("隔岸 姚六一", "隔岸 柳丁", "点歌的人 海来阿木").forEach { q ->
+                            runCatching { MusicApi.search(q) }
+                        }
+                    }
+                    toast = "已写入 diag.log（[song] 行）"
+                }
+            }
+            MineRow(
                 "卡顿日志探测",
                 if (glitchLog) "已开启 · underrun 等事件写入 diag.log" else "已关闭 · 排查卡顿时再开（系统层日志需 root）",
                 divider = false,

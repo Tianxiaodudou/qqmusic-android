@@ -54,7 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -142,11 +141,9 @@ fun SongListView(
         }
     }
 
-    val policy = Settings.paidPolicy(context)
-    val shown = if (policy == Settings.PaidPolicy.HIDE) songs.filter { !it.paid } else songs
-    val hiddenCount = songs.size - shown.size
-    val selectable = shown.filter { !it.paid }
-    val chosen = shown.filter { selected.contains(it.mid) }
+    val shown = songs
+    val selectable = songs
+    val chosen = songs.filter { selected.contains(it.mid) }
 
     fun toggle(song: MusicApi.Song) {
         selected = if (selected.contains(song.mid)) selected - song.mid else selected + song.mid
@@ -186,7 +183,7 @@ fun SongListView(
                 ) { Text("取消", fontSize = AppTheme.typography.bodySmall.fontSize) }
             } else {
                 Text(
-                    if (hiddenCount > 0) shown.size.toString() + " 首 · 隐藏 " + hiddenCount + " 首付费" else shown.size.toString() + " 首",
+                    shown.size.toString() + " 首",
                     fontSize = AppTheme.typography.bodySmall.fontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -225,7 +222,7 @@ fun SongListView(
         if (shown.isEmpty()) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Text(
-                    if (hiddenCount > 0) "这里都是需要单独购买的付费内容" else "暂无歌曲",
+                    "暂无歌曲",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -244,21 +241,15 @@ fun SongListView(
                 itemsIndexed(shown) { i, song ->
                     val checked = selected.contains(song.mid)
                     // 不做任何「免费/会员/付费」预判：所有歌都可点，真放不出来时再提示原因
-                    val locked = false
                     Row(
                         Modifier.fillMaxWidth()
-                            .alpha(if (locked) 0.4f else 1f)
                             .clip(AppTheme.shapes.cardSmall)
                             .combinedClickable(
                                 onClick = {
-                                    when {
-                                        locked -> toast("付费内容，购买后才能播放")
-                                        selecting -> toggle(song)
-                                        else -> onPlay(shown, i)
-                                    }
+                                    if (selecting) toggle(song) else onPlay(shown, i)
                                 },
                                 onLongClick = {
-                                    if (!locked && !selecting) {
+                                    if (!selecting) {
                                         selecting = true
                                         selected = setOf(song.mid)
                                     }
@@ -268,7 +259,7 @@ fun SongListView(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (selecting) {
-                            Checkbox(checked = checked, enabled = !locked, onCheckedChange = { toggle(song) })
+                            Checkbox(checked = checked, onCheckedChange = { toggle(song) })
                         }
                         val playingThis = PlayerController.current?.mid == song.mid
                         Box(
@@ -311,7 +302,7 @@ fun SongListView(
                         }
                         if (!selecting) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                RowAction(Icons.Rounded.QueueMusic, "加入队列", enabled = !locked) {
+                                RowAction(Icons.Rounded.QueueMusic, "加入队列") {
                                     PlayerController.enqueue(listOf(song))
                                     toast("已加入播放队列")
                                 }
@@ -332,7 +323,7 @@ fun SongListView(
                                         )
                                     }
                                 }
-                                RowAction(Icons.Rounded.Download, "下载", enabled = !locked) { onDownload(song) }
+                                RowAction(Icons.Rounded.Download, "下载") { onDownload(song) }
                                 Box {
                                     RowAction(Icons.Rounded.MoreVert, "更多") { moreFor = song }
                                     DropdownMenu(

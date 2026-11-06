@@ -42,16 +42,29 @@ object TrackResolver {
 
     fun qualityOf(mid: String): String = qualities[mid].orEmpty()
 
-    /** 解析直链（带音质上限、替换音源兜底、8 分钟缓存）。失败返回 null。 */
+    /** 解析结果：url 非空即可播放/下载；否则 reason 是给用户看的原因。 */
+    data class Resolved(val url: String? = null, val reason: String? = null, val quality: String = "")
+
+    /** 解析直链（带音质上限、替换音源兜底、8 分钟缓存）。失败返回 null，并通过 onFailed 给出原因。 */
     fun resolve(mid: String): String? {
-        val ctx = appContext ?: return null
+        val r = resolveDetailed(mid)
+        if (r.url != null) {
+            if (r.quality.isNotEmpty()) onResolved?.invoke(mid, r.quality)
+        } else {
+            onFailed?.invoke(mid, r.reason ?: "无法播放这首歌，请稍后重试")
+        }
+        return r.url
+    }
+
+    /** 同 [resolve]，但不回调 UI —— 下载等非播放场景直接拿直链或失败原因。 */
+    fun resolveDetailed(mid: String): Resolved {
+        val ctx = appContext ?: return Resolved(reason = "播放器还没准备好，请稍后重试")
         cache[mid]?.let {
             if (System.currentTimeMillis() - it.second < TTL) {
-                qualities[mid]?.takeIf { q -> q.isNotEmpty() }?.let { q -> onResolved?.invoke(mid, q) }
-                return it.first
+                return Resolved(url = it.first, quality = qualities[mid].orEmpty())
             }
         }
-        val song = TrackCatalog.get(mid) ?: return null
+        val song = TrackCatalog.get(mid) ?: return Resolved(reason = "缺少歌曲信息，请重试")
         var wanted = Settings.quality(ctx)
         // 卸载优先 + 设备只支持 MP3 卸载时，播放压到 320k MP3（下载路径不受影响）
         if (Settings.offloadPreferMp3(ctx) && AudioStats.offloadMp3 &&
@@ -86,32 +99,29 @@ object TrackResolver {
                     "O801" -> "Hi-Res"; "AI00" -> "母带"; "D004" -> "杜比"; else -> ""
                 }
                 qualities[mid] = text
-                onResolved?.invoke(mid, text)
-                return picked
+                return Resolved(url = picked, quality = text)
             }
         }
         // 一个 purl 都没拿到：用 vkey 的 result 码给出准确原因（语义见 QQMusicApi）
         val results = ref.results.values
         val reason = when {
-            results.contains(104003) -> "因账户权限无法播放（需要会员或购买该歌曲）"
-            results.contains(104013) -> "因账户权限无法播放（该歌曲限制了播放设备）"
+            results.contains(104003) -> "因账户权限无法播放或下载（需要会员或购买该歌曲）"
+            results.contains(104013) -> "因账户权限无法播放或下载（该歌曲限制了播放设备）"
             results.contains(104004) -> "取不到播放地址，请稍后重试"
             results.isEmpty() -> "取不到播放地址，请稍后重试"
             else -> "无法播放这首歌，请稍后重试"
         }
-        onFailed?.invoke(mid, reason)
         // 版权受限：换可播版本
-        val replaced = runCatching { Extras.replacement(song) }.getOrNull() ?: return null
+        val replaced = runCatching { Extras.replacement(song) }.getOrNull() ?: return Resolved(reason = reason)
         for (q in chain) {
             val url = runCatching { MusicApi.streamUrlOf(replaced, q.code) }.getOrNull()
             if (!url.isNullOrEmpty()) {
                 cache[mid] = url to System.currentTimeMillis()
                 qualities[mid] = "替换音源"
-                onResolved?.invoke(mid, "替换音源")
-                return url
+                return Resolved(url = url, quality = "替换音源")
             }
         }
-        return null
+        return Resolved(reason = reason)
     }
 
     /** 提前解析下一首，切歌时不用等。 */

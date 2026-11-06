@@ -4,9 +4,14 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.tianxiaodudou.qqmusicdownloader.player.TrackCatalog
+import com.tianxiaodudou.qqmusicdownloader.player.TrackResolver
 import okhttp3.Request
 import java.io.File
 
@@ -43,11 +48,15 @@ object Downloader {
         Thread {
             try {
                 update(song.mid) { it.copy(state = "下载中", progress = 5) }
+                TrackCatalog.put(song)
                 var src = runCatching { Lossless.playableFile(app, song) }.getOrNull()
                 var ext = "flac"
                 var mime = "audio/flac"
                 if (src == null) {
-                    val url = MusicApi.songUrl(song) ?: throw IllegalStateException("拿不到播放地址")
+                    // 与播放走同一套解析：拿不到直链时用 vkey 的 result 说明原因（如账户权限不足）
+                    val resolved = TrackResolver.resolveDetailed(song.mid)
+                    val url = resolved.url
+                        ?: throw IllegalStateException(resolved.reason ?: "拿不到播放地址，请稍后重试")
                     update(song.mid) { it.copy(progress = 20) }
                     val tmp = File(app.cacheDir, song.mid + ".mp3")
                     val req = Request.Builder().url(url).header("User-Agent", QqClient.userAgent()).build()
@@ -67,7 +76,12 @@ object Downloader {
                 update(song.mid) { it.copy(state = "完成", progress = 100, path = saved) }
                 History.add(app, song, saved)
             } catch (e: Exception) {
-                update(song.mid) { it.copy(state = "失败", progress = 0, path = e.message ?: "未知错误") }
+                val msg = e.message ?: "未知错误"
+                update(song.mid) { it.copy(state = "失败", progress = 0, path = msg) }
+                // 失败原因（如账户权限不足）用系统提示条给出，不必再进下载列表看
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(app, "下载失败：" + msg, Toast.LENGTH_LONG).show()
+                }
             }
         }.start()
     }

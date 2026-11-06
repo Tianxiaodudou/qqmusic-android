@@ -33,13 +33,6 @@ class MainActivity : ComponentActivity() {
                 AppRoot()
             }
         }
-        // 调试入口：adb shell am start -n <pkg>/.MainActivity --ez calib true
-        // 搜索上百首歌并逐首探测 vkey 权限，结果写入 diag.log（tag=probe）
-        if (intent?.getBooleanExtra("calib", false) == true) {
-            Thread {
-                com.tianxiaodudou.qqmusicdownloader.net.Calibrator.run()
-            }.start()
-        }
     }
 
     private fun askNotificationPermission() {

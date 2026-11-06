@@ -1,6 +1,5 @@
 package com.tianxiaodudou.qqmusicdownloader.net
 
-import com.tianxiaodudou.qqmusicdownloader.player.SongAccess
 
 /**
  * 付费判定校准：搜索一大批歌，逐首探测 vkey 的 result，把「字段 + 实际能否播放」落盘，
@@ -33,15 +32,14 @@ object Calibrator {
                 rFlac.putAll(runCatching { MusicApi.probeBatch(chunk, "F000") }.getOrDefault(emptyMap()))
             }
             list.forEach { s ->
-                val acc = SongAccess.of(s)
+
                 Diag.log(
                     "probe",
                     s.mid + " | " + s.name + " - " + s.singers +
                         " | payPlay=" + s.payPlay + " payMonth=" + s.payMonth +
                         " priceTrack=" + s.priceTrack + " priceAlbum=" + s.priceAlbum +
                         " s128=" + s.size128 + " s320=" + s.size320 + " flac=" + s.sizeFlac +
-                        " | r320=" + (r320[s.mid] ?: -1) + " rFlac=" + (rFlac[s.mid] ?: -1) +
-                        " | judge=" + acc.kind.name,
+                        " | r320=" + (r320[s.mid] ?: -1) + " rFlac=" + (rFlac[s.mid] ?: -1),
                 )
             }
             Diag.log("probe", "TOTAL=" + list.size)

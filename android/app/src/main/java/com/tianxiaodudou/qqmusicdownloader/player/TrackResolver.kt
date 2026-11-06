@@ -93,11 +93,11 @@ object TrackResolver {
         // 一个 purl 都没拿到：用 vkey 的 result 码给出准确原因（语义见 QQMusicApi）
         val results = ref.results.values
         val reason = when {
-            results.contains(104003) -> "无权限：需要绿钻/付费包，或当前账号等级不够（104003）"
-            results.contains(104013) -> "设备受限：该歌曲限制此设备播放（104013）"
-            results.contains(104004) -> "取不到播放地址：VKey 获取失败（104004）"
-            results.isEmpty() -> "取不到播放地址：接口没有返回结果"
-            else -> "当前账号无法播放这首歌（result=" + results.first() + "）"
+            results.contains(104003) -> "因账户权限无法播放（需要会员或购买该歌曲）"
+            results.contains(104013) -> "因账户权限无法播放（该歌曲限制了播放设备）"
+            results.contains(104004) -> "取不到播放地址，请稍后重试"
+            results.isEmpty() -> "取不到播放地址，请稍后重试"
+            else -> "无法播放这首歌，请稍后重试"
         }
         onFailed?.invoke(mid, reason)
         // 版权受限：换可播版本

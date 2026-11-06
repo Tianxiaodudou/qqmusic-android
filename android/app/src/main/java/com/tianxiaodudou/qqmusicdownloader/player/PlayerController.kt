@@ -68,6 +68,8 @@ object PlayerController {
     var sourcePath by mutableStateOf("")
         private set
     var error by mutableStateOf<String?>(null)
+    /** 播放失败（含账户无权限）时的外部提示回调，UI 用它弹提示条。 */
+    var onPlaybackError: ((String) -> Unit)? = null
     var sleepEndAt by mutableStateOf(0L)
         private set
     var sleepAfterCurrent by mutableStateOf(false)
@@ -93,7 +95,10 @@ object PlayerController {
         val ctx = context.applicationContext
         appContext = ctx
         TrackResolver.attach(ctx)
-        TrackResolver.onFailed = { _, reason -> error = reason }
+        TrackResolver.onFailed = { _, reason ->
+            error = reason
+            onPlaybackError?.invoke(reason)
+        }
         TrackResolver.onResolved = { mid, quality ->
             if (current?.mid == mid) {
                 actualQuality = quality

@@ -156,6 +156,10 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
     // 轻量提示条（用于“为什么不能播放”这类原因说明）
     var notice by remember { mutableStateOf("") }
     fun showNotice(text: String) { notice = text }
+    // 播放失败（含账户无权限）时，在列表/桌面也弹一条提示，而不是只在播放页里的一行小字
+    LaunchedEffect(Unit) {
+        PlayerController.onPlaybackError = { msg -> showNotice(msg) }
+    }
     LaunchedEffect(notice) {
         if (notice.isNotEmpty()) {
             kotlinx.coroutines.delay(3500)
@@ -163,24 +167,9 @@ private fun MainScaffold(session: Session, onLogout: () -> Unit) {
         }
     }
 
+    // 不做任何预判：任何歌都直接进播放页尝试。取不到音源时由 PlayerController 报原因。
     fun playAt(list: List<MusicApi.Song>, i: Int) {
-        val song = list.getOrNull(i) ?: return
-        val access = com.tianxiaodudou.qqmusicdownloader.player.SongAccess.of(song)
-        when (access.kind) {
-            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.NO_COPYRIGHT -> {
-                showNotice(access.label + "：" + access.hint)
-                return
-            }
-            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.PAID_TRACK,
-            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.PAID_ALBUM -> {
-                showNotice(access.label + "：" + access.hint)
-                return
-            }
-            com.tianxiaodudou.qqmusicdownloader.player.SongAccess.Kind.VIP -> {
-                showNotice(access.hint)
-            }
-            else -> Unit
-        }
+        if (i !in list.indices) return
         Nav.clear()
         PlayerController.play(list, i)
         showPlayer = true

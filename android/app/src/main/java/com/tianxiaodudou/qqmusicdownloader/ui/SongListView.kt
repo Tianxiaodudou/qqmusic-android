@@ -133,8 +133,6 @@ fun SongListView(
         faved = false
         moreFor = null
         Favorites.ensureLoaded()
-        // 后台批量探测这些歌「能不能真拿到直链」，探到 104003 才打徽章（避免字段误判）
-        com.tianxiaodudou.qqmusicdownloader.net.PlayableProbe.request(songs, 30)
         // 列表封面预加载，滚动到下一屏时不用现等
         withContext(Dispatchers.IO) {
             Covers.prefetch(
@@ -245,10 +243,8 @@ fun SongListView(
             LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f)) {
                 itemsIndexed(shown) { i, song ->
                     val checked = selected.contains(song.mid)
-                    // 徽章只依据「实测 vkey 结果」：未知时先不标，探到 104003 才标
-                    val access = com.tianxiaodudou.qqmusicdownloader.player.SongAccess.of(song)
-                    val badge = com.tianxiaodudou.qqmusicdownloader.net.PlayableProbe.badge(song)
-                    val locked = badge == "单曲付费" || badge == "专辑付费" || badge == "无版权"
+                    // 不做任何「免费/会员/付费」预判：所有歌都可点，真放不出来时再提示原因
+                    val locked = false
                     Row(
                         Modifier.fillMaxWidth()
                             .alpha(if (locked) 0.4f else 1f)
@@ -311,17 +307,6 @@ fun SongListView(
                                 overflow = TextOverflow.Ellipsis,
                                 fontSize = AppTheme.typography.caption.fontSize,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (badge.isNotEmpty()) {
-                            Text(
-                                badge,
-                                fontSize = AppTheme.typography.badge.fontSize,
-                                color = AppTheme.colors.warning,
-                                modifier = Modifier
-                                    .clip(AppTheme.shapes.tag)
-                                    .background(AppTheme.colors.warningSoft)
-                                    .padding(horizontal = AppTheme.dimens.spacing5, vertical = AppTheme.dimens.spacing2),
                             )
                         }
                         if (!selecting) {
